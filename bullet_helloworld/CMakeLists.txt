@@ -1,0 +1,8 @@
+cmake_minimum_required( VERSION 2.8 )
+project( b.out )
+set( SOURCES a.cpp )
+set( EXECUTABLE_NAME b.out )
+find_package( Bullet REQUIRED )
+include_directories(${BULLET_INCLUDE_DIRS})
+add_executable( ${EXECUTABLE_NAME} ${SOURCES} )
+target_link_libraries(${EXECUTABLE_NAME} ${BULLET_LIBRARIES})
