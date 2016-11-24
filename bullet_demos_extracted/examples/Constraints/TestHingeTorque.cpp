@@ -1,5 +1,12 @@
 #include "TestHingeTorque.h"
+#include <boost/program_options.hpp>
 
+#include <iostream>
+#include <iterator>
+#include <fstream>
+
+namespace po = boost::program_options;
+using namespace std;
 
 #include "../CommonInterfaces/CommonRigidBodyBase.h"
 #include "../CommonInterfaces/CommonParameterInterface.h"
@@ -11,18 +18,18 @@ static btScalar radius(0.2);
 //        btVector3 linkHalfExtents(0.05, 0.37, 0.1);
 //const float x_len_link  = 0.05;
 //const float x_len_link  = 0.03;
-const float x_len_link  = 0.53;
+float x_len_link  = 0.53;
 //const float y_len_link  = 0.37;
 //const float y_len_link  = 0.18;
-const float y_len_link  = 2.08;
+float y_len_link  = 2.08;
 //const float y_len_link  = 0.15;
 //const float z_len_link  = 0.1;
-const float z_len_link  = 0.3;
+float z_len_link  = 0.3;
 //const float basic_str   = 2000;
-const float basic_str   = 3000;
+float basic_str   = 3000;
 //const int const_numLinks = 8;
 //const int const_numLinks = 8;
-const int const_numLinks = 15;
+int const_numLinks = 15;
 //const int const_numLinks = 25;
 //const int const_numLinks = 2;
 //const int const_numLinks = 2;
@@ -30,29 +37,29 @@ const int const_numLinks = 15;
 //const float ang_damp = 0.9;
 //const float linear_damp = 0.37;
 //const float ang_damp = 0.39;
-const float linear_damp = 0.77;
-const float ang_damp = 0.79;
+float linear_damp = 0.77;
+float ang_damp = 0.79;
 //const float linear_damp = 0.07;
 //const float ang_damp = 0.09;
-const float time_leap = 1.0/240.0;
+float time_leap = 1.0/240.0;
 //const int limit_numLink = const_numLinks - 1;
-const int limit_numLink = const_numLinks + 1;
+int limit_numLink = const_numLinks + 1;
 //const float equi_angle = -0.1;
-const float equi_angle = 0;
+float equi_angle = 0;
 //const int inter_spring = 1;
-const int inter_spring = 5;
+int inter_spring = 5;
 //const int every_spring = 5;
 //const int every_spring = 8;
 //const int every_spring = 10;
-const int every_spring = 1;
+int every_spring = 1;
 //const float spring_stiffness = 220; //Works for 8
 //const float spring_stiffness = 420; //Tmp for 15
-const float spring_stiffness = 520;
-const float camera_dist     = 45;
+float spring_stiffness = 520;
+float camera_dist     = 45;
 //const float linear_damp = 0.95;
 //const float ang_damp = 0.9;
 //const float spring_offset   = 0.5;
-const float spring_offset   = 0;
+float spring_offset   = 0;
 
 struct TestHingeTorque : public CommonRigidBodyBase
 {
@@ -60,7 +67,6 @@ struct TestHingeTorque : public CommonRigidBodyBase
     btAlignedObjectArray<btJointFeedback*> m_jointFeedback;
     btAlignedObjectArray<btRigidBody*> m_allbones;
     btAlignedObjectArray<btHingeConstraint*> m_allhinges;
-
 
 	TestHingeTorque(struct GUIHelperInterface* helper);
 	virtual ~ TestHingeTorque();
@@ -118,7 +124,8 @@ void TestHingeTorque::stepSimulation(float deltaTime)
     m_dynamicsWorld->stepSimulation(time_leap,0);
 	
     static int count = 0;
-    if ((count& 0x0f)==0)
+    //if ((count& 0x0f)==0)
+    if (1)
     {
         int all_size    = m_allbones.size();
         //b3Printf("Number of objexts = %i",m_allbones.size());
@@ -209,6 +216,95 @@ void TestHingeTorque::stepSimulation(float deltaTime)
 void TestHingeTorque::initPhysics()
 {
 	int upAxis = 1;
+    //b3Printf("Config name = %s",m_guiHelper->m_data->m_glApp->configname);
+    //b3Printf("Config name = %s",m_guiHelper->configname);
+    b3Printf("Config name = %s",m_guiHelper->getconfigname());
+
+    try {
+
+        po::options_description desc("Allowed options");
+        desc.add_options()
+            ("help", "produce help message")
+            ("x_len_link", po::value<float>(), "Size x of cubes")
+            ("y_len_link", po::value<float>(), "Size y of cubes")
+            ("z_len_link", po::value<float>(), "Size z of cubes")
+            ("basic_str", po::value<float>(), "Minimal strength of hinge's recover force")
+            ("const_numLinks", po::value<int>(), "Number of units")
+            ("linear_damp", po::value<float>(), "Control the linear damp ratio")
+            ("ang_damp", po::value<float>(), "Control the angle damp ratio")
+            ("time_leap", po::value<float>(), "Time unit for simulation")
+            ("equi_angle", po::value<float>(), "Control the angle of balance for hinges")
+            ("inter_spring", po::value<int>(), "Number of units between two strings")
+            ("every_spring", po::value<int>(), "Number of units between one strings")
+            ("spring_stiffness", po::value<float>(), "Stiffness of spring")
+            ("camera_dist", po::value<float>(), "Distance of camera")
+            ("spring_offset", po::value<float>(), "String offset for balance state")
+        ;
+
+        po::variables_map vm;
+        const char* file_name = m_guiHelper->getconfigname();
+        ifstream ifs(file_name);
+        po::store(po::parse_config_file(ifs, desc), vm);
+        po::notify(vm);    
+
+        if (vm.count("x_len_link")){
+            x_len_link      = vm["x_len_link"].as<float>();
+        }
+        if (vm.count("y_len_link")){
+            y_len_link      = vm["y_len_link"].as<float>();
+        }
+        if (vm.count("z_len_link")){
+            z_len_link      = vm["z_len_link"].as<float>();
+        }
+
+        if (vm.count("basic_str")){
+            basic_str       = vm["basic_str"].as<float>();
+        }
+
+        if (vm.count("const_numLinks")){
+            const_numLinks  = vm["const_numLinks"].as<int>();
+        }
+        limit_numLink = const_numLinks + 1;
+
+        if (vm.count("linear_damp")){
+            linear_damp     = vm["linear_damp"].as<float>();
+        }
+        if (vm.count("ang_damp")){
+            ang_damp        = vm["ang_damp"].as<float>();
+        }
+
+        if (vm.count("time_leap")){
+            time_leap       = vm["time_leap"].as<float>();
+        }
+
+        if (vm.count("equi_angle")){
+            equi_angle      = vm["equi_angle"].as<float>();
+        }
+
+        if (vm.count("inter_spring")){
+            inter_spring    = vm["inter_spring"].as<int>();
+        }
+        if (vm.count("every_spring")){
+            every_spring    = vm["every_spring"].as<int>();
+        }
+
+        if (vm.count("spring_stiffness")){
+            spring_stiffness    = vm["spring_stiffness"].as<float>();
+        }
+        if (vm.count("camera_dist")){
+            camera_dist     = vm["camera_dist"].as<float>();
+        }
+        if (vm.count("spring_offset")){
+            spring_offset   = vm["spring_offset"].as<float>();
+        }
+    }
+    catch(exception& e) {
+        cerr << "error: " << e.what() << "\n";
+    }
+    catch(...) {
+        cerr << "Exception of unknown type!\n";
+    }
+    
 	m_guiHelper->setUpAxis(upAxis);
 
 	createEmptyDynamicsWorld();

@@ -166,6 +166,10 @@ void OpenGLGuiHelper::setVRMode(bool vrMode)
 	m_data->m_vrSkipShadowPass = 0;
 }
 
+char* OpenGLGuiHelper::getconfigname(){
+    return m_data->m_glApp->configname;
+};
+
 
 
 OpenGLGuiHelper::OpenGLGuiHelper(CommonGraphicsApp* glApp, bool useOpenGL2)

@@ -347,6 +347,7 @@ ADD_EXECUTABLE(App_ExampleBrowser
 )
 
 target_link_libraries(App_ExampleBrowser ${BULLET_LIBRARIES})
+TARGET_LINK_LIBRARIES(App_ExampleBrowser ${Boost_LIBRARIES} )
 
 FILE( MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/data" )
 

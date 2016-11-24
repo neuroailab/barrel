@@ -24,6 +24,9 @@ public:
 	virtual void setSharedMemoryInterface(class SharedMemoryInterface* sharedMem);
 	
 	static void registerFileImporter(const char* extension, CommonExampleInterface::CreateFunc*		createFunc);
+
+    float stop_time;
+    float now_time;
 };
 
 #endif //OPENGL_BROWSER_GUI_H

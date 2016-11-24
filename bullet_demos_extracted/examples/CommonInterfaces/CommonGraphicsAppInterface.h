@@ -52,6 +52,12 @@ struct CommonGraphicsApp
 	bool	m_mouseInitialized;
 	float	m_backgroundColorRGB[3];
 
+    char* configname=(char*)"123";
+
+    void setconfigname(char* inputname){
+        configname  = inputname;
+    }
+
 	CommonGraphicsApp()
 		:m_window(0),
 		m_renderer(0),

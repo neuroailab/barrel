@@ -14,6 +14,13 @@ struct OpenGLGuiHelper : public GUIHelperInterface
 
 	virtual ~OpenGLGuiHelper();
 
+    char* getconfigname();
+    /*
+    char* getconfigname(){
+        return m_data->m_glApp->configname;
+    };
+    */
+
 	virtual struct CommonRenderInterface* getRenderInterface();
 
 	virtual void createRigidBodyGraphicsObject(btRigidBody* body, const btVector3& color);

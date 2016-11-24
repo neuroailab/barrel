@@ -68,7 +68,15 @@ struct GUIHelperInterface
 	
 	virtual void drawText3D( const char* txt, float posX, float posZY, float posZ, float size)=0;
 
+    virtual char* getconfigname(){
+        return configname;
+    };
 
+    char* configname=(char*)"";
+
+    void setconfigname(char* inputname){
+        configname  = inputname;
+    }
 };
 
 

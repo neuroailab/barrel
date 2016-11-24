@@ -117,8 +117,10 @@ extern bool useShadowMap;
 
 static bool visualWireframe=false;
 static bool renderVisualGeometry=true;
-static bool renderGrid = true;
-static bool renderGui = true;
+//static bool renderGrid = true;
+//static bool renderGui = true;
+static bool renderGrid = false;
+static bool renderGui = false;
 static bool enable_experimental_opencl = false;
 
 int gDebugDrawFlags = 0;
@@ -779,6 +781,8 @@ OpenGLExampleBrowser::~OpenGLExampleBrowser()
 
 bool OpenGLExampleBrowser::init(int argc, char* argv[])
 {
+    now_time    = 0;
+    stop_time   = 10;
     b3CommandLineArgs args(argc,argv);
     
 	loadCurrentSettings(startFileName, args);
@@ -833,6 +837,14 @@ bool OpenGLExampleBrowser::init(int argc, char* argv[])
         s_app = simpleApp;
     }
 #endif
+    //s_app->setconfigname((char*)"test123");
+	if (args.CheckCmdLineFlag("config_filename"))
+	{
+        char* now_name  = 0;
+        args.GetCmdLineArgument("config_filename", now_name);
+        if (now_name)
+            s_app->setconfigname(now_name);
+	}
 	m_internalData->m_app = s_app;
     char* gVideoFileName = 0;
     args.GetCmdLineArgument("mp4",gVideoFileName);
@@ -1087,31 +1099,37 @@ bool OpenGLExampleBrowser::requestedExit()
 
 void OpenGLExampleBrowser::update(float deltaTime)
 {
-		B3_PROFILE("OpenGLExampleBrowser::update");
-		assert(glGetError()==GL_NO_ERROR);
-		s_instancingRenderer->init();
-        DrawGridData dg;
-        dg.upAxis = s_app->getUpAxis();
+    now_time    = now_time + deltaTime;
+    if (now_time>stop_time){
+        //b3Printf("Now stop!");
+        //exit(0);
+    }
+    
+    B3_PROFILE("OpenGLExampleBrowser::update");
+    assert(glGetError()==GL_NO_ERROR);
+    s_instancingRenderer->init();
+    DrawGridData dg;
+    dg.upAxis = s_app->getUpAxis();
 
-        {
-            BT_PROFILE("Update Camera and Light");
+    {
+        BT_PROFILE("Update Camera and Light");
 
-	
 
-            s_instancingRenderer->updateCamera(dg.upAxis);
-        }
 
-		
-		static int frameCount = 0;
-		frameCount++;
+        s_instancingRenderer->updateCamera(dg.upAxis);
+    }
 
-		if (0)
-		{
-            BT_PROFILE("Draw frame counter");
-            char bla[1024];
-            sprintf(bla,"Frame %d", frameCount);
-            s_app->drawText(bla,10,10);
-		}
+    
+    static int frameCount = 0;
+    frameCount++;
+
+    if (0)
+    {
+        BT_PROFILE("Draw frame counter");
+        char bla[1024];
+        sprintf(bla,"Frame %d", frameCount);
+        s_app->drawText(bla,10,10);
+    }
 
     if (gPngFileName)
     {
