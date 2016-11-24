@@ -18,7 +18,7 @@ ENDIF (Bullet_FOUND)
 #)
 
 LINK_LIBRARIES(
-    /usr/local/lib/libBullet3Common.dylib 
+    /usr/local/lib/libBullet3Common.${DYLIB_SUFFIX} 
 )
 #LINK_LIBRARIES(
 # BulletDynamics BulletCollision LinearMath
@@ -71,7 +71,7 @@ ADD_DEFINITIONS(-DB3_USE_STANDALONE_EXAMPLE)
 #        BulletDynamics BulletCollision LinearMath OpenGLWindow Bullet3Common ${OPENGL_gl_LIBRARY} ${OPENGL_glu_LIBRARY}
 #)
 LINK_LIBRARIES(
-     /usr/local/lib/libBullet3Common.dylib OpenGLWindow ${OPENGL_gl_LIBRARY} ${OPENGL_glu_LIBRARY}
+     /usr/local/lib/libBullet3Common.${DYLIB_SUFFIX} OpenGLWindow ${OPENGL_gl_LIBRARY} ${OPENGL_glu_LIBRARY}
 )
 
 LINK_LIBRARIES(

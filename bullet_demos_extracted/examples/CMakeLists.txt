@@ -1,7 +1,12 @@
 cmake_minimum_required( VERSION 2.8 )
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 SET(BULLET_VERSION 2.85)
-SET(BULLET_PHYSICS_SOURCE_DIR /Users/chengxuz/barrel/bullet/bullet3/)
+SET(BULLET_PHYSICS_SOURCE_DIR /Users/chengxuz/barrel/bullet/bullet3/ CACHE STRING "Some user-specified option")
+IF(APPLE)
+    SET(DYLIB_SUFFIX dylib)
+ELSEIF(UNIX)
+    SET(DYLIB_SUFFIX so)
+ENDIF()
 
 find_package( Bullet REQUIRED )
 include_directories(${BULLET_INCLUDE_DIRS})

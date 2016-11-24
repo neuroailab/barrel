@@ -2,7 +2,7 @@
 INCLUDE_DIRECTORIES(
 	.
 	${BULLET_PHYSICS_SOURCE_DIR}/src
-	${BULLET_PHYSICS_SOURCE_DIR}/examples/ThirdPartyLibs
+	../ThirdPartyLibs
 )
 
 FILE(GLOB GwenGUISupport_SRCS  "GwenGUISupport/*" )
@@ -17,12 +17,12 @@ IF (WIN32)
 ELSE(WIN32)
         IF(APPLE)
                 find_library(COCOA NAMES Cocoa)
-  			ELSE(APPLE)
-                ADD_DEFINITIONS("-DGLEW_INIT_OPENGL11_FUNCTIONS=1")
-                ADD_DEFINITIONS("-DGLEW_STATIC")
-                ADD_DEFINITIONS("-DGLEW_DYNAMIC_LOAD_ALL_GLX_FUNCTIONS=1")
-                INCLUDE_DIRECTORIES( ../ThirdPartyLibs/Glew )
-     		ENDIF(APPLE)
+        ELSE(APPLE)
+            ADD_DEFINITIONS("-DGLEW_INIT_OPENGL11_FUNCTIONS=1")
+            ADD_DEFINITIONS("-DGLEW_STATIC")
+            ADD_DEFINITIONS("-DGLEW_DYNAMIC_LOAD_ALL_GLX_FUNCTIONS=1")
+            INCLUDE_DIRECTORIES( ../ThirdPartyLibs/Glew )
+        ENDIF(APPLE)
 ENDIF(WIN32)
 
 
@@ -60,10 +60,6 @@ IF (BUILD_SHARED_LIBS)
                                 BulletInverseDynamics LinearMath OpenGLWindow gwen BussIK
                                 ${COCOA} ${OPENGL_gl_LIBRARY} ${OPENGL_glu_LIBRARY}
                  )
-             #TARGET_LINK_LIBRARIES(
-             #                   BulletExampleBrowserLib  OpenGLWindow gwen BussIK
-             #                   ${COCOA} ${OPENGL_gl_LIBRARY} ${OPENGL_glu_LIBRARY} ${BULLET_LIBRARIES}
-             #    )
   			ELSE(APPLE)
                  TARGET_LINK_LIBRARIES(
                                 BulletExampleBrowserLib Bullet3Common BulletSoftBody BulletDynamics BulletCollision BulletInverseDynamicsUtils
@@ -88,7 +84,7 @@ INCLUDE_DIRECTORIES(
 
 
 LINK_LIBRARIES(
-        OpenGLWindow gwen BussIK 
+    BulletExampleBrowserLib OpenGLWindow gwen BussIK 
 )
 
 IF (WIN32)
@@ -104,7 +100,7 @@ ELSE(WIN32)
                 find_library(COCOA NAMES Cocoa)
                 MESSAGE(${COCOA})
                 link_libraries(${COCOA} ${OPENGL_gl_LIBRARY} ${OPENGL_glu_LIBRARY})
-  ELSE(APPLE)
+          ELSE(APPLE)
 		ADD_DEFINITIONS("-DGLEW_INIT_OPENGL11_FUNCTIONS=1")
 		ADD_DEFINITIONS("-DGLEW_STATIC")
 		ADD_DEFINITIONS("-DGLEW_DYNAMIC_LOAD_ALL_GLX_FUNCTIONS=1")
@@ -335,7 +331,7 @@ SET(BulletExampleBrowser_SRCS
 
 
 LINK_LIBRARIES(
-    /usr/local/lib/libBullet3Common.dylib BulletExampleBrowserLib /usr/local/lib/libBulletInverseDynamics.dylib /Users/chengxuz/barrel/bullet/bullet3/bullet_build/Extras/InverseDynamics/libBulletInverseDynamicsUtils.dylib
+    /usr/local/lib/libBullet3Common.${DYLIB_SUFFIX} BulletExampleBrowserLib /usr/local/lib/libBulletInverseDynamics.${DYLIB_SUFFIX} ${BULLET_PHYSICS_SOURCE_DIR}/bullet_build/Extras/InverseDynamics/libBulletInverseDynamicsUtils.${DYLIB_SUFFIX}
 )
 
 ADD_EXECUTABLE(App_ExampleBrowser

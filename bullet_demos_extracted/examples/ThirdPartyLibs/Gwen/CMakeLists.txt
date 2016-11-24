@@ -1,8 +1,8 @@
 
 INCLUDE_DIRECTORIES(
 	${BULLET_PHYSICS_SOURCE_DIR}/src
-	${BULLET_PHYSICS_SOURCE_DIR}/examples/ThirdPartyLibs
-	${BULLET_PHYSICS_SOURCE_DIR}/examples/ThirdPartyLibs/Glew
+	..
+	../Glew
 )
 
 IF(NOT WIN32 AND NOT APPLE)
