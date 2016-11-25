@@ -60,10 +60,32 @@ float camera_dist     = 45;
 //const float ang_damp = 0.9;
 //const float spring_offset   = 0.5;
 float spring_offset   = 0;
+float time_limit    = 5.0/4;
+float initial_str   = 10000;
+float initial_stime = 1.0/8;
+int initial_poi     = 14;
+int flag_time       = 0;
+float limit_softness = 0.9;
+float limit_bias    = 0.3;
+float limit_relax   = 1;
+float limit_low     = -2;
+float limit_up      = 0;
+float state_ban_limit   = 1;
+float velo_ban_limit    = 1;
+float angl_ban_limit    = 1;
+float force_limit       = 1;
+float torque_limit      = 1;
+//int debug_flag          = 
 
 struct TestHingeTorque : public CommonRigidBodyBase
 {
     bool m_once;
+    float pass_time;
+    float curr_velo;
+    float curr_angl;
+    float curr_state;
+    float curr_force;
+    float curr_torque;
     btAlignedObjectArray<btJointFeedback*> m_jointFeedback;
     btAlignedObjectArray<btRigidBody*> m_allbones;
     btAlignedObjectArray<btHingeConstraint*> m_allhinges;
@@ -122,91 +144,80 @@ void TestHingeTorque::stepSimulation(float deltaTime)
     }
     
     m_dynamicsWorld->stepSimulation(time_leap,0);
+
+    pass_time   = pass_time + time_leap;
+
+    if (flag_time==1){
+        if (pass_time > time_limit){
+            exit(0);
+        }
+    }
 	
+    curr_velo   = 0;
+    curr_angl   = 0;
+    curr_state  = 0;
+    curr_force  = 0;
+    curr_torque = 0;
     static int count = 0;
     //if ((count& 0x0f)==0)
     if (1)
     {
         int all_size    = m_allbones.size();
-        //b3Printf("Number of objexts = %i",m_allbones.size());
-        //b3Printf("Number of hinges = %i",m_allhinges.size());
-
-        //b3Printf("Angle of hinge = %f",m_allhinges[0]->getHingeAngle());
-        //m_allbones[1]->applyForce(btVector3(0,0,-100), btVector3(0,0,0));
         btRigidBody* base = btRigidBody::upcast(m_dynamicsWorld->getCollisionObjectArray()[0]);
-        
-        /*
-        b3Printf("base angvel = %f,%f,%f",base->getAngularVelocity()[0],
-                         base->getAngularVelocity()[1],
-                         
-                         base->getAngularVelocity()[2]);
-        
-        btRigidBody* child = btRigidBody::upcast(m_dynamicsWorld->getCollisionObjectArray()[1]);
-
-
-        b3Printf("child angvel = %f,%f,%f",child->getAngularVelocity()[0],
-                         child->getAngularVelocity()[1],
-
-                         child->getAngularVelocity()[2]);
-        
-        */
 
         for (int i=0;i<all_size;i++){
             btVector3 tmp_center_pos = m_allbones[i]->getCenterOfMassPosition();
-            //b3Printf("Position of bone = %f, %f, %f",m_allbones[i]->getCenterOfMassPosition().getX(), m_allbones[i]->getCenterOfMassPosition().getY(), m_allbones[i]->getCenterOfMassPosition().getZ());
+
             btTransform tmp_trans = m_allbones[i]->getCenterOfMassTransform();
             btVector3 tmp_pos = tmp_trans(btVector3(0,0,-z_len_link));
             btVector3 tmp_direction = tmp_center_pos - tmp_pos;
             btVector3 tmp_pos_f = tmp_trans(btVector3(0,y_len_link,0));
             btVector3 tmp_point     = tmp_pos_f - tmp_center_pos;
-            //b3Printf("Relative position = %f, %f, %f", tmp_direction.getX(), tmp_direction.getY(), tmp_direction.getZ());
 
-            /*
-            if (i < all_size -1){
-                btScalar tmp_angle_high     = m_allhinges[i+1]->getHingeAngle();
-                //m_allbones[i]->applyForce(-tmp_direction*tmp_angle_high*basic_str*(i+1), btVector3(0,y_len_link,0));
-                //m_allbones[i]->applyForce(-tmp_direction*tmp_angle_high*basic_str, btVector3(0,y_len_link,0));
-                //m_allbones[i]->applyForce(-tmp_direction*tmp_angle_high*basic_str, tmp_point);
-            }
-            */
             btScalar tmp_angle_high     = m_allhinges[i]->getHingeAngle() - equi_angle;
 
-            //btVector3 tmp_force_now     = tmp_direction*tmp_angle_high*basic_str*(i+1);
             btVector3 tmp_force_now     = tmp_direction*tmp_angle_high*basic_str*(m_allbones.size() - i)/2;
             m_allbones[i]->applyForce(tmp_force_now, -tmp_point);
-            //b3Printf("Force of bone = %f, %f, %f",tmp_force_now.getX(), tmp_force_now.getY(), tmp_force_now.getZ());
+
             if (i < all_size -1){
                 btTransform tmp_trans = m_allbones[i+1]->getCenterOfMassTransform();
                 btVector3 tmp_pos = tmp_trans(btVector3(0,0,z_len_link));
                 btVector3 tmp_pos_f = tmp_trans(btVector3(0,-y_len_link,0));
                 btVector3 tmp_point     = tmp_pos_f - tmp_center_pos;
                 m_allbones[i+1]->applyForce(-tmp_force_now, -tmp_point);
-                //b3Printf("Force of bone = %f, %f, %f",tmp_force_now.getX(), tmp_force_now.getY(), tmp_force_now.getZ());
             }
 
-            //m_allbones[i]->applyForce(tmp_force_now, btVector3(0,-y_len_link,0));
-            //btVector3 tmp_force_all     = m_allbones[i]->getTotalForce();
-            //b3Printf("Total force of bone = %f, %f, %f",tmp_force_all.getX(), tmp_force_all.getY(), tmp_force_all.getZ());
-            //m_allbones[i]->applyDamping(1./240.0);
+            if ((i==initial_poi) && (pass_time < initial_stime)){
+                m_allbones[i]->applyForce(btVector3(0,0,initial_str), btVector3(0,0,0));
+            }
+
         }
 
-        /*
-
-        for (int i=0;i<m_jointFeedback.size();i++)
-        {
-                b3Printf("Applied force at the COM/Inertial frame B[%d]:(%f,%f,%f), torque B:(%f,%f,%f)\n", i,
-
-        
-                        m_jointFeedback[i]->m_appliedForceBodyB.x(),
-                        m_jointFeedback[i]->m_appliedForceBodyB.y(),
-                        m_jointFeedback[i]->m_appliedForceBodyB.z(),
-                        m_jointFeedback[i]->m_appliedTorqueBodyB.x(),
-                        m_jointFeedback[i]->m_appliedTorqueBodyB.y(),
-                        m_jointFeedback[i]->m_appliedTorqueBodyB.z());
+        for (int i=0;i<all_size;i++){
+            curr_velo   += m_allbones[i]->getLinearVelocity().norm();
+            curr_angl   += m_allbones[i]->getAngularVelocity().norm();
+            curr_force  += m_allbones[i]->getTotalForce().norm();
+            curr_torque += m_allbones[i]->getTotalTorque().norm();
         }
-        */
+
+        curr_velo   /= all_size;
+        curr_angl   /= all_size;
+        curr_force  /= all_size;
+        curr_torque /= all_size;
+
+        for (int i=0;i<m_allhinges.size();i++){
+            curr_state  += m_allhinges[i]->getHingeAngle() - limit_up;
+        }
+        curr_state  /= m_allhinges.size();
     }
     count++;
+
+    if (flag_time==2){
+        if ((curr_velo < velo_ban_limit) && (curr_state < state_ban_limit) && (curr_angl < angl_ban_limit) && (curr_force < force_limit) && (curr_torque < torque_limit)){
+            exit(0);
+        }
+        cout << "Now state:" << curr_velo << " " << curr_angl << " " << curr_force << " " << curr_torque << " " << curr_state << endl;
+    }
 
     //CommonRigidBodyBase::stepSimulation(deltaTime);
 }
@@ -216,6 +227,10 @@ void TestHingeTorque::stepSimulation(float deltaTime)
 void TestHingeTorque::initPhysics()
 {
 	int upAxis = 1;
+    pass_time   = 0;
+    m_allbones.clear();
+    m_allhinges.clear();
+    
     //b3Printf("Config name = %s",m_guiHelper->m_data->m_glApp->configname);
     //b3Printf("Config name = %s",m_guiHelper->configname);
     b3Printf("Config name = %s",m_guiHelper->getconfigname());
@@ -239,6 +254,21 @@ void TestHingeTorque::initPhysics()
             ("spring_stiffness", po::value<float>(), "Stiffness of spring")
             ("camera_dist", po::value<float>(), "Distance of camera")
             ("spring_offset", po::value<float>(), "String offset for balance state")
+            ("time_limit", po::value<float>(), "Time limit for recording")
+            ("initial_str", po::value<float>(), "Initial strength of force applied")
+            ("initial_stime", po::value<float>(), "Initial time to apply force")
+            ("initial_poi", po::value<int>(), "Unit to apply the force")
+            ("flag_time", po::value<int>(), "Whether open time limit")
+            ("limit_softness", po::value<float>(), "Softness of the hinge limit")
+            ("limit_bias", po::value<float>(), "Bias of the hinge limit")
+            ("limit_relax", po::value<float>(), "Relax of the hinge limit")
+            ("limit_low", po::value<float>(), "Lower bound of the hinge limit")
+            ("limit_up", po::value<float>(), "Up bound of the hinge limit")
+            ("state_ban_limit", po::value<float>(), "While flag_time is 2, used for angle states of hinges to judge whether stop")
+            ("velo_ban_limit", po::value<float>(), "While flag_time is 2, used for linear velocities of rigid bodys to judge whether stop")
+            ("angl_ban_limit", po::value<float>(), "While flag_time is 2, used for angular velocities of rigid bodys to judge whether stop")
+            ("force_limit", po::value<float>(), "While flag_time is 2, used for forces of rigid bodys to judge whether stop")
+            ("torque_limit", po::value<float>(), "While flag_time is 2, used for torques of rigid bodys to judge whether stop")
         ;
 
         po::variables_map vm;
@@ -296,6 +326,53 @@ void TestHingeTorque::initPhysics()
         }
         if (vm.count("spring_offset")){
             spring_offset   = vm["spring_offset"].as<float>();
+        }
+        if (vm.count("time_limit")){
+            time_limit      = vm["time_limit"].as<float>();
+        }
+        if (vm.count("initial_str")){
+            initial_str     = vm["initial_str"].as<float>();
+        }
+        if (vm.count("initial_stime")){
+            initial_stime   = vm["initial_stime"].as<float>();
+        }
+        if (vm.count("initial_poi")){
+            initial_poi     = vm["initial_poi"].as<int>();
+        }
+        if (vm.count("flag_time")){
+            flag_time       = vm["flag_time"].as<int>();
+        }
+
+        if (vm.count("limit_softness")){
+            limit_softness  = vm["limit_softness"].as<float>();
+        }
+        if (vm.count("limit_bias")){
+            limit_bias      = vm["limit_bias"].as<float>();
+        }
+        if (vm.count("limit_relax")){
+            limit_relax     = vm["limit_relax"].as<float>();
+        }
+        if (vm.count("limit_low")){
+            limit_low       = vm["limit_low"].as<float>();
+        }
+        if (vm.count("limit_up")){
+            limit_up        = vm["limit_up"].as<float>();
+        }
+
+        if (vm.count("state_ban_limit")){
+            state_ban_limit = vm["state_ban_limit"].as<float>();
+        }
+        if (vm.count("velo_ban_limit")){
+            velo_ban_limit  = vm["velo_ban_limit"].as<float>();
+        }
+        if (vm.count("angl_ban_limit")){
+            angl_ban_limit  = vm["angl_ban_limit"].as<float>();
+        }
+        if (vm.count("force_limit")){
+            force_limit     = vm["force_limit"].as<float>();
+        }
+        if (vm.count("torque_limit")){
+            torque_limit    = vm["torque_limit"].as<float>();
         }
     }
     catch(exception& e) {
@@ -391,8 +468,9 @@ void TestHingeTorque::initPhysics()
                                                                                  axisInA,axisInB,useReferenceA);
                                 //hinge->setLimit(-1.f, 1.f, 100.9f, 1.3f, 1.0f);
                                 //hinge->setLimit(-2.f, 2.f);
-                                hinge->setLimit(-2.f, 0.f);
-                                m_allhinges.push_back(hinge);
+                                //
+                hinge->setLimit(limit_low, limit_up, limit_softness, limit_bias, limit_relax);
+                m_allhinges.push_back(hinge);
 				con = hinge;
 
                                 if ((i>every_spring-2) && (i % inter_spring==0)){
