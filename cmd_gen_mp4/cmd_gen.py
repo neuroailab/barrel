@@ -1,6 +1,15 @@
 import argparse
 import os
 from itertools import *
+import copy
+import multiprocessing
+import numpy as np
+
+args        = []
+all_items   = []
+config_dict = {}
+para_search = {}
+nu_rela_key = ['camera_dist', 'time_limit']
 
 def make_config(config_dict, config_filename):
     fout        = open(config_filename, 'w')
@@ -16,6 +25,53 @@ def make_config(config_dict, config_filename):
 def my_product(dicts):
     return (dict(izip(dicts, x)) for x in product(*[x['range'] for x in dicts.itervalues()]))
 
+def run_it(ind):
+    global all_items 
+    global args
+    global config_dict
+    global para_search
+
+    cmd_tmp1        = "%s --config_filename=%s --mp4=%s --start_demo_name=TestHingeTorque"
+    cmd_tmp2        = "%s --config_filename=%s --start_demo_name=TestHingeTorque"
+
+    start_indx  = min(ind * args.mapn, len(all_items))
+    end_indx    = min((ind+1)*args.mapn, len(all_items))
+    curr_items  = all_items[start_indx: end_indx]
+
+    our_config  = copy.deepcopy(config_dict)
+    
+    for item in curr_items:
+
+        now_file_name   = ""
+
+        for key_value in item:
+            if not key_value=='damp':
+                our_config[key_value]["value"]  = item[key_value]
+            else:
+                for sub_key in para_search[key_value]["key_value"]:
+                    our_config[sub_key]["value"]  = item[key_value]
+            now_file_name   = now_file_name + para_search[key_value]["short"] + str(para_search[key_value]["range"].index(item[key_value]))
+
+        now_nu  = item["const_numLinks"]
+        our_config['initial_poi']["value"]  = now_nu - 1
+        #our_config['camera_dist']["value"]  = dist_dict[now_nu]
+        for tmp_key in nu_rela_key:
+            our_config[tmp_key]["value"]  = our_config[tmp_key]["dict_nu"][now_nu]
+
+        # Make config files
+        now_config_fn   = os.path.join(args.pathconfig, now_file_name + ".cfg")
+        now_mp4_fn      = os.path.join(args.pathmp4, now_file_name + ".mp4")
+
+        make_config(our_config, now_config_fn)
+        if args.mp4flag==1:
+            cmd_tmp         = "%s --config_filename=%s --mp4=%s --start_demo_name=TestHingeTorque"
+            cmd_str         = cmd_tmp % (args.pathexe, now_config_fn, now_mp4_fn)
+        else:
+            cmd_tmp         = "%s --config_filename=%s --start_demo_name=TestHingeTorque"
+            cmd_str         = cmd_tmp % (args.pathexe, now_config_fn)
+
+        os.system(cmd_str)
+
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='The script to generate the mp4s through command line')
     parser.add_argument('--nproc', default = 4, type = int, action = 'store', help = 'Number of processes')
@@ -23,6 +79,7 @@ if __name__=="__main__":
     parser.add_argument('--pathmp4', default = "/home/chengxuz/barrel/barrel/cmd_gen_mp4/generated_mp4s", type = str, action = 'store', help = 'Path to mp4 folder')
     parser.add_argument('--pathexe', default = "/home/chengxuz/barrel/build_examples/ExampleBrowser/App_ExampleBrowser", type = str, action = 'store', help = 'Path to App_ExampleBrowser')
     parser.add_argument('--mp4flag', default = 1, type = int, action = 'store', help = 'Whether generate mp4 files')
+    parser.add_argument('--mapn', default = 30, type = int, action = 'store', help = 'Number of items in each processes')
 
     args    = parser.parse_args()
     #print(args.nproc)
@@ -38,9 +95,9 @@ if __name__=="__main__":
             "inter_spring":{"value":1, "help":"Number of units between two strings", "type":"int"}, 
             "every_spring":{"value":3, "help":"Number of units between one strings", "type":"int"},
             "spring_stiffness":{"value":520, "help":"Stiffness of spring", "type":"float"}, 
-            "camera_dist":{"value":45, "help":"Distance of camera", "type":"float"}, 
+            "camera_dist":{"value":45, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
             "spring_offset":{"value":0, "help":"String offset for balance state", "type":"float"}, 
-            "time_limit":{"value":30.0/4, "help":"Time limit for recording", "type":"float"}, 
+            "time_limit":{"value":30.0/4, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
             "initial_str":{"value":30000, "help":"Initial strength of force applied", "type":"float"}, 
             "initial_stime":{"value":0.1/8, "help":"Initial time to apply force", "type":"float"}, 
             "limit_softness":{"value":0.9, "help":"Softness of the hinge limit", "type":"float"}, 
@@ -58,6 +115,7 @@ if __name__=="__main__":
 
     para_search     = {"basic_str":{"range":[1000, 3000, 5000, 7000], "short":"ba"}, 
             "const_numLinks":{"range":[5, 15, 25], "short":"nu"},
+            #"const_numLinks":{"range":[25], "short":"nu"},
             "damp":{"range":[0.1, 0.5, 0.9], "key_value": ["linear_damp", "ang_damp"], "short":"dp"},
             "inter_spring":{"range":[1, 3, 5, 7], "short":"is"},
             "every_spring":{"range":[2, 3, 5, 7, 9, 11, 13, 17, 21], "short":"es"},
@@ -66,7 +124,6 @@ if __name__=="__main__":
 
     #print(len(list(my_product(para_search))))
 
-    ava_num     = 0
     for check_item in my_product(para_search):
 
         right_flag      = 1
@@ -80,11 +137,20 @@ if __name__=="__main__":
 
         if check_item['inter_spring'] > check_item["const_numLinks"]:
             right_flag      = 0
-        ava_num         = ava_num + right_flag
 
-    print(ava_num)
+        if right_flag==1:
+            all_items.append(check_item)
+
+    #print(len(all_items), all_items[0])
 
 
+    nu_args     = range(int(np.ceil(len(all_items)*1.0/args.mapn)))
+    #nu_args     = range(2)
+    pool = multiprocessing.Pool(processes=args.nproc)
+    r = pool.map_async(run_it, nu_args)
+    r.get()
+    #print('Done!')
+    #run_it(0)
     '''
     # Make config files
     now_config_fn   = "test.cfg"
