@@ -19,7 +19,13 @@ def make_config(config_dict, config_filename):
     for key_value in config_dict:
         tmp_key     = config_dict[key_value]
         fout.write(line_com % tmp_key["help"])
-        fout.write(line_tmp[tmp_key["type"]] % (key_value, tmp_key["value"]))
+        if not tmp_key["type"]=="list":
+            fout.write(line_tmp[tmp_key["type"]] % (key_value, tmp_key["value"]))
+        else:
+            #fout.write(line_tmp[tmp_key["type"]] % (key_value, str(tmp_key["value"])[1:-1].replace(',', '') ))
+            #fout.write(line_tmp[tmp_key["type"]] % (key_value, str(tmp_key["value"])[1:-1] ))
+            for value_list in tmp_key["value"]:
+                fout.write(line_tmp[tmp_key["type_in"]] % (key_value, value_list))
         fout.write("\n")
 
 def my_product(dicts):
@@ -80,6 +86,7 @@ if __name__=="__main__":
     parser.add_argument('--pathexe', default = "/home/chengxuz/barrel/build_examples/ExampleBrowser/App_ExampleBrowser", type = str, action = 'store', help = 'Path to App_ExampleBrowser')
     parser.add_argument('--mp4flag', default = 1, type = int, action = 'store', help = 'Whether generate mp4 files')
     parser.add_argument('--mapn', default = 30, type = int, action = 'store', help = 'Number of items in each processes')
+    parser.add_argument('--testmode', default = 0, type = int, action = 'store', help = 'Whether run the test command or not')
 
     args    = parser.parse_args()
     #print(args.nproc)
@@ -87,18 +94,18 @@ if __name__=="__main__":
             "y_len_link":{"value":2.08, "help":"Size y of cubes", "type":"float"},
             "z_len_link":{"value":0.3, "help":"Size z of cubes", "type":"float"}, 
             "basic_str":{"value":3000, "help":"Minimal strength of hinge's recover force", "type":"float"}, 
-            "const_numLinks":{"value":15, "help":"Number of units", "type":"int"},
-            "linear_damp":{"value":0.17, "help":"Control the linear damp ratio", "type":"float"},
-            "ang_damp":{"value":0.19, "help":"Control the angle damp ratio", "type":"float"},
+            "const_numLinks":{"value":25, "help":"Number of units", "type":"int"},
+            "linear_damp":{"value":0.5, "help":"Control the linear damp ratio", "type":"float"},
+            "ang_damp":{"value":0.5, "help":"Control the angle damp ratio", "type":"float"},
             "time_leap":{"value":1.0/240.0, "help":"Time unit for simulation", "type":"float"},
             "equi_angle":{"value":0, "help":"Control the angle of balance for hinges", "type":"float"}, 
-            "inter_spring":{"value":1, "help":"Number of units between two strings", "type":"int"}, 
-            "every_spring":{"value":3, "help":"Number of units between one strings", "type":"int"},
-            "spring_stiffness":{"value":520, "help":"Stiffness of spring", "type":"float"}, 
-            "camera_dist":{"value":45, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
+            "inter_spring":{"value":(1, 3, 3, 3), "help":"Number of units between two strings", "type":"list", "type_in": "int"}, 
+            "every_spring":{"value":(3, 5, 7, 9), "help":"Number of units between one strings", "type":"list", "type_in": "int"},
+            "spring_stiffness":{"value":500, "help":"Stiffness of spring", "type":"float"}, 
+            "camera_dist":{"value":70, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
             "spring_offset":{"value":0, "help":"String offset for balance state", "type":"float"}, 
-            "time_limit":{"value":30.0/4, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
-            "initial_str":{"value":30000, "help":"Initial strength of force applied", "type":"float"}, 
+            "time_limit":{"value":50.0/4, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
+            "initial_str":{"value":50000, "help":"Initial strength of force applied", "type":"float"}, 
             "initial_stime":{"value":0.1/8, "help":"Initial time to apply force", "type":"float"}, 
             "limit_softness":{"value":0.9, "help":"Softness of the hinge limit", "type":"float"}, 
             "limit_bias":{"value":0.3, "help":"Bias of the hinge limit", "type":"float"}, 
@@ -110,59 +117,59 @@ if __name__=="__main__":
             "state_ban_limit":{"value":1, "help":"While flag_time is 2, used for angle states of hinges to judge whether stop", "type":"float"}, 
             "force_limit":{"value":100, "help":"While flag_time is 2, used for force states of hinges to judge whether stop", "type":"float"}, 
             "torque_limit":{"value":200, "help":"While flag_time is 2, used for torque states of hinges to judge whether stop", "type":"float"}, 
-            "initial_poi":{"value":14, "help":"Unit to apply the force", "type":"int"}, 
-            "flag_time":{"value":1, "help":"Whether open time limit", "type":"int"}}
+            "initial_poi":{"value":24, "help":"Unit to apply the force", "type":"int"}, 
+            "flag_time":{"value":0, "help":"Whether open time limit", "type":"int"}}
 
-    para_search     = {"basic_str":{"range":[1000, 3000, 5000, 7000], "short":"ba"}, 
-            "const_numLinks":{"range":[5, 15, 25], "short":"nu"},
-            #"const_numLinks":{"range":[25], "short":"nu"},
-            "damp":{"range":[0.1, 0.5, 0.9], "key_value": ["linear_damp", "ang_damp"], "short":"dp"},
-            "inter_spring":{"range":[1, 3, 5, 7], "short":"is"},
-            "every_spring":{"range":[2, 3, 5, 7, 9, 11, 13, 17, 21], "short":"es"},
-            "spring_stiffness":{"range":[300, 500, 700, 900], "short":"ss"}
-            }
+    if args.testmode==0:
+        para_search     = {"basic_str":{"range":[1000, 3000, 5000, 7000], "short":"ba"}, 
+                "const_numLinks":{"range":[5, 15, 25], "short":"nu"},
+                #"const_numLinks":{"range":[25], "short":"nu"},
+                "damp":{"range":[0.1, 0.5, 0.9], "key_value": ["linear_damp", "ang_damp"], "short":"dp"},
+                "inter_spring":{"range":[1, 3, 5, 7], "short":"is"},
+                "every_spring":{"range":[2, 3, 5, 7, 9, 11, 13, 17, 21], "short":"es"},
+                "spring_stiffness":{"range":[300, 500, 700, 900], "short":"ss"}
+                }
 
-    #print(len(list(my_product(para_search))))
+        #print(len(list(my_product(para_search))))
 
-    for check_item in my_product(para_search):
+        for check_item in my_product(para_search):
 
-        right_flag      = 1
+            right_flag      = 1
 
-        for key_value in check_item:
-            if check_item[key_value] not in para_search[key_value]['range']:
-                right_flag  = 0
+            for key_value in check_item:
+                if check_item[key_value] not in para_search[key_value]['range']:
+                    right_flag  = 0
 
-        if check_item['every_spring'] > check_item["const_numLinks"]:
-            right_flag      = 0
+            if check_item['every_spring'] > check_item["const_numLinks"]:
+                right_flag      = 0
 
-        if check_item['inter_spring'] > check_item["const_numLinks"]:
-            right_flag      = 0
+            if check_item['inter_spring'] > check_item["const_numLinks"]:
+                right_flag      = 0
 
-        if right_flag==1:
-            all_items.append(check_item)
+            if right_flag==1:
+                all_items.append(check_item)
 
-    #print(len(all_items), all_items[0])
+        #print(len(all_items), all_items[0])
 
 
-    nu_args     = range(int(np.ceil(len(all_items)*1.0/args.mapn)))
-    #nu_args     = range(2)
-    pool = multiprocessing.Pool(processes=args.nproc)
-    r = pool.map_async(run_it, nu_args)
-    r.get()
-    #print('Done!')
-    #run_it(0)
-    '''
-    # Make config files
-    now_config_fn   = "test.cfg"
-    now_mp4_fn      = "test.mp4"
-
-    make_config(config_dict, now_config_fn)
-    if args.mp4flag==1:
-	cmd_tmp         = "%s --config_filename=%s --mp4=%s --start_demo_name=TestHingeTorque"
-	cmd_str         = cmd_tmp % (args.pathexe, now_config_fn, now_mp4_fn)
+        nu_args     = range(int(np.ceil(len(all_items)*1.0/args.mapn)))
+        #nu_args     = range(2)
+        pool = multiprocessing.Pool(processes=args.nproc)
+        r = pool.map_async(run_it, nu_args)
+        r.get()
+        #print('Done!')
+        #run_it(0)
     else:
-        cmd_tmp         = "%s --config_filename=%s --start_demo_name=TestHingeTorque"
-        cmd_str         = cmd_tmp % (args.pathexe, now_config_fn)
+        # Make config files
+        now_config_fn   = "test.cfg"
+        now_mp4_fn      = "test.mp4"
 
-    os.system(cmd_str)
-    '''
+        make_config(config_dict, now_config_fn)
+        if args.mp4flag==1:
+            cmd_tmp         = "%s --config_filename=%s --mp4=%s --start_demo_name=TestHingeTorque"
+            cmd_str         = cmd_tmp % (args.pathexe, now_config_fn, now_mp4_fn)
+        else:
+            cmd_tmp         = "%s --config_filename=%s --start_demo_name=TestHingeTorque"
+            cmd_str         = cmd_tmp % (args.pathexe, now_config_fn)
+
+        os.system(cmd_str)

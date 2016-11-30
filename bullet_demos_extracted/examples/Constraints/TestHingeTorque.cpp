@@ -4,6 +4,7 @@
 #include <iostream>
 #include <iterator>
 #include <fstream>
+#include <vector>
 
 namespace po = boost::program_options;
 using namespace std;
@@ -13,7 +14,7 @@ using namespace std;
 
 short collisionFilterGroup = short(btBroadphaseProxy::CharacterFilter);
 short collisionFilterMask = short(btBroadphaseProxy::AllFilter ^ (btBroadphaseProxy::CharacterFilter));
-static btScalar radius(0.2);
+static btScalar radius(1);
 
 //        btVector3 linkHalfExtents(0.05, 0.37, 0.1);
 //const float x_len_link  = 0.05;
@@ -47,11 +48,15 @@ int limit_numLink = const_numLinks + 1;
 //const float equi_angle = -0.1;
 float equi_angle = 0;
 //const int inter_spring = 1;
-int inter_spring = 5;
+//int inter_spring = 5;
 //const int every_spring = 5;
 //const int every_spring = 8;
 //const int every_spring = 10;
-int every_spring = 1;
+
+vector<int> inter_spring = {5};
+vector<int> every_spring = {1};
+
+//int every_spring = 1;
 //const float spring_stiffness = 220; //Works for 8
 //const float spring_stiffness = 420; //Tmp for 15
 float spring_stiffness = 520;
@@ -249,8 +254,8 @@ void TestHingeTorque::initPhysics()
             ("ang_damp", po::value<float>(), "Control the angle damp ratio")
             ("time_leap", po::value<float>(), "Time unit for simulation")
             ("equi_angle", po::value<float>(), "Control the angle of balance for hinges")
-            ("inter_spring", po::value<int>(), "Number of units between two strings")
-            ("every_spring", po::value<int>(), "Number of units between one strings")
+            ("inter_spring", po::value<vector<int>>()->multitoken(), "Number of units between two strings")
+            ("every_spring", po::value<vector<int>>()->multitoken(), "Number of units between one strings")
             ("spring_stiffness", po::value<float>(), "Stiffness of spring")
             ("camera_dist", po::value<float>(), "Distance of camera")
             ("spring_offset", po::value<float>(), "String offset for balance state")
@@ -312,10 +317,15 @@ void TestHingeTorque::initPhysics()
         }
 
         if (vm.count("inter_spring")){
-            inter_spring    = vm["inter_spring"].as<int>();
+            inter_spring    = vm["inter_spring"].as< vector<int> >();
         }
         if (vm.count("every_spring")){
-            every_spring    = vm["every_spring"].as<int>();
+            every_spring    = vm["every_spring"].as< vector<int> >();
+        }
+
+        if (every_spring.size()!=inter_spring.size()){
+            cerr << "error: size not equal!" << endl;
+            exit(0);
         }
 
         if (vm.count("spring_stiffness")){
@@ -407,6 +417,9 @@ void TestHingeTorque::initPhysics()
         btVector3 baseHalfExtents(x_len_link, y_len_link, z_len_link);
 
         btBoxShape* baseBox = new btBoxShape(baseHalfExtents);
+        btBoxShape* linkBox1 = new btBoxShape(linkHalfExtents);
+		btSphereShape* linkSphere = new btSphereShape(radius);
+
         //btVector3 basePosition = btVector3(-0.4f, 3.f, 0.f);
         btVector3 basePosition = btVector3(-0.4f, 7.f, 0.f);
         btTransform baseWorldTrans;
@@ -415,17 +428,42 @@ void TestHingeTorque::initPhysics()
         
         //mbC->forceMultiDof();							//if !spherical, you can comment this line to check the 1DoF algorithm
         //init the base
-        btVector3 baseInertiaDiag(0.f, 0.f, 0.f);
+        //btVector3 baseInertiaDiag(0.f, 0.f, 0.f);
         float baseMass = 0.f;
         float linkMass = 1.f;
         
-        btRigidBody* base = createRigidBody(baseMass,baseWorldTrans,baseBox);
-        m_dynamicsWorld->removeRigidBody(base);
-        base->setDamping(0,0);
-        m_dynamicsWorld->addRigidBody(base,collisionFilterGroup,collisionFilterMask);
-        btBoxShape* linkBox1 = new btBoxShape(linkHalfExtents);
-		btSphereShape* linkSphere = new btSphereShape(radius);
+        // Create the base ball
+        btVector3 basePosition_ball = btVector3(-0.4f, 7.f + y_len_link + radius, 0.f);
+        btTransform baseWorldTrans_ball;
+        baseWorldTrans_ball.setIdentity();
+        baseWorldTrans_ball.setOrigin(basePosition_ball);
+
+        btRigidBody* base_ball = createRigidBody(baseMass,baseWorldTrans_ball,linkSphere);
+        m_dynamicsWorld->removeRigidBody(base_ball);
+        base_ball->setDamping(0,0);
+        m_dynamicsWorld->addRigidBody(base_ball,collisionFilterGroup,collisionFilterMask);
 		
+        // Create the base box
+        btRigidBody* base = createRigidBody(linkMass,baseWorldTrans,baseBox);
+        m_dynamicsWorld->removeRigidBody(base);
+        base->setDamping(linear_damp,ang_damp);
+        m_dynamicsWorld->addRigidBody(base,collisionFilterGroup,collisionFilterMask);
+
+        btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, -radius, 0));						//par body's COM to cur body's COM offset
+        btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, radius, 0));							//cur body's COM to cur body's PIV offset
+        btGeneric6DofSpring2Constraint* fixed = new btGeneric6DofSpring2Constraint(*base_ball, *base,pivotInA,pivotInB);
+        fixed->setLinearLowerLimit(btVector3(0,0,0));
+        fixed->setLinearUpperLimit(btVector3(0,0,0));
+        fixed->setAngularLowerLimit(btVector3(0,-1,0));
+        fixed->setAngularUpperLimit(btVector3(0,1,0));
+        for (int indx_tmp=3;indx_tmp<6;indx_tmp++){
+            fixed->enableSpring(indx_tmp, true);
+            fixed->setStiffness(indx_tmp, basic_str*const_numLinks/2);
+        }
+        fixed->setEquilibriumPoint();
+
+        m_dynamicsWorld->addConstraint(fixed,true);
+
         btRigidBody* prevBody = base;
         
         for (int i=0;i<numLinks;i++)
@@ -472,28 +510,31 @@ void TestHingeTorque::initPhysics()
                 hinge->setLimit(limit_low, limit_up, limit_softness, limit_bias, limit_relax);
                 m_allhinges.push_back(hinge);
 				con = hinge;
+                
+                // Create a spring constraint if needed
+                for (int spring_indx=0;spring_indx < every_spring.size();spring_indx++){
+                    int tmp_every_spring    = every_spring[spring_indx];
+                    int tmp_inter_spring    = inter_spring[spring_indx];
 
-                                if ((i>every_spring-2) && (i % inter_spring==0)){
-                                    //btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, -linkHalfExtents[1], 0));
-                                    //btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, linkHalfExtents[1], 0));
-                                    btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, -every_spring*linkHalfExtents[1]+spring_offset, 0));
-                                    btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, every_spring*linkHalfExtents[1]-spring_offset, 0));
-                                    btGeneric6DofSpring2Constraint* fixed;
+                    if ((i>tmp_every_spring-2) && (i % tmp_inter_spring==0)){
+                        btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, -tmp_every_spring*linkHalfExtents[1]+spring_offset, 0));
+                        btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, tmp_every_spring*linkHalfExtents[1]-spring_offset, 0));
+                        btGeneric6DofSpring2Constraint* fixed;
 
-                                    if (i-every_spring>-1) {
-                                        fixed = new btGeneric6DofSpring2Constraint(*m_allbones[i-(every_spring)], *linkBody,pivotInA,pivotInB);
-                                    } else {
-                                        fixed = new btGeneric6DofSpring2Constraint(*base, *linkBody,pivotInA,pivotInB);
-                                    }
-                                    //for (int indx_tmp=0;indx_tmp<3;indx_tmp++){
-                                    for (int indx_tmp=0;indx_tmp<6;indx_tmp++){
-                                        fixed->enableSpring(indx_tmp, true);
-                                        //fixed->setStiffness(indx_tmp, 10);
-                                        fixed->setStiffness(indx_tmp, spring_stiffness);
-                                    }
-                                    fixed->setEquilibriumPoint();
-                                    m_dynamicsWorld->addConstraint(fixed,true);
-                                }
+                        if (i-tmp_every_spring>-1) {
+                            fixed = new btGeneric6DofSpring2Constraint(*m_allbones[i-(tmp_every_spring)], *linkBody,pivotInA,pivotInB);
+                        } else {
+                            fixed = new btGeneric6DofSpring2Constraint(*base, *linkBody,pivotInA,pivotInB);
+                        }
+                        //for (int indx_tmp=0;indx_tmp<3;indx_tmp++){
+                        for (int indx_tmp=0;indx_tmp<6;indx_tmp++){
+                            fixed->enableSpring(indx_tmp, true);
+                            fixed->setStiffness(indx_tmp, spring_stiffness);
+                        }
+                        fixed->setEquilibriumPoint();
+                        m_dynamicsWorld->addConstraint(fixed,true);
+                    }
+                }
 			} else
 			{
 				
