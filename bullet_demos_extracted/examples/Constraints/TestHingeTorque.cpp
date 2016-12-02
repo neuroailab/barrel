@@ -15,19 +15,20 @@ using namespace std;
 short collisionFilterGroup = short(btBroadphaseProxy::CharacterFilter);
 short collisionFilterMask = short(btBroadphaseProxy::AllFilter ^ (btBroadphaseProxy::CharacterFilter));
 
-float x_pos_base    = -0.4;
-float y_pos_base    = 7;
-float z_pos_base    = 0;
+vector<float> x_pos_base    = {-0.4};
+vector<float> y_pos_base    = {7};
+vector<float> z_pos_base    = {0};
+vector<int> const_numLinks  = {15};
+
 float x_len_link    = 0.53;
 float y_len_link    = 2.08;
 float z_len_link    = 0.3;
 float radius        = 1;
 float basic_str     = 3000;
-int const_numLinks  = 15;
 float linear_damp   = 0.77;
 float ang_damp      = 0.79;
 float time_leap     = 1.0/240.0;
-int limit_numLink   = const_numLinks + 1;
+//int limit_numLink   = const_numLinks + 1;
 float equi_angle    = 0;
 
 vector<int> inter_spring = {5};
@@ -62,9 +63,9 @@ struct TestHingeTorque : public CommonRigidBodyBase{
     float curr_state;
     float curr_force;
     float curr_torque;
-    btAlignedObjectArray<btJointFeedback*> m_jointFeedback;
-    btAlignedObjectArray<btRigidBody*> m_allbones;
-    btAlignedObjectArray<btHingeConstraint*> m_allhinges;
+    //btAlignedObjectArray<btJointFeedback*> m_jointFeedback;
+    btAlignedObjectArray< btAlignedObjectArray< btRigidBody* > > m_allbones_big_list;
+    btAlignedObjectArray< btAlignedObjectArray< btHingeConstraint* > > m_allhinges_big_list;
 
 	TestHingeTorque(struct GUIHelperInterface* helper);
 	virtual ~ TestHingeTorque();
@@ -90,9 +91,11 @@ TestHingeTorque::TestHingeTorque(struct GUIHelperInterface* helper)
 m_once(true){
 }
 TestHingeTorque::~ TestHingeTorque(){
+    /*
 	for (int i=0;i<m_jointFeedback.size();i++){
 		delete m_jointFeedback[i];
 	}
+    */
 }
 
 void TestHingeTorque::stepSimulation(float deltaTime){
@@ -125,11 +128,18 @@ void TestHingeTorque::stepSimulation(float deltaTime){
     curr_torque = 0;
 
     static int count = 0;
+    int all_size_for_big_list   = 0;
     //if ((count& 0x0f)==0)
-    if (1)
-    {
+    //if (1)
+    for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) {
+        btAlignedObjectArray< btRigidBody* > m_allbones;
+        btAlignedObjectArray< btHingeConstraint* > m_allhinges;
+
+        m_allbones      = m_allbones_big_list[big_list_indx];
+        m_allhinges     = m_allhinges_big_list[big_list_indx];
+
         int all_size    = m_allbones.size();
-        btRigidBody* base = btRigidBody::upcast(m_dynamicsWorld->getCollisionObjectArray()[0]);
+        //btRigidBody* base = btRigidBody::upcast(m_dynamicsWorld->getCollisionObjectArray()[0]);
 
         if (hinge_mode==1){
             for (int i=0;i<all_size;i++){
@@ -143,7 +153,7 @@ void TestHingeTorque::stepSimulation(float deltaTime){
 
                 btScalar tmp_angle_high     = m_allhinges[i]->getHingeAngle() - equi_angle;
 
-                btVector3 tmp_force_now     = tmp_direction*tmp_angle_high*basic_str*(m_allbones.size() - i)/2;
+                btVector3 tmp_force_now     = tmp_direction*tmp_angle_high*basic_str*(all_size - i)/2;
                 m_allbones[i]->applyForce(tmp_force_now, -tmp_point);
 
                 if (i < all_size -1){
@@ -164,21 +174,23 @@ void TestHingeTorque::stepSimulation(float deltaTime){
             curr_torque += m_allbones[i]->getTotalTorque().norm();
         }
 
-        if (pass_time < initial_stime){
+        if ((pass_time < initial_stime) && (initial_poi < all_size)){
             m_allbones[initial_poi]->applyForce(btVector3(0,0,initial_str), btVector3(0,0,0));
         }
-
-        curr_velo   /= all_size;
-        curr_angl   /= all_size;
-        curr_force  /= all_size;
-        curr_torque /= all_size;
 
         for (int i=0;i<m_allhinges.size();i++){
             curr_state  += m_allhinges[i]->getHingeAngle() - limit_up;
         }
-        curr_state  /= m_allhinges.size();
+
+        all_size_for_big_list   += all_size;
     }
     count++;
+    curr_velo   /= all_size_for_big_list;
+    curr_angl   /= all_size_for_big_list;
+    curr_force  /= all_size_for_big_list;
+    curr_torque /= all_size_for_big_list;
+    curr_state  /= all_size_for_big_list;
+
 
     if (flag_time==2){
         if ((curr_velo < velo_ban_limit) && (curr_state < state_ban_limit) && (curr_angl < angl_ban_limit) && (curr_force < force_limit) && (curr_torque < torque_limit)){
@@ -195,23 +207,23 @@ void TestHingeTorque::stepSimulation(float deltaTime){
 void TestHingeTorque::initPhysics(){
 	int upAxis = 1;
     pass_time   = 0;
-    m_allbones.clear();
-    m_allhinges.clear();
+    m_allbones_big_list.clear();
+    m_allhinges_big_list.clear();
     
     b3Printf("Config name = %s",m_guiHelper->getconfigname());
     try {
         po::options_description desc("Allowed options");
         desc.add_options()
             ("help", "produce help message")
-            ("x_pos_base", po::value<float>(), "Position x of base")
-            ("y_pos_base", po::value<float>(), "Position y of base")
-            ("z_pos_base", po::value<float>(), "Position z of base")
+            ("x_pos_base", po::value<vector<float>>()->multitoken(), "Position x of base")
+            ("y_pos_base", po::value<vector<float>>()->multitoken(), "Position y of base")
+            ("z_pos_base", po::value<vector<float>>()->multitoken(), "Position z of base")
+            ("const_numLinks", po::value<vector<int>>()->multitoken(), "Number of units")
             ("x_len_link", po::value<float>(), "Size x of cubes")
             ("y_len_link", po::value<float>(), "Size y of cubes")
             ("z_len_link", po::value<float>(), "Size z of cubes")
             ("radius", po::value<float>(), "Size of the ball at top")
             ("basic_str", po::value<float>(), "Minimal strength of hinge's recover force")
-            ("const_numLinks", po::value<int>(), "Number of units")
             ("linear_damp", po::value<float>(), "Control the linear damp ratio")
             ("ang_damp", po::value<float>(), "Control the angle damp ratio")
             ("time_leap", po::value<float>(), "Time unit for simulation")
@@ -246,13 +258,21 @@ void TestHingeTorque::initPhysics(){
         po::notify(vm);    
 
         if (vm.count("x_pos_base")){
-            x_pos_base      = vm["x_pos_base"].as<float>();
+            x_pos_base      = vm["x_pos_base"].as< vector<float> >();
         }
         if (vm.count("y_pos_base")){
-            y_pos_base      = vm["y_pos_base"].as<float>();
+            y_pos_base      = vm["y_pos_base"].as< vector<float> >();
         }
         if (vm.count("z_pos_base")){
-            z_pos_base      = vm["z_pos_base"].as<float>();
+            z_pos_base      = vm["z_pos_base"].as< vector<float> >();
+        }
+        if (vm.count("const_numLinks")){
+            const_numLinks  = vm["const_numLinks"].as< vector<int> >();
+        }
+        //limit_numLink = const_numLinks + 1;
+        if ((x_pos_base.size()!=y_pos_base.size()) || (y_pos_base.size()!=z_pos_base.size()) || (x_pos_base.size()!=const_numLinks.size())){
+            cerr << "error: size not equal for (xyz,num)!" << endl;
+            exit(0);
         }
 
         if (vm.count("x_len_link")){
@@ -272,10 +292,6 @@ void TestHingeTorque::initPhysics(){
             basic_str       = vm["basic_str"].as<float>();
         }
 
-        if (vm.count("const_numLinks")){
-            const_numLinks  = vm["const_numLinks"].as<int>();
-        }
-        limit_numLink = const_numLinks + 1;
 
         if (vm.count("linear_damp")){
             linear_damp     = vm["linear_damp"].as<float>();
@@ -385,19 +401,24 @@ void TestHingeTorque::initPhysics(){
 				+btIDebugDraw::DBG_DrawConstraintLimits;
 	m_dynamicsWorld->getDebugDrawer()->setDebugMode(mode);
 
-	{ // create a door using hinge constraint attached to the world
+
+    btVector3 linkHalfExtents(x_len_link, y_len_link, z_len_link);
+    btVector3 baseHalfExtents(x_len_link, y_len_link, z_len_link);
+
+    btBoxShape* baseBox = new btBoxShape(baseHalfExtents);
+    btBoxShape* linkBox1 = new btBoxShape(linkHalfExtents);
+    btSphereShape* linkSphere = new btSphereShape(radius);
+
+    for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) { // create a door using hinge constraint attached to the world
+
+        btAlignedObjectArray< btRigidBody* > m_allbones;
+        btAlignedObjectArray< btHingeConstraint* > m_allhinges;
+
+        m_allbones.clear();
+        m_allhinges.clear();
         
-        int numLinks = const_numLinks;
-
-        btVector3 linkHalfExtents(x_len_link, y_len_link, z_len_link);
-        btVector3 baseHalfExtents(x_len_link, y_len_link, z_len_link);
-
-        btBoxShape* baseBox = new btBoxShape(baseHalfExtents);
-        btBoxShape* linkBox1 = new btBoxShape(linkHalfExtents);
-		btSphereShape* linkSphere = new btSphereShape(radius);
-
-        //btVector3 basePosition = btVector3(-0.4f, 3.f, 0.f);
-        btVector3 basePosition = btVector3( x_pos_base, y_pos_base, z_pos_base);
+        int numLinks = const_numLinks[big_list_indx];
+        btVector3 basePosition = btVector3( x_pos_base[big_list_indx], y_pos_base[big_list_indx], z_pos_base[big_list_indx]);
         btTransform baseWorldTrans;
         baseWorldTrans.setIdentity();
         baseWorldTrans.setOrigin(basePosition);
@@ -406,7 +427,7 @@ void TestHingeTorque::initPhysics(){
         float linkMass = 1.f;
         
         // Create the base ball
-        btVector3 basePosition_ball = btVector3(x_pos_base, y_pos_base + y_len_link + radius, z_pos_base);
+        btVector3 basePosition_ball = btVector3(x_pos_base[big_list_indx], y_pos_base[big_list_indx] + y_len_link + radius, z_pos_base[big_list_indx]);
         btTransform baseWorldTrans_ball;
         baseWorldTrans_ball.setIdentity();
         baseWorldTrans_ball.setOrigin(basePosition_ball);
@@ -432,7 +453,7 @@ void TestHingeTorque::initPhysics(){
         fixed->setAngularUpperLimit(btVector3(0,1,0));
         for (int indx_tmp=3;indx_tmp<6;indx_tmp++){
             fixed->enableSpring(indx_tmp, true);
-            fixed->setStiffness(indx_tmp, basic_str*const_numLinks/2);
+            fixed->setStiffness(indx_tmp, basic_str*numLinks/2);
         }
         fixed->setEquilibriumPoint();
 
@@ -448,21 +469,31 @@ void TestHingeTorque::initPhysics(){
             
 			btCollisionShape* colOb = 0;
 			
+            colOb = linkBox1;
+            /*
 			if (i<limit_numLink){
 				colOb = linkBox1;
 			} else {
 				colOb = linkSphere;
 			}
+            */
+
             btRigidBody* linkBody = createRigidBody(linkMass,linkTrans,colOb);
             m_dynamicsWorld->removeRigidBody(linkBody);
             linkBody->setDamping(linear_damp,ang_damp);
             m_dynamicsWorld->addRigidBody(linkBody,collisionFilterGroup,collisionFilterMask);
+
+            m_allbones.push_back(linkBody);
+            /*
             if (i<limit_numLink){
                 m_allbones.push_back(linkBody);
             }
+            */
+
 			btTypedConstraint* con = 0;
 			
-			if (i<limit_numLink){
+			//if (i<limit_numLink){
+			if (1) {
 				//create a hinge constraint
                 if (hinge_mode==1){
                     btVector3 pivotInA(0,-linkHalfExtents[1],0);
@@ -525,20 +556,22 @@ void TestHingeTorque::initPhysics(){
 				//fixed->setLinearUpperLimit(btVector3(0,0,0));
 				//fixed->setAngularLowerLimit(btVector3(0,0,0));
 				//fixed->setAngularUpperLimit(btVector3(0,0,0));
-				
 				con = fixed;
-
 			}
+
 			btAssert(con);
 			if (con){
-				btJointFeedback* fb = new btJointFeedback();
+				/* btJointFeedback* fb = new btJointFeedback();
 				m_jointFeedback.push_back(fb);
-				con->setJointFeedback(fb);
+				con->setJointFeedback(fb); */
 
 				m_dynamicsWorld->addConstraint(con,true);
 			}
 			prevBody = linkBody;
+
         }
+        m_allbones_big_list.push_back(m_allbones);
+        m_allhinges_big_list.push_back(m_allhinges);
 	}
 	
     /*
