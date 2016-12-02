@@ -14,56 +14,27 @@ using namespace std;
 
 short collisionFilterGroup = short(btBroadphaseProxy::CharacterFilter);
 short collisionFilterMask = short(btBroadphaseProxy::AllFilter ^ (btBroadphaseProxy::CharacterFilter));
-static btScalar radius(1);
 
-//        btVector3 linkHalfExtents(0.05, 0.37, 0.1);
-//const float x_len_link  = 0.05;
-//const float x_len_link  = 0.03;
-float x_len_link  = 0.53;
-//const float y_len_link  = 0.37;
-//const float y_len_link  = 0.18;
-float y_len_link  = 2.08;
-//const float y_len_link  = 0.15;
-//const float z_len_link  = 0.1;
-float z_len_link  = 0.3;
-//const float basic_str   = 2000;
-float basic_str   = 3000;
-//const int const_numLinks = 8;
-//const int const_numLinks = 8;
-int const_numLinks = 15;
-//const int const_numLinks = 25;
-//const int const_numLinks = 2;
-//const int const_numLinks = 2;
-//const float linear_damp = 0.7;
-//const float ang_damp = 0.9;
-//const float linear_damp = 0.37;
-//const float ang_damp = 0.39;
-float linear_damp = 0.77;
-float ang_damp = 0.79;
-//const float linear_damp = 0.07;
-//const float ang_damp = 0.09;
-float time_leap = 1.0/240.0;
-//const int limit_numLink = const_numLinks - 1;
-int limit_numLink = const_numLinks + 1;
-//const float equi_angle = -0.1;
-float equi_angle = 0;
-//const int inter_spring = 1;
-//int inter_spring = 5;
-//const int every_spring = 5;
-//const int every_spring = 8;
-//const int every_spring = 10;
+float x_pos_base    = -0.4;
+float y_pos_base    = 7;
+float z_pos_base    = 0;
+float x_len_link    = 0.53;
+float y_len_link    = 2.08;
+float z_len_link    = 0.3;
+float radius        = 1;
+float basic_str     = 3000;
+int const_numLinks  = 15;
+float linear_damp   = 0.77;
+float ang_damp      = 0.79;
+float time_leap     = 1.0/240.0;
+int limit_numLink   = const_numLinks + 1;
+float equi_angle    = 0;
 
 vector<int> inter_spring = {5};
 vector<int> every_spring = {1};
 
-//int every_spring = 1;
-//const float spring_stiffness = 220; //Works for 8
-//const float spring_stiffness = 420; //Tmp for 15
 float spring_stiffness = 520;
 float camera_dist     = 45;
-//const float linear_damp = 0.95;
-//const float ang_damp = 0.9;
-//const float spring_offset   = 0.5;
 float spring_offset   = 0;
 float time_limit    = 5.0/4;
 float initial_str   = 10000;
@@ -80,10 +51,10 @@ float velo_ban_limit    = 1;
 float angl_ban_limit    = 1;
 float force_limit       = 1;
 float torque_limit      = 1;
-//int debug_flag          = 
 
-struct TestHingeTorque : public CommonRigidBodyBase
-{
+int hinge_mode          = 1;
+
+struct TestHingeTorque : public CommonRigidBodyBase{
     bool m_once;
     float pass_time;
     float curr_velo;
@@ -102,9 +73,7 @@ struct TestHingeTorque : public CommonRigidBodyBase
 	virtual void stepSimulation(float deltaTime);
 
 	
-	virtual void resetCamera()
-	{
-    
+	virtual void resetCamera(){
         //float dist = 5;
         float dist = camera_dist;
         //float dist = 15;
@@ -114,27 +83,20 @@ struct TestHingeTorque : public CommonRigidBodyBase
         float targetPos[3]={-1.34,5.4,-0.44};
         m_guiHelper->resetCamera(dist,pitch,yaw,targetPos[0],targetPos[1],targetPos[2]);
 	}
-	
-
 };
 
 TestHingeTorque::TestHingeTorque(struct GUIHelperInterface* helper)
 :CommonRigidBodyBase(helper),
-m_once(true)
-{
+m_once(true){
 }
-TestHingeTorque::~ TestHingeTorque()
-{
-	for (int i=0;i<m_jointFeedback.size();i++)
-	{
+TestHingeTorque::~ TestHingeTorque(){
+	for (int i=0;i<m_jointFeedback.size();i++){
 		delete m_jointFeedback[i];
 	}
-
 }
 
-
-void TestHingeTorque::stepSimulation(float deltaTime)
-{
+void TestHingeTorque::stepSimulation(float deltaTime){
+    /*
     if (0)//m_once)
     {
         m_once=false;
@@ -147,22 +109,21 @@ void TestHingeTorque::stepSimulation(float deltaTime)
         hinge->getRigidBodyB().applyTorque(hingeAxisInWorld*10);
         
     }
+    */
     
     m_dynamicsWorld->stepSimulation(time_leap,0);
-
     pass_time   = pass_time + time_leap;
-
     if (flag_time==1){
         if (pass_time > time_limit){
             exit(0);
         }
     }
-	
     curr_velo   = 0;
     curr_angl   = 0;
     curr_state  = 0;
     curr_force  = 0;
     curr_torque = 0;
+
     static int count = 0;
     //if ((count& 0x0f)==0)
     if (1)
@@ -170,32 +131,30 @@ void TestHingeTorque::stepSimulation(float deltaTime)
         int all_size    = m_allbones.size();
         btRigidBody* base = btRigidBody::upcast(m_dynamicsWorld->getCollisionObjectArray()[0]);
 
-        for (int i=0;i<all_size;i++){
-            btVector3 tmp_center_pos = m_allbones[i]->getCenterOfMassPosition();
+        if (hinge_mode==1){
+            for (int i=0;i<all_size;i++){
+                btVector3 tmp_center_pos = m_allbones[i]->getCenterOfMassPosition();
 
-            btTransform tmp_trans = m_allbones[i]->getCenterOfMassTransform();
-            btVector3 tmp_pos = tmp_trans(btVector3(0,0,-z_len_link));
-            btVector3 tmp_direction = tmp_center_pos - tmp_pos;
-            btVector3 tmp_pos_f = tmp_trans(btVector3(0,y_len_link,0));
-            btVector3 tmp_point     = tmp_pos_f - tmp_center_pos;
-
-            btScalar tmp_angle_high     = m_allhinges[i]->getHingeAngle() - equi_angle;
-
-            btVector3 tmp_force_now     = tmp_direction*tmp_angle_high*basic_str*(m_allbones.size() - i)/2;
-            m_allbones[i]->applyForce(tmp_force_now, -tmp_point);
-
-            if (i < all_size -1){
-                btTransform tmp_trans = m_allbones[i+1]->getCenterOfMassTransform();
-                btVector3 tmp_pos = tmp_trans(btVector3(0,0,z_len_link));
-                btVector3 tmp_pos_f = tmp_trans(btVector3(0,-y_len_link,0));
+                btTransform tmp_trans = m_allbones[i]->getCenterOfMassTransform();
+                btVector3 tmp_pos = tmp_trans(btVector3(0,0,-z_len_link));
+                btVector3 tmp_direction = tmp_center_pos - tmp_pos;
+                btVector3 tmp_pos_f = tmp_trans(btVector3(0,y_len_link,0));
                 btVector3 tmp_point     = tmp_pos_f - tmp_center_pos;
-                m_allbones[i+1]->applyForce(-tmp_force_now, -tmp_point);
-            }
 
-            if ((i==initial_poi) && (pass_time < initial_stime)){
-                m_allbones[i]->applyForce(btVector3(0,0,initial_str), btVector3(0,0,0));
-            }
+                btScalar tmp_angle_high     = m_allhinges[i]->getHingeAngle() - equi_angle;
 
+                btVector3 tmp_force_now     = tmp_direction*tmp_angle_high*basic_str*(m_allbones.size() - i)/2;
+                m_allbones[i]->applyForce(tmp_force_now, -tmp_point);
+
+                if (i < all_size -1){
+                    btTransform tmp_trans = m_allbones[i+1]->getCenterOfMassTransform();
+                    btVector3 tmp_pos = tmp_trans(btVector3(0,0,z_len_link));
+                    btVector3 tmp_pos_f = tmp_trans(btVector3(0,-y_len_link,0));
+                    btVector3 tmp_point     = tmp_pos_f - tmp_center_pos;
+                    m_allbones[i+1]->applyForce(-tmp_force_now, -tmp_point);
+                }
+
+            }
         }
 
         for (int i=0;i<all_size;i++){
@@ -203,6 +162,10 @@ void TestHingeTorque::stepSimulation(float deltaTime)
             curr_angl   += m_allbones[i]->getAngularVelocity().norm();
             curr_force  += m_allbones[i]->getTotalForce().norm();
             curr_torque += m_allbones[i]->getTotalTorque().norm();
+        }
+
+        if (pass_time < initial_stime){
+            m_allbones[initial_poi]->applyForce(btVector3(0,0,initial_str), btVector3(0,0,0));
         }
 
         curr_velo   /= all_size;
@@ -229,25 +192,24 @@ void TestHingeTorque::stepSimulation(float deltaTime)
 
 
 
-void TestHingeTorque::initPhysics()
-{
+void TestHingeTorque::initPhysics(){
 	int upAxis = 1;
     pass_time   = 0;
     m_allbones.clear();
     m_allhinges.clear();
     
-    //b3Printf("Config name = %s",m_guiHelper->m_data->m_glApp->configname);
-    //b3Printf("Config name = %s",m_guiHelper->configname);
     b3Printf("Config name = %s",m_guiHelper->getconfigname());
-
     try {
-
         po::options_description desc("Allowed options");
         desc.add_options()
             ("help", "produce help message")
+            ("x_pos_base", po::value<float>(), "Position x of base")
+            ("y_pos_base", po::value<float>(), "Position y of base")
+            ("z_pos_base", po::value<float>(), "Position z of base")
             ("x_len_link", po::value<float>(), "Size x of cubes")
             ("y_len_link", po::value<float>(), "Size y of cubes")
             ("z_len_link", po::value<float>(), "Size z of cubes")
+            ("radius", po::value<float>(), "Size of the ball at top")
             ("basic_str", po::value<float>(), "Minimal strength of hinge's recover force")
             ("const_numLinks", po::value<int>(), "Number of units")
             ("linear_damp", po::value<float>(), "Control the linear damp ratio")
@@ -274,6 +236,7 @@ void TestHingeTorque::initPhysics()
             ("angl_ban_limit", po::value<float>(), "While flag_time is 2, used for angular velocities of rigid bodys to judge whether stop")
             ("force_limit", po::value<float>(), "While flag_time is 2, used for forces of rigid bodys to judge whether stop")
             ("torque_limit", po::value<float>(), "While flag_time is 2, used for torques of rigid bodys to judge whether stop")
+            ("hinge_mode", po::value<int>(), "Whether use hinges rather than springs for connections of two units")
         ;
 
         po::variables_map vm;
@@ -281,6 +244,16 @@ void TestHingeTorque::initPhysics()
         ifstream ifs(file_name);
         po::store(po::parse_config_file(ifs, desc), vm);
         po::notify(vm);    
+
+        if (vm.count("x_pos_base")){
+            x_pos_base      = vm["x_pos_base"].as<float>();
+        }
+        if (vm.count("y_pos_base")){
+            y_pos_base      = vm["y_pos_base"].as<float>();
+        }
+        if (vm.count("z_pos_base")){
+            z_pos_base      = vm["z_pos_base"].as<float>();
+        }
 
         if (vm.count("x_len_link")){
             x_len_link      = vm["x_len_link"].as<float>();
@@ -290,6 +263,9 @@ void TestHingeTorque::initPhysics()
         }
         if (vm.count("z_len_link")){
             z_len_link      = vm["z_len_link"].as<float>();
+        }
+        if (vm.count("radius")){
+            radius          = vm["radius"].as<float>();
         }
 
         if (vm.count("basic_str")){
@@ -384,6 +360,10 @@ void TestHingeTorque::initPhysics()
         if (vm.count("torque_limit")){
             torque_limit    = vm["torque_limit"].as<float>();
         }
+
+        if (vm.count("hinge_mode")){
+            hinge_mode      = vm["hinge_mode"].as<int>();
+        }
     }
     catch(exception& e) {
         cerr << "error: " << e.what() << "\n";
@@ -397,7 +377,6 @@ void TestHingeTorque::initPhysics()
 	createEmptyDynamicsWorld();
 	m_dynamicsWorld->getSolverInfo().m_splitImpulse = false;
 	
-        //m_dynamicsWorld->setGravity(btVector3(0,0,-10));
     m_dynamicsWorld->setGravity(btVector3(0,0,0));
     
 	m_guiHelper->createPhysicsDebugDrawer(m_dynamicsWorld);
@@ -406,13 +385,10 @@ void TestHingeTorque::initPhysics()
 				+btIDebugDraw::DBG_DrawConstraintLimits;
 	m_dynamicsWorld->getDebugDrawer()->setDebugMode(mode);
 
-
 	{ // create a door using hinge constraint attached to the world
         
         int numLinks = const_numLinks;
-        bool spherical = false;					//set it ot false -to use 1DoF hinges instead of 3DoF sphericals
-        bool canSleep = false;
-        bool selfCollide = false;
+
         btVector3 linkHalfExtents(x_len_link, y_len_link, z_len_link);
         btVector3 baseHalfExtents(x_len_link, y_len_link, z_len_link);
 
@@ -421,19 +397,16 @@ void TestHingeTorque::initPhysics()
 		btSphereShape* linkSphere = new btSphereShape(radius);
 
         //btVector3 basePosition = btVector3(-0.4f, 3.f, 0.f);
-        btVector3 basePosition = btVector3(-0.4f, 7.f, 0.f);
+        btVector3 basePosition = btVector3( x_pos_base, y_pos_base, z_pos_base);
         btTransform baseWorldTrans;
         baseWorldTrans.setIdentity();
         baseWorldTrans.setOrigin(basePosition);
         
-        //mbC->forceMultiDof();							//if !spherical, you can comment this line to check the 1DoF algorithm
-        //init the base
-        //btVector3 baseInertiaDiag(0.f, 0.f, 0.f);
         float baseMass = 0.f;
         float linkMass = 1.f;
         
         // Create the base ball
-        btVector3 basePosition_ball = btVector3(-0.4f, 7.f + y_len_link + radius, 0.f);
+        btVector3 basePosition_ball = btVector3(x_pos_base, y_pos_base + y_len_link + radius, z_pos_base);
         btTransform baseWorldTrans_ball;
         baseWorldTrans_ball.setIdentity();
         baseWorldTrans_ball.setOrigin(basePosition_ball);
@@ -449,6 +422,7 @@ void TestHingeTorque::initPhysics()
         base->setDamping(linear_damp,ang_damp);
         m_dynamicsWorld->addRigidBody(base,collisionFilterGroup,collisionFilterMask);
 
+        // Special spring for base ball and base box unit 
         btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, -radius, 0));						//par body's COM to cur body's COM offset
         btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, radius, 0));							//cur body's COM to cur body's PIV offset
         btGeneric6DofSpring2Constraint* fixed = new btGeneric6DofSpring2Constraint(*base_ball, *base,pivotInA,pivotInB);
@@ -466,8 +440,7 @@ void TestHingeTorque::initPhysics()
 
         btRigidBody* prevBody = base;
         
-        for (int i=0;i<numLinks;i++)
-        {
+        for (int i=0;i<numLinks;i++){
             btTransform linkTrans;
             linkTrans = baseWorldTrans;
             
@@ -475,41 +448,49 @@ void TestHingeTorque::initPhysics()
             
 			btCollisionShape* colOb = 0;
 			
-			if (i<limit_numLink)
-			{
+			if (i<limit_numLink){
 				colOb = linkBox1;
-			} else 
-			{
+			} else {
 				colOb = linkSphere;
 			}
             btRigidBody* linkBody = createRigidBody(linkMass,linkTrans,colOb);
             m_dynamicsWorld->removeRigidBody(linkBody);
-            //linkBody->setDamping(0,0);
             linkBody->setDamping(linear_damp,ang_damp);
-            //linkBody->m_additionalDamping   = true;
             m_dynamicsWorld->addRigidBody(linkBody,collisionFilterGroup,collisionFilterMask);
             if (i<limit_numLink){
                 m_allbones.push_back(linkBody);
             }
 			btTypedConstraint* con = 0;
 			
-			if (i<limit_numLink)
-			{
+			if (i<limit_numLink){
 				//create a hinge constraint
-				btVector3 pivotInA(0,-linkHalfExtents[1],0);
-				btVector3 pivotInB(0,linkHalfExtents[1],0);
-				btVector3 axisInA(1,0,0);
-				btVector3 axisInB(1,0,0);
-				bool useReferenceA = true;
-				btHingeConstraint* hinge = new btHingeConstraint(*prevBody,*linkBody,
-                                                                                 pivotInA,pivotInB,
-                                                                                 axisInA,axisInB,useReferenceA);
-                                //hinge->setLimit(-1.f, 1.f, 100.9f, 1.3f, 1.0f);
-                                //hinge->setLimit(-2.f, 2.f);
-                                //
-                hinge->setLimit(limit_low, limit_up, limit_softness, limit_bias, limit_relax);
-                m_allhinges.push_back(hinge);
-				con = hinge;
+                if (hinge_mode==1){
+                    btVector3 pivotInA(0,-linkHalfExtents[1],0);
+                    btVector3 pivotInB(0,linkHalfExtents[1],0);
+                    btVector3 axisInA(1,0,0);
+                    btVector3 axisInB(1,0,0);
+                    bool useReferenceA = true;
+                    btHingeConstraint* hinge = new btHingeConstraint(*prevBody,*linkBody,
+                        pivotInA,pivotInB,
+                        axisInA,axisInB,useReferenceA);
+                    hinge->setLimit(limit_low, limit_up, limit_softness, limit_bias, limit_relax);
+                    m_allhinges.push_back(hinge);
+                    con = hinge;
+                } else {
+                    btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, -linkHalfExtents[1], 0));
+                    btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0,  linkHalfExtents[1], 0));
+                    btGeneric6DofSpring2Constraint* fixed = new btGeneric6DofSpring2Constraint(*prevBody, *linkBody,pivotInA,pivotInB);
+                    fixed->setLinearLowerLimit(btVector3(0,0,0));
+                    fixed->setLinearUpperLimit(btVector3(0,0,0));
+                    fixed->setAngularLowerLimit(btVector3( limit_low,0,0));
+                    fixed->setAngularUpperLimit(btVector3(  limit_up,0,0));
+                    for (int indx_tmp=3;indx_tmp<6;indx_tmp++){
+                        fixed->enableSpring(indx_tmp, true);
+                        fixed->setStiffness(indx_tmp, basic_str*(numLinks-i)/2);
+                    }
+                    fixed->setEquilibriumPoint();
+                    con = fixed;
+                }
                 
                 // Create a spring constraint if needed
                 for (int spring_indx=0;spring_indx < every_spring.size();spring_indx++){
@@ -535,8 +516,7 @@ void TestHingeTorque::initPhysics()
                         m_dynamicsWorld->addConstraint(fixed,true);
                     }
                 }
-			} else
-			{
+			} else{
 				
 				btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, -radius, 0));						//par body's COM to cur body's COM offset
 				btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, radius, 0));							//cur body's COM to cur body's PIV offset
@@ -550,8 +530,7 @@ void TestHingeTorque::initPhysics()
 
 			}
 			btAssert(con);
-			if (con)
-			{
+			if (con){
 				btJointFeedback* fb = new btJointFeedback();
 				m_jointFeedback.push_back(fb);
 				con->setJointFeedback(fb);
@@ -559,11 +538,10 @@ void TestHingeTorque::initPhysics()
 				m_dynamicsWorld->addConstraint(con,true);
 			}
 			prevBody = linkBody;
-            
         }
-       
 	}
 	
+    /*
 	if (0)
 	{
 		btVector3 groundHalfExtents(1,1,0.2);
@@ -584,10 +562,10 @@ void TestHingeTorque::initPhysics()
 		body->setFriction(0);
 		
 	}
+    */
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
 }
 
-class CommonExampleInterface*    TestHingeTorqueCreateFunc(CommonExampleOptions& options)
-{
+class CommonExampleInterface*    TestHingeTorqueCreateFunc(CommonExampleOptions& options){
 	return new TestHingeTorque(options.m_guiHelper);
 }
