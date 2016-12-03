@@ -3,7 +3,7 @@
 
 \topmargin 0.0cm
 \oddsidemargin 0.2cm
-\textwidth 16cm 
+\textwidth 16cm
 \textheight 21cm
 \footskip 1.0cm
 
@@ -47,7 +47,7 @@
 
 
 
-\begin{document} 
+\begin{document}
 
 % Double-space the manuscript.
 
@@ -55,36 +55,38 @@
 
 % Make the title.
 
-\maketitle 
+\maketitle
 
 % Place your abstract within the special {sciabstract} environment.
 
 \begin{sciabstract}
-    In this paper, we trained models in virtual worlds for specific goals and then showed that those models could predict the brain areas realted to the same goals well. 
-    We frst built two virtual worlds for models to learn two behaviors, recognizing objects by detecting their shapes using simulated-whiskers and recovering 3D shapes and therefore categories from 2D images collected in simulation world. After training those models well, we then showed that those models could predict the related neural responses for those behaviors as well. 
-    Both these models shared the similarity that they were trained to give normals of the object surfaces as intermediate outputs. And by explicitly constraining the models to do so, we were expecting that this would actually help the models for better explaining the responses of both intermediate layers and final layers of brain areas in interest. 
+    In this paper, we trained models in virtual worlds for specific goals and then showed that those models could predict the brain areas realted to the same goals well.
+    We frst built two virtual worlds for models to learn two behaviors, recognizing objects by detecting their shapes using simulated-whiskers and recovering 3D shapes and therefore categories from 2D images collected in simulation world. After training those models well, we then showed that those models could predict the related neural responses for those behaviors as well.
+    Both these models shared the similarity that they were trained to give normals of the object surfaces as intermediate outputs. And by explicitly constraining the models to do so, we were expecting that this would actually help the models for better explaining the responses of both intermediate layers and final layers of brain areas in interest.
     We also hope that this work would inspire future researches to utilize the considerable literature about functions of intermediate layers to improve the performances of models both on finishing tasks and modelling brains.
 
 \end{sciabstract}
 
 \section*{Introduction}
 
-Brains have done remarkable work by actively analyzing environment information and making decisions upon that. Among all systems in brains, sensory systems are usually concentrated on analyzing some particular environment information, for example, light for visual systems, sound for auditory systems, and inputs from whiskers for mouse somatosensory systems. 
+Brains have done remarkable work by actively analyzing environment information and making decisions upon that. Among all systems in brains, sensory systems are usually concentrated on analyzing some particular environment information, for example, light for visual systems, sound for auditory systems, and inputs from whiskers for mouse somatosensory systems.
 The goal of those sensory systems is to extract the useful semantic information from the complex raw input data, which could be described as untangling the behavior-related dimensions (such as category) from other irrelevant dimensions (such as translation and rotation of the objects)\cite{yamins2016using}. And in this work, we are especially interested in visual systems and mouse somatosensory systems.
 
-A lot of work has been done to explore both two systems. While those systems differ from their input data, number of overall neurons, and specific structures as well as organizations, they are believed to have the similarity of consisting of several consecutive regions that are distinguishable on both structures and functions \cite{felleman1991distributed}. 
+A lot of work has been done to explore both two systems. While those systems differ from their input data, number of overall neurons, and specific structures as well as organizations, they are believed to have the similarity of consisting of several consecutive regions that are distinguishable on both structures and functions \cite{felleman1991distributed}.
 For visual systems, starting from work of Hubel and Wiesel\cite{Hubel1959}, there have been a large number of hierarchical models developed to explain the response patterns of them\cite{riesenhuber1999hierarchical, serre2007feedforward, fukushima1980neocognitron, bengio2009learning, pinto2009high}.
-Similarly in somatosensory systems, researchers also find evidence showing hierarchical processing for somatosensory input in both human and primates\cite{Pons1987, Inui2004, Iwamura1998}. 
+Similarly in somatosensory systems, researchers also find evidence showing hierarchical processing for somatosensory input in both human and primates\cite{Pons1987, Inui2004, Iwamura1998}.
 
 Hierarchical models are also used widely in artificial intelligence to help design better systems for various tasks. The recent work using deep neural networks (DNNs) has achieved significant improvements on object recognition, speech recognition, and numerous of other artificial intelligence tasks\cite{Krizhevsky, hinton2012deep, lecun2015deep}. Those deep neural networks are all composed of multiple simple neural network layers in series, where the computation in single layer is usually simple but non-linear and stacks of those simple non-linear computations finally make up of some highly complicated non-linear computations. Additionally, those models are also believed to be biologically plausible and therefore could be good candidates for models of related brain systems.
 
-Furthermore, researchers have also found that the hierarchical models optimized for performances on object recognition tasks could also serve as a good model for IT areas in primates, which are believed to be the responsible areas for object recognition in brains \cite{Yamins2013, Yamins2014, Cadieu2014}. Inspired by this, we are building performance optimized hierarchical models for specific tasks that we think V4 (an intermediate layer in visual systems) in human and primates and mouse somatosensory systems are performing. And after having the models, we could use them to explain the responses of those brain areas. 
+Furthermore, researchers have also found that the hierarchical models optimized for performances on object recognition tasks could also serve as a good model for IT areas in primates, which are believed to be the responsible areas for object recognition in brains \cite{Yamins2013, Yamins2014, Cadieu2014}. Inspired by this, we are building performance optimized hierarchical models for specific tasks that we think V4 (an intermediate layer in visual systems) in human and primates and mouse somatosensory systems are performing. And after having the models, we could use them to explain the responses of those brain areas.
 
-The two tasks that we are interested in are predicting normals of object surfaces and then object categories both using 2D images as input or collecting input through simulated-whiskers respectively. The two tasks mainly differ in their required input and there have been 
+Both two areas of interest are poor understood. V4 is believed to encode intermediate level of object features and show strong attentional modulation\cite{Roe2012}, while IT areas are believed to encode high level of object features as object category. And mouse could use their whiskers to detect object shape, position, and texture of object surface\cite{Boubenec2012,Diamond2008,Arabzadeh2005,OConnor2010}. Thus the task that we are interested in for V4 neurons is predicting normals of object surfaces using 2D images as input. Once we have a good model for V4, we could further add some extra layers on top of it to predict the object category from normals. Those extra layers then could be treated as models for IT areas. For mouse somatosensory cortex, we are using the similar task but with input now collected through simulated-whiskers to simulate the input to mouse barrel cortex. Via doing this, we are trying to model S1 (primary somatosensory cortex) as normal predictors and then S2 (secondary somatosensory cortex) as object category detector. With explicitly modeling the functions of intermediate layers, we hope that we could have a better model for the whole systems.
 
-However, for optimizing those deep hierarchical models, one would need a large nubmer of examples with corresponding labels. And in our work, it is either too difficult to collect the corresponding labels (for example, the normals of object surfaces given the 2D images) or the desired example itself (for example, the mechanical )
+However, for optimizing those deep hierarchical models, one would need a large nubmer of examples with corresponding labels. And in our work, it is either too difficult to collect the corresponding labels (for example, the normals of object surfaces given the 2D images) or the desired example itself (for example, the input from simulated whiskers). Thus we need to create virtual worlds for our tasks and train our models there.
 
 \section*{Methods}
+
+
 
 \section*{Results}
 

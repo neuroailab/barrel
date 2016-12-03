@@ -13,3 +13,5 @@ Makefile
 *.log
 *.blg
 *.bbl
+*.bak
+*.gz
