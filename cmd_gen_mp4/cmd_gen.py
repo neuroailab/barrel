@@ -134,7 +134,7 @@ if __name__=="__main__":
             "time_leap":{"value":1.0/240.0, "help":"Time unit for simulation", "type":"float"},
             "equi_angle":{"value":0, "help":"Control the angle of balance for hinges", "type":"float"}, 
             "spring_stiffness":{"value":500, "help":"Stiffness of spring", "type":"float"}, 
-            "camera_dist":{"value":70, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
+            "camera_dist":{"value":90, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
             "spring_offset":{"value":0, "help":"String offset for balance state", "type":"float"}, 
             "time_limit":{"value":50.0/4, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
             "initial_str":{"value":50000, "help":"Initial strength of force applied", "type":"float"}, 
