@@ -84,11 +84,19 @@ Both two areas of interest are poor understood. V4 is believed to encode interme
 
 However, for optimizing those deep hierarchical models, one would need a large nubmer of examples with corresponding labels. And in our work, it is either too difficult to collect the corresponding labels (for example, the normals of object surfaces given the 2D images) or the desired example itself (for example, the input from simulated whiskers). Thus we need to create virtual worlds for our tasks and train our models there.
 
+There have already been some works investigating training deep hierarchical models in virtual worlds\cite{Qiu2016,Johnson-Roberson2016}. In the work by Johnson-Roberson and et al.\cite{Johnson-Roberson2016}, virtual worlds have been used to train deep hierarchical models to learn driving. And in our work, we will illustrate that it is possible that we could successfully train a model that performs well on object recognition task both in virtual environment and real world without using any training examples and notations from real world.
+
+As for mouse somatosensory systems, a lot of investigations have been made to mouse whiskers and barrel cortex\cite{Boubenec2012,Diamond2008,Arabzadeh2005,OConnor2010}. Mechanical properties of mouse whiskers have also been explored a lot \cite{Diamond2008,Quist2014,Towal2011}. Recently, researchers started to utilize the mechanical properties known to simulate the responses of whiskers under particular circumstances \cite{Huet2016}. Combining them with deep hierarchical models in a virtual world, we will build a mode for both barrel cortex and mouse somatosensory systems.
+
+In the following sections, we will describe our methods used for both building the virtual worlds and training the models in Methods section. [TODO] Then in Results section, we will illustrate our results from the models and their performances on explaining those systems. [TODO] We will briefly discuss those results in Discuss section.
+
 \section*{Methods}
 
 
 
 \section*{Results}
+
+\section*{Discussion}
 
 \bibliography{scibib}
 
