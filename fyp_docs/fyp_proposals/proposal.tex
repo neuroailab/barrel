@@ -26,13 +26,14 @@
 
 % Include your paper's title here
 
-\title{Understanding sensory systems by training models in virtual worlds}
+\title{Improving understanding of intermediate and higher cortical areas by training models in virtual worlds}
 
 \author
-{Chengxu Zhuang$^{1\ast}$, Damian Mrowca$^{2}$, Daniel Yamins$^{1}$\\
+{Chengxu Zhuang$^{1\ast}$, Damian Mrowca$^{2}$, Daniel Yamins$^{1,2,3}$\\
 \\
-\normalsize{$^{1}$Department of Psychology, University of Stanford}\\
-\normalsize{$^{2}$Computer Science Department, University of Stanford}\\
+\normalsize{$^{1}$Psychology Department,  Stanford University}\\
+\normalsize{$^{2}$Computer Science Department,  Stanford University}\\
+\normalsize{$^{3}$Neuroscience Institute,  Stanford University}\\
 \normalsize{Jordan Hall Rm 427, Stanford, CA 94305, USA}\\
 \\
 \normalsize{$^\ast$To whom correspondence should be addressed; E-mail: chengxuz@stanford.edu.}
@@ -60,16 +61,16 @@
 % Place your abstract within the special {sciabstract} environment.
 
 \begin{sciabstract}
-    In this paper, we trained models in virtual worlds for specific goals and then showed that those models could predict the brain areas realted to the same goals well.
-    We frst built two virtual worlds for models to learn two behaviors, recognizing objects by detecting their shapes using simulated-whiskers and recovering 3D shapes and therefore categories from 2D images collected in simulation world. After training those models well, we then showed that those models could predict the related neural responses for those behaviors as well.
-    Both these models shared the similarity that they were trained to give normals of the object surfaces as intermediate outputs. And by explicitly constraining the models to do so, we are expecting that this will actually help the models for better explaining the responses of both intermediate layers and final layers of related brain areas.
-    We also hope that this work would inspire future researches to utilize the considerable literature about functions of intermediate layers to improve the performances of models both on finishing tasks and modelling brains.
+In this paper, we explore the use of virtual three-dimensional worlds to train deep neural networks to solve object-related tasks, both at high and intermediate levels of representation.
+Specifically, we consider two sensory domains: (1) a typical visual domain, in which the neural network is exposed to visual images created by rendering in a complex three-dimensional scene, and (2) a whisker-like domain in which a vibrissal array is passed across 3-d objects in these same types of scenes, and which the neural network is driven by the array of forces at the base of the vibrissae.
+In both cases of input format, we train the networks to solve object-related tasks, including (1) object category recognition, a task putatively engaging high-level abstractions and (2) agent-centered object normal map estimation, a task that is putatively at an intermediate level of abstraction.
+After training these models, we then investigate how well these models predict responses in neurons in animal brain areas believed to underly these functions. Specifically, for the visual input case, we seek to determine whether networks trained on both intermediate and high-level tasks lead are improved models of the macaque and human ventral visual stream, compared to existing Deep Neural Networks trained only on high-level tasks. For the whisker input case, we seek to determine whether any of the networks so trained are effective models of higher barrel cortex in rodents, including areas S1 and S2. We also hope that this work will inspire future researchers to utilize the considerable literature about intermediate and high-level behavioral functions to improve predict power of models both in solving sensory tasks and in modeling brains.
 
 \end{sciabstract}
 
 \section*{Introduction}
 
-Brains have done remarkable work by actively analyzing environment information and making decisions upon that. Among all systems in brains, sensory systems are usually concentrated on analyzing some particular environment information, for example, light for visual systems, sound for auditory systems, and inputs from whiskers for mouse somatosensory systems.
+Brains do remarkable work in actively analyzing environmental information and making decisions based on this information. Among all brain systems, sensory systems are especially concentrated on analyzing some particular environmental information, e.g., light for visual systems, sound for auditory systems, and inputs from whiskers for mouse somatosensory systems.
 The goal of those sensory systems is to extract the useful semantic information from the complex raw input data, which could be described as untangling the behavior-related dimensions (such as category) from other irrelevant dimensions (such as translation and rotation of the objects)\cite{yamins2016using}. And in this work, we are especially interested in visual systems and mouse somatosensory systems.
 
 A lot of work has been done to explore both two systems. While those systems differ from their input data, number of overall neurons, and specific structures as well as organizations, they are believed to have the similarity of consisting of several consecutive regions that are distinguishable on both structures and functions \cite{felleman1991distributed}.
