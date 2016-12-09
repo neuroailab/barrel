@@ -133,6 +133,10 @@ Explain how these ideas above apply to both visual and somatosensory domains.
 
 [Then, describe the model architectures, which are more specific to the particular sensory domains.]
 
+We could have various ways to train our models solving these tasks: (1) end-to-end training for the whole task, e.g. from pixel values to object category for visual system; (2) from input to intermediate target, and then from intermediate to final target, e.g., for the rodent somatosensory systems it is from simulated-whisker inputs to normals, and then from normals to object category; (3) doing both of these two training simultaneously.
+
+We are also interested in comparing these training methods. By comparing their performances on tasks or performances on predicting neuron responses, we could answer whether the second and third training methods would be better than the first. More specifically for second training method, we also need to investigate the number of layers we would take to get the intermediate target and similarly, how many extra layers on the intermediate output we need to get the final target. As the constraint of getting the intermediate target could be a regularization to the whole network. We might expect that less training examples overall would be needed in second and third training methods compared to the first. And especially for the second stage of training (from intermediate target to final target), as the task should be easier than from raw input to final target, we would also expect that less training examples would be needed.
+
 \section*{Results}
 
 We will explain this later, not in this proposal.
