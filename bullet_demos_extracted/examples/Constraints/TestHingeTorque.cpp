@@ -409,7 +409,7 @@ void TestHingeTorque::initPhysics(){
     btBoxShape* linkBox1 = new btBoxShape(linkHalfExtents);
     btSphereShape* linkSphere = new btSphereShape(radius);
 
-    for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) { // create a door using hinge constraint attached to the world
+    for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) { // create one single whisker 
 
         btAlignedObjectArray< btRigidBody* > m_allbones;
         btAlignedObjectArray< btHingeConstraint* > m_allhinges;

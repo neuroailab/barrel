@@ -1,0 +1,7 @@
+cmake_minimum_required( VERSION 2.8 )
+project( sens_read )
+set( SOURCES main.cpp )
+set( EXECUTABLE_NAME sens_read.out )
+include_directories(./sensorData/)
+add_executable( ${EXECUTABLE_NAME} ${SOURCES} )
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
