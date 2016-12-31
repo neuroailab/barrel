@@ -51,7 +51,16 @@ namespace stb {
 #endif 
 #endif
 
+#if defined(__linux__)
+#define CrossMEMCPY stb::memcpy
+#else
+#define CrossMEMCPY std::memcpy
+#endif
 
+#ifdef _WIN32
+#else
+#include <sched.h>
+#endif
 
 namespace ml {
 
@@ -329,8 +338,8 @@ namespace ml {
 
 				if (!m_colorCompressed || !m_depthCompressed) throw MLIB_EXCEPTION("out of memory");
 
-				std::memcpy(m_colorCompressed, other.m_colorCompressed, m_colorSizeBytes);
-				std::memcpy(m_depthCompressed, other.m_depthCompressed, m_depthSizeBytes);
+				CrossMEMCPY(m_colorCompressed, other.m_colorCompressed, m_colorSizeBytes);
+				CrossMEMCPY(m_depthCompressed, other.m_depthCompressed, m_depthSizeBytes);
 
 				m_timeStampColor = other.m_timeStampColor;
 				m_timeStampDepth = other.m_timeStampDepth;
@@ -468,8 +477,8 @@ namespace ml {
 
 					if (!m_colorCompressed || !m_depthCompressed) throw MLIB_EXCEPTION("out of memory");
 
-					std::memcpy(m_colorCompressed, other.m_colorCompressed, m_colorSizeBytes);
-					std::memcpy(m_depthCompressed, other.m_depthCompressed, m_depthSizeBytes);
+					CrossMEMCPY(m_colorCompressed, other.m_colorCompressed, m_colorSizeBytes);
+					CrossMEMCPY(m_depthCompressed, other.m_depthCompressed, m_depthSizeBytes);
 
 					m_timeStampColor = other.m_timeStampColor;
 					m_timeStampDepth = other.m_timeStampDepth;
@@ -507,7 +516,7 @@ namespace ml {
 						m_colorSizeBytes = width*height*sizeof(vec3uc);
 						m_colorCompressed = (unsigned char*)std::malloc(m_colorSizeBytes);
 					}
-					std::memcpy(m_colorCompressed, color, m_colorSizeBytes);
+					CrossMEMCPY(m_colorCompressed, color, m_colorSizeBytes);
 				}
 				else if (type == TYPE_PNG || type == TYPE_JPEG) {
 					freeColor();
@@ -577,7 +586,7 @@ namespace ml {
 				if (type != TYPE_RAW) throw MLIB_EXCEPTION("invliad type");
 				if (m_colorCompressed == NULL || m_colorSizeBytes == 0) throw MLIB_EXCEPTION("invalid data");
 				vec3uc* res = (vec3uc*)std::malloc(m_colorSizeBytes);
-				memcpy(res, m_colorCompressed, m_colorSizeBytes);
+				CrossMEMCPY(res, m_colorCompressed, m_colorSizeBytes);
 				return res;
 			}
 
@@ -590,7 +599,7 @@ namespace ml {
 						m_depthSizeBytes = width*height*sizeof(unsigned short);
 						m_depthCompressed = (unsigned char*)std::malloc(m_depthSizeBytes);
 					}
-					std::memcpy(m_depthCompressed, depth, m_depthSizeBytes);
+					CrossMEMCPY(m_depthCompressed, depth, m_depthSizeBytes);
 				}
 				else if (type == TYPE_ZLIB_USHORT) {
 					freeDepth();
@@ -599,7 +608,7 @@ namespace ml {
 					int quality = 8;
 					int n = 2;
 					unsigned char* tmpBuff = (unsigned char *)std::malloc((width*n + 1) * height);
-					std::memcpy(tmpBuff, depth, width*height*sizeof(unsigned short));
+					CrossMEMCPY(tmpBuff, depth, width*height*sizeof(unsigned short));
 					m_depthCompressed = stb::stbi_zlib_compress(tmpBuff, width*height*sizeof(unsigned short), &out_len, quality);
 					std::free(tmpBuff);
 					m_depthSizeBytes = out_len;
@@ -615,7 +624,7 @@ namespace ml {
 					out_len = uplinksimple::encode(depth, width*height, tmpBuff, tmpBuffSize);
 					m_depthSizeBytes = out_len;
 					m_depthCompressed = (unsigned char*)std::malloc(out_len);
-					std::memcpy(m_depthCompressed, tmpBuff, out_len);
+					CrossMEMCPY(m_depthCompressed, tmpBuff, out_len);
 					std::free(tmpBuff);
 #else
 					throw MLIB_EXCEPTION("need UPLINK_COMPRESSION");
@@ -661,7 +670,7 @@ namespace ml {
 				if (type != TYPE_RAW_USHORT) throw MLIB_EXCEPTION("invliad type");
 				if (m_depthCompressed == NULL || m_depthSizeBytes == 0) throw MLIB_EXCEPTION("invalid data");
 				unsigned short* res = (unsigned short*)std::malloc(m_depthSizeBytes);
-				memcpy(res, m_depthCompressed, m_depthSizeBytes);
+				CrossMEMCPY(res, m_depthCompressed, m_depthSizeBytes);
 				return res;
 			}
 
@@ -1103,6 +1112,8 @@ namespace ml {
 				while (m_frameCache.size() >= m_cacheSize) {
 #ifdef _WIN32
 					Sleep(0);
+#else
+                    sched_yield();
 #endif
 				}
 				m_mutexCache.lock();
@@ -1255,6 +1266,8 @@ namespace ml {
 				ss << m_base;
 #if _WIN32
 				for (unsigned int i = std::max(1u, (unsigned int)std::ceilf(std::log10f((float)m_current + 1))); i < m_numCountDigits; i++) ss << "0";
+#elif defined(__linux__)
+				for (unsigned int i = std::max(1u, (unsigned int)ceilf(log10f((float)m_current + 1))); i < m_numCountDigits; i++) ss << "0";
 #else
 				for (unsigned int i = std::max(1u, (unsigned int)stb::ceilf(stb::log10f((float)m_current + 1))); i < m_numCountDigits; i++) ss << "0";
 #endif 
@@ -1511,8 +1524,8 @@ namespace ml {
 				RGBDFrame& f = m_frames.back();
 				f.m_colorCompressed = (unsigned char*)std::malloc(f.m_colorSizeBytes);
 				f.m_depthCompressed = (unsigned char*)std::malloc(f.m_depthSizeBytes);
-				std::memcpy(f.m_colorCompressed, second.m_frames[i].m_colorCompressed, f.m_colorSizeBytes);
-				std::memcpy(f.m_depthCompressed, second.m_frames[i].m_depthCompressed, f.m_depthSizeBytes);
+				CrossMEMCPY(f.m_colorCompressed, second.m_frames[i].m_colorCompressed, f.m_colorSizeBytes);
+				CrossMEMCPY(f.m_depthCompressed, second.m_frames[i].m_depthCompressed, f.m_depthSizeBytes);
 			}
 		}
 
@@ -1674,7 +1687,9 @@ namespace ml {
 					}
 					else {
 						#ifdef _WIN32
-						//Sleep(0);
+						Sleep(0);
+#else
+                        sched_yield();
 						#endif
 					}
 				}
@@ -1782,7 +1797,9 @@ namespace ml {
 				fs.m_timeStampDepth = timeStampDepth;
 				while (m_data.size() >= m_cacheSize) {
 					#ifdef _WIN32
-					//Sleep(0);	//wait until we have space in our cache
+					Sleep(0);	//wait until we have space in our cache
+#else
+                    sched_yield();
 				    #endif
 				}
 				m_mutexList.lock();
