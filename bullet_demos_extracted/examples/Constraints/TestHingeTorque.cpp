@@ -127,6 +127,8 @@ void TestHingeTorque::stepSimulation(float deltaTime){
     curr_force  = 0;
     curr_torque = 0;
 
+    //cout << "In step" << endl;
+
     static int count = 0;
     int all_size_for_big_list   = 0;
     //if ((count& 0x0f)==0)
@@ -142,26 +144,32 @@ void TestHingeTorque::stepSimulation(float deltaTime){
         //btRigidBody* base = btRigidBody::upcast(m_dynamicsWorld->getCollisionObjectArray()[0]);
 
         if (hinge_mode==1){
+            all_size    = m_allhinges.size();
             for (int i=0;i<all_size;i++){
                 btVector3 tmp_center_pos = m_allbones[i]->getCenterOfMassPosition();
 
                 btTransform tmp_trans = m_allbones[i]->getCenterOfMassTransform();
                 btVector3 tmp_pos = tmp_trans(btVector3(0,0,-z_len_link));
                 btVector3 tmp_direction = tmp_center_pos - tmp_pos;
-                btVector3 tmp_pos_f = tmp_trans(btVector3(0,y_len_link,0));
+                //btVector3 tmp_pos_f = tmp_trans(btVector3(0,y_len_link,0));
+                btVector3 tmp_pos_f = tmp_trans(btVector3(0,-y_len_link,0));
                 btVector3 tmp_point     = tmp_pos_f - tmp_center_pos;
 
                 btScalar tmp_angle_high     = m_allhinges[i]->getHingeAngle() - equi_angle;
 
                 btVector3 tmp_force_now     = tmp_direction*tmp_angle_high*basic_str*(all_size - i)/2;
                 m_allbones[i]->applyForce(tmp_force_now, -tmp_point);
+                //m_allbones[i]->applyForce(tmp_force_now, tmp_point);
 
-                if (i < all_size -1){
+                //if (i < all_size -1){
+                if (i < all_size){
                     btTransform tmp_trans = m_allbones[i+1]->getCenterOfMassTransform();
                     btVector3 tmp_pos = tmp_trans(btVector3(0,0,z_len_link));
-                    btVector3 tmp_pos_f = tmp_trans(btVector3(0,-y_len_link,0));
+                    //btVector3 tmp_pos_f = tmp_trans(btVector3(0,-y_len_link,0));
+                    btVector3 tmp_pos_f = tmp_trans(btVector3(0,y_len_link,0));
                     btVector3 tmp_point     = tmp_pos_f - tmp_center_pos;
                     m_allbones[i+1]->applyForce(-tmp_force_now, -tmp_point);
+                    //m_allbones[i+1]->applyForce(-tmp_force_now, tmp_point);
                 }
 
             }
@@ -174,8 +182,9 @@ void TestHingeTorque::stepSimulation(float deltaTime){
             curr_torque += m_allbones[i]->getTotalTorque().norm();
         }
 
-        if ((pass_time < initial_stime) && (initial_poi < all_size)){
-            m_allbones[initial_poi]->applyForce(btVector3(0,0,initial_str), btVector3(0,0,0));
+        if ((pass_time < initial_stime) && (initial_poi < all_size-1)){
+            m_allbones[initial_poi+1]->applyForce(btVector3(0,0,initial_str), btVector3(0,0,0));
+            cout << "Applied" << endl;
         }
 
         for (int i=0;i<m_allhinges.size();i++){
@@ -198,6 +207,8 @@ void TestHingeTorque::stepSimulation(float deltaTime){
         }
         cout << "Now state:" << curr_velo << " " << curr_angl << " " << curr_force << " " << curr_torque << " " << curr_state << endl;
     }
+
+    //cout << "Out step" << endl;
 
     //CommonRigidBodyBase::stepSimulation(deltaTime);
 }
@@ -460,6 +471,9 @@ void TestHingeTorque::initPhysics(){
         m_dynamicsWorld->addConstraint(fixed,true);
 
         btRigidBody* prevBody = base;
+        m_allbones.push_back(base);
+
+        cout << "Push base" << endl;
         
         for (int i=0;i<numLinks;i++){
             btTransform linkTrans;
@@ -519,7 +533,19 @@ void TestHingeTorque::initPhysics(){
                         fixed->enableSpring(indx_tmp, true);
                         fixed->setStiffness(indx_tmp, basic_str*(numLinks-i)/2);
                     }
-                    fixed->setEquilibriumPoint();
+                    for (int indx_tmp=0;indx_tmp<6;indx_tmp++){
+                        if (indx_tmp!=3) {
+                            fixed->setEquilibriumPoint(indx_tmp);
+                        } else {
+                            if (limit_low > 0)
+                                fixed->setEquilibriumPoint(indx_tmp, limit_low);
+                            else if (limit_up < 0)
+                                fixed->setEquilibriumPoint(indx_tmp, limit_up);
+                            else
+                                fixed->setEquilibriumPoint(indx_tmp);
+                        }
+                    }
+                    //fixed->setEquilibriumPoint();
                     con = fixed;
                 }
                 
@@ -531,13 +557,18 @@ void TestHingeTorque::initPhysics(){
                     if ((i>tmp_every_spring-2) && (i % tmp_inter_spring==0)){
                         btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, -tmp_every_spring*linkHalfExtents[1]+spring_offset, 0));
                         btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, tmp_every_spring*linkHalfExtents[1]-spring_offset, 0));
+                        //btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, 0, 0));
+                        //btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, 0, 0));
                         btGeneric6DofSpring2Constraint* fixed;
 
+                        fixed = new btGeneric6DofSpring2Constraint(*m_allbones[i-(tmp_every_spring)+1], *linkBody,pivotInA,pivotInB);
+                        /*
                         if (i-tmp_every_spring>-1) {
                             fixed = new btGeneric6DofSpring2Constraint(*m_allbones[i-(tmp_every_spring)], *linkBody,pivotInA,pivotInB);
                         } else {
                             fixed = new btGeneric6DofSpring2Constraint(*base, *linkBody,pivotInA,pivotInB);
                         }
+                        */
                         //for (int indx_tmp=0;indx_tmp<3;indx_tmp++){
                         for (int indx_tmp=0;indx_tmp<6;indx_tmp++){
                             fixed->enableSpring(indx_tmp, true);
@@ -572,6 +603,7 @@ void TestHingeTorque::initPhysics(){
         }
         m_allbones_big_list.push_back(m_allbones);
         m_allhinges_big_list.push_back(m_allhinges);
+        cout << "Push everything" << endl;
 	}
 	
     /*

@@ -89,8 +89,8 @@ def build_array(x, y):
     y_pos_va        = 7
     z_pos_st        = 0
     z_pos_step      = 10
-    #const_num_l     = 25
     const_num_l     = 25
+    #const_num_l     = 2
 
     for indx_x in range(x):
         for indx_y in range(y):
@@ -144,16 +144,18 @@ if __name__=="__main__":
             "limit_softness":{"value":0.9, "help":"Softness of the hinge limit", "type":"float"}, 
             "limit_bias":{"value":0.3, "help":"Bias of the hinge limit", "type":"float"}, 
             "limit_relax":{"value":1, "help":"Relax of the hinge limit", "type":"float"}, 
-            "limit_low":{"value":-2, "help":"Low bound of the hinge limit", "type":"float"}, 
+            #"limit_low":{"value":-2, "help":"Low bound of the hinge limit", "type":"float"}, 
+            "limit_low":{"value":0.1, "help":"Low bound of the hinge limit", "type":"float"}, 
             #"limit_up":{"value":-0.1, "help":"Up bound of the hinge limit", "type":"float"}, 
-            "limit_up":{"value":-0.2, "help":"Up bound of the hinge limit", "type":"float"}, 
+            "limit_up":{"value":2, "help":"Up bound of the hinge limit", "type":"float"}, 
+            #"limit_up":{"value":2, "help":"Up bound of the hinge limit", "type":"float"}, 
             "angl_ban_limit":{"value":1.5, "help":"While flag_time is 2, used for angular velocities of rigid bodys to judge whether stop", "type":"float"}, 
             "velo_ban_limit":{"value":1.5, "help":"While flag_time is 2, used for linear velocities of rigid bodys to judge whether stop", "type":"float"}, 
             "state_ban_limit":{"value":1, "help":"While flag_time is 2, used for angle states of hinges to judge whether stop", "type":"float"}, 
             "force_limit":{"value":100, "help":"While flag_time is 2, used for force states of hinges to judge whether stop", "type":"float"}, 
             "torque_limit":{"value":200, "help":"While flag_time is 2, used for torque states of hinges to judge whether stop", "type":"float"}, 
             "initial_poi":{"value":24, "help":"Unit to apply the force", "type":"int"}, 
-            "hinge_mode":{"value":1, "help":"Whether use hinges rather than springs for connections of two units", "type":"int"},
+            "hinge_mode":{"value":0, "help":"Whether use hinges rather than springs for connections of two units", "type":"int"},
             "flag_time":{"value":0, "help":"Whether open time limit", "type":"int"}}
     '''
     config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":"float"}, 
@@ -163,7 +165,9 @@ if __name__=="__main__":
             "basic_str":{"value":3000, "help":"Minimal strength of hinge's recover force", "type":"float"}, 
             "const_numLinks":{"value":25, "help":"Number of units", "type":"int"},
             "linear_damp":{"value":0.5, "help":"Control the linear damp ratio", "type":"float"},
+            #"linear_damp":{"value":0, "help":"Control the linear damp ratio", "type":"float"},
             "ang_damp":{"value":0.5, "help":"Control the angle damp ratio", "type":"float"},
+            #"ang_damp":{"value":0, "help":"Control the angle damp ratio", "type":"float"},
             "time_leap":{"value":1.0/240.0, "help":"Time unit for simulation", "type":"float"},
             "equi_angle":{"value":0, "help":"Control the angle of balance for hinges", "type":"float"}, 
             "inter_spring":{"value":(1, 3, 3, 3), "help":"Number of units between two strings", "type":"list", "type_in": "int"}, 
