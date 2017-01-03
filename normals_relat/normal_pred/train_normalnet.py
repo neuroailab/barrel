@@ -52,6 +52,10 @@ def exponential_decay(global_step,
 
 
 class Threedworld(data.HDF5DataProvider):
+
+    N_TRAIN = 2048000 - 102400
+    N_VAL = 102400 
+
     def __init__(self,
                  data_path,
                  group='train',
@@ -64,7 +68,7 @@ class Threedworld(data.HDF5DataProvider):
 
         Args:
             - data_path
-                path to imagenet data
+                path to raw hdf5 data
         Kwargs:
             - group (str, default: 'train')
                 Which subset of the dataset you want: train, val.
@@ -81,36 +85,53 @@ class Threedworld(data.HDF5DataProvider):
                 Extra arguments for HDF5DataProvider
         """
         self.group = group
-        images = 'images'
-        labels = 'normals'
+        self.images = 'images'
+        self.labels = 'normals'
+        if self.group=='train':
+            subslice = range(N_TRAIN)
+        else:
+            subslice = range(N_TRAIN, N_TRAIN + N_VAL)
         super(Threedworld, self).__init__(
             data_path,
-            [images, labels],
+            [self.images, self.labels],
             batch_size=batch_size,
             postprocess={images: self.postproc, labels: self.postproc},
             pad=True,
+            subslice=subslice,
             *args, **kwargs)
         if crop_size is None:
             self.crop_size = 256
         else:
             self.crop_size = crop_size
 
+        self.off        = None
+        self.now_num    = 0
+
     def postproc(self, ims, f):
         norm = ims.astype(np.float32) / 255
-        off = np.random.randint(0, 256 - self.crop_size, size=2)
+        if self.now_num==0:
+            off = np.random.randint(0, 256 - self.crop_size, size=2)
+            self.off = off
+        else:
+            off = self.off
         images_batch = norm[:,
                             off[0]: off[0] + self.crop_size,
                             off[1]: off[1] + self.crop_size]
+        if self.now_num==0:
+            self.now_num = 1
+        else:
+            self.now_num = 0
+
         return images_batch
 
     def next(self):
-        batch = super(ImageNet, self).next()
-        feed_dict = {'images': np.squeeze(batch[self.group + '/images']),
-                     'labels': np.squeeze(batch[self.group + '/labels'])}
+        batch = super(Threedworld, self).next()
+        feed_dict = {'images': np.squeeze(batch[self.images]),
+                     'labels': np.squeeze(batch[self.labels])}
         return feed_dict
 
 BATCH_SIZE = 256
-NUM_BATCHES_PER_EPOCH = data.ImageNet.N_TRAIN // BATCH_SIZE
+NUM_BATCHES_PER_EPOCH = Threedworld.N_TRAIN // BATCH_SIZE
 IMAGE_SIZE_CROP = 224
 
 params = {
@@ -141,14 +162,14 @@ params = {
     },
 
     'model_params': {
-        'func': model.alexnet_tfutils,
+        'func': model.alexnet_tfutils, # TODO:
         'seed': 0,
         'norm': False  # do you want local response normalization?
     },
 
     'train_params': {
         'data_params': {
-            'func': data.ImageNet,
+            'func': Threedworld,
             'data_path': DATA_PATH,
             'group': 'train',
             'crop_size': IMAGE_SIZE_CROP,
@@ -167,7 +188,7 @@ params = {
     'loss_params': {
         'targets': 'labels',
         'agg_func': tf.reduce_mean,
-        'loss_per_case_func': tf.nn.sparse_softmax_cross_entropy_with_logits,
+        'loss_per_case_func': tf.nn.sparse_softmax_cross_entropy_with_logits, # TODO:
     },
 
     'learning_rate_params': {
@@ -188,13 +209,13 @@ params = {
     'validation_params': {
         'topn': {
             'data_params': {
-                'func': data.ImageNet,
+                'func': Threedworld,
                 'data_path': DATA_PATH,  # path to image database
                 'group': 'val',
                 'crop_size': IMAGE_SIZE_CROP,  # size after cropping an image
             },
             'targets': {
-                'func': in_top_k, # TODO: change it to MSE?
+                'func': in_top_k, # TODO:
                 'target': 'labels',
             },
             'queue_params': {
@@ -203,7 +224,7 @@ params = {
                 'n_threads': 4,
                 'seed': 0,
             },
-            'num_steps': data.ImageNet.N_VAL // BATCH_SIZE + 1,
+            'num_steps': Threedworld.N_VAL // BATCH_SIZE + 1,
             'agg_func': lambda x: {k:np.mean(v) for k,v in x.items()},
             'online_agg_func': online_agg
         },
@@ -214,5 +235,5 @@ params = {
 
 
 if __name__ == '__main__':
-    base.get_params()
-    base.train_from_params(**params)
+    #base.get_params()
+    #base.train_from_params(**params)
