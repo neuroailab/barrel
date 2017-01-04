@@ -63,6 +63,18 @@ class NoramlNetfromConv(model.ConvNet):
         self.output = tf.image.resize_images(in_layer, [new_size, new_size])
         return self.output
 
+    def add_bypass(self, bypass_layer, in_layer=None):
+        if in_layer is None:
+            in_layer = self.output
+
+        bypass_shape = bypass_layer.get_shape().as_list()
+        ds = in_layer.get_shape().as_list()[1]
+        if bypass_shape[1] != ds:
+            bypass_layer = tf.image.resize_images(bypass_layer, ds, ds)
+        self.output = tf.concat(3, [in_layer, bypass_layer])
+
+        return self.output
+
 def getEncodeDepth(cfg):
     val = None
     if 'encode_depth' in cfg:
@@ -246,9 +258,10 @@ def getFilterSeed(cfg):
         return 0
     
 
-def normalnet(inputs, train=True, **kwargs):
+def normalnet(inputs, cfg_initial, train=True, **kwargs):
     """The Model definition."""
 
+    cfg = cfg_initial
     fseed = getFilterSeed(cfg)
     
     #encoding
@@ -260,6 +273,9 @@ def normalnet(inputs, train=True, **kwargs):
 
     m = NoramlNetfromConv(seed = fseed, **kwargs)
 
+    encode_nodes = []
+    encode_nodes.append(inputs)
+
     with tf.contrib.framework.arg_scope([m.conv], init='xavier',
                                         stddev=.01, bias=0, activation='relu'):
         for i in range(1, encode_depth + 1):
@@ -269,9 +285,9 @@ def normalnet(inputs, train=True, **kwargs):
                 cs = getEncodeConvStride(i, encode_depth, cfg)
 
                 if i==1:
-                    m.conv(nf, cfs, cs, padding='VALID', in_layer=inputs)
+                    new_encode_node = m.conv(nf, cfs, cs, padding='VALID', in_layer=inputs)
                 else:
-                    m.conv(nf, cfs, cs)
+                    new_encode_node = m.conv(nf, cfs, cs)
 
                 print('Encode conv %d with size %d stride %d numfilters %d' % (i, cfs, cs, nf))        
                 do_pool = getEncodeDoPool(i, cfg)
@@ -285,72 +301,67 @@ def normalnet(inputs, train=True, **kwargs):
                     elif pool_type == 'avg':
                         pfunc = 'avgpool' 
 
-                    m.pool(pfs, ps, pfunc)
+                    new_encode_node = m.pool(pfs, ps, pfunc)
                     print('Encode %s pool %d with size %d stride %d' % (pfunc, i, pfs, ps))
+                encode_nodes.append(new_encode_node)   
 
-    #hidden
-    hidden_depth = getHiddenDepth(cfg)
+        #hidden
+        hidden_depth = getHiddenDepth(cfg)
 
-    for i in range(1, hidden_depth + 1):
-        with tf.variable_scope('hid%i' i + encode_depth):
-            nf = getHiddenNumFeatures(i, cfg)
-            m.fc(nf, init='trunc_norm', dropout=.5, bias=.1)
-            print('hidden layer %d %d' % (i, nf))
+        for i in range(1, hidden_depth + 1):
+            with tf.variable_scope('hid%i' i + encode_depth):
+                nf = getHiddenNumFeatures(i, cfg)
+                m.fc(nf, init='trunc_norm', dropout=.5, bias=.1)
+                print('hidden layer %d %d' % (i, nf))
 
-    #decode
-    decode_depth = getDecodeDepth(cfg)
-    print('Decode depth: %d' % decode_depth)
+        #decode
+        decode_depth = getDecodeDepth(cfg)
+        print('Decode depth: %d' % decode_depth)
 
-    nf = getDecodeNumFilters(0, decode_depth, cfg)
-    ds = getDecodeSize(0, decode_depth, cfg)
+        nf = getDecodeNumFilters(0, decode_depth, cfg)
+        ds = getDecodeSize(0, decode_depth, cfg)
 
-    with tf.variable_scope('trans%i' encode_depth + encode_depth):
-        m.fc(ds*ds*nf, init='trunc_norm', dropout=None, activation=None, bias=.1)
-        print("Linear to %d for input size %d" % (ds * ds * nf, ds))
+        with tf.variable_scope('trans%i' encode_depth + encode_depth):
+            m.fc(ds*ds*nf, init='trunc_norm', dropout=None, activation=None, bias=.1)
+            print("Linear to %d for input size %d" % (ds * ds * nf, ds))
 
-    decode = m.reshape([ds, ds, nf])    
-    print("Unflattening to", decode.get_shape().as_list())
+        decode = m.reshape([ds, ds, nf])    
+        print("Unflattening to", decode.get_shape().as_list())
 
-    for i in range(1, decode_depth + 1):
-        nf0 = nf
-        ds = getDecodeSize(i, cfg)
+        for i in range(1, decode_depth + 1):
+            nf0 = nf
+            ds = getDecodeSize(i, cfg)
 
-        if i == decode_depth:
-             assert ds == IMAGE_SIZE, (ds, IMAGE_SIZE)
-        decode = tf.image.resize_images(decode, ds, ds)
-        
-        print('Decode resize %d to shape' % i, decode.get_shape().as_list())
-        add_bypass = getDecodeBypass(i, encode_nodes, ds, decode_depth, rng, cfg, slippage=slippage)
-        if add_bypass != None:
-            bypass_layer = encode_nodes[add_bypass]
-            bypass_shape = bypass_layer.get_shape().as_list()
-            if bypass_shape[1] != ds:
-                bypass_layer = tf.image.resize_images(bypass_layer, ds, ds)
-            decode = tf.concat(3, [decode, bypass_layer])
-            print('Decode bypass from %d at %d for shape' % (add_bypass, i), decode.get_shape().as_list())
-            nf0 = nf0 + bypass_shape[-1]
-            cfg0['decode'][i]['bypass'] = add_bypass
-        cfs = getDecodeFilterSize(i, decode_depth, rng, cfg, slippage=slippage)
-        cfg0['decode'][i]['filter_size'] = cfs
-        nf = getDecodeNumFilters(i, decode_depth, rng, cfg, slippage=slippage)
-        cfg0['decode'][i]['num_filters'] = nf
-        if i == decode_depth:
-            assert nf == NUM_CHANNELS, (nf, NUM_CHANNELS)
-        W = tf.Variable(tf.truncated_normal([cfs, cfs, nf0, nf],
-                                                                                stddev=0.1,
-                                                                                seed=fseed))
-        b = tf.Variable(tf.zeros([nf]))
-        decode = tf.nn.conv2d(decode,
-                                                    W,
-                                                    strides=[1, 1, 1, 1],
-                                                    padding='SAME')
-        decode = tf.nn.bias_add(decode, b)
-        print('Decode conv %d with size %d num channels %d numfilters %d for shape' % (i, cfs, nf0, nf), decode.get_shape().as_list())
+            if i == decode_depth:
+                 assert ds == IMAGE_SIZE, (ds, IMAGE_SIZE)
 
-        if i < decode_depth:    #add relu to all but last ... need this?
-            decode = tf.nn.relu(decode)
+            decode = m.resize_images(ds)
+            
+            print('Decode resize %d to shape' % i, decode.get_shape().as_list())
 
-    return decode, cfg0
+            add_bypass = getDecodeBypass(i, encode_nodes, ds, 1, cfg)
+
+            if add_bypass != None:
+                bypass_layer = encode_nodes[add_bypass]
+
+                decode = m.add_bypass(bypass_layer)
+
+                print('Decode bypass from %d at %d for shape' % (add_bypass, i), decode.get_shape().as_list())
+
+            cfs = getDecodeFilterSize(i, cfg)
+            nf = getDecodeNumFilters(i, decode_depth, cfg)
+
+            if i == decode_depth:
+                assert nf == NUM_CHANNELS, (nf, NUM_CHANNELS)
+
+            if i < decode_depth:
+                decode = m.conv(nf, cfs, 1)
+            else:
+                decode = m.conv(nf, cfs, 1, activation = None)
+
+            print('Decode conv %d with size %d numfilters %d for shape' % (i, cfs, nf), decode.get_shape().as_list())
+
+    return m.output, m.params
 
 
 def get_model(rng, batch_size, cfg, slippage, slippage_error, host, port, datapath):
