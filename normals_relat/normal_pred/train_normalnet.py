@@ -110,11 +110,16 @@ class Threedworld(data.HDF5DataProvider):
 
     def postproc(self, ims, f):
         norm = ims.astype(np.float32) / 255
-        if self.now_num==0:
-            off = np.random.randint(0, 256 - self.crop_size, size=2)
-            self.off = off
+        if self.group=='train':
+            #print('In train')
+            if self.now_num==0:
+                off = np.random.randint(0, 256 - self.crop_size, size=2)
+                self.off = off
+            else:
+                off = self.off
         else:
-            off = self.off
+            off = int((256 - self.crop_size)/2)
+            off = [off, off]
         images_batch = norm[:,
                             off[0]: off[0] + self.crop_size,
                             off[1]: off[1] + self.crop_size]
