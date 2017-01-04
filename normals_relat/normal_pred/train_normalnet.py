@@ -138,8 +138,8 @@ params = {
     'save_params': {
         'host': 'localhost',
         'port': 31001,
-        'dbname': 'alexnet-test',
-        'collname': 'alexnet',
+        'dbname': 'normalnet-test',
+        'collname': 'normalnet',
         'exp_id': 'trainval0',
 
         'do_save': True,
