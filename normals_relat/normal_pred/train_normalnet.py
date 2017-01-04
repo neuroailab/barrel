@@ -8,7 +8,12 @@ import numpy as np
 
 import tensorflow as tf
 
+import normal_encoder_asymmetric_with_bypass
+
 from tfutils import base, data, model, optimizer
+
+import json
+import copy
 
 
 host = os.uname()[1]
@@ -18,10 +23,6 @@ else:
     print("Not supported yet!")
     exit()
 
-
-def in_top_k(inputs, outputs, target):
-    return {'top1': tf.nn.in_top_k(outputs, inputs[target], 1),
-            'top5': tf.nn.in_top_k(outputs, inputs[target], 5)}
 
 
 def online_agg(agg_res, res, step):
@@ -88,14 +89,14 @@ class Threedworld(data.HDF5DataProvider):
         self.images = 'images'
         self.labels = 'normals'
         if self.group=='train':
-            subslice = range(N_TRAIN)
+            subslice = range(self.N_TRAIN)
         else:
-            subslice = range(N_TRAIN, N_TRAIN + N_VAL)
+            subslice = range(self.N_TRAIN, self.N_TRAIN + self.N_VAL)
         super(Threedworld, self).__init__(
             data_path,
             [self.images, self.labels],
             batch_size=batch_size,
-            postprocess={images: self.postproc, labels: self.postproc},
+            postprocess={self.images: self.postproc, self.labels: self.postproc},
             pad=True,
             subslice=subslice,
             *args, **kwargs)
@@ -133,90 +134,69 @@ class Threedworld(data.HDF5DataProvider):
 BATCH_SIZE = 256
 NUM_BATCHES_PER_EPOCH = Threedworld.N_TRAIN // BATCH_SIZE
 IMAGE_SIZE_CROP = 224
+NUM_CHANNELS = 3
+NORM_NUM = (IMAGE_SIZE_CROP**2) * NUM_CHANNELS * BATCH_SIZE
 
-params = {
-    'save_params': {
-        'host': 'localhost',
-        'port': 31001,
-        'dbname': 'normalnet-test',
-        'collname': 'normalnet',
-        'exp_id': 'trainval0',
+def loss_ave_l2(output, labels):
+    loss = tf.nn.l2_loss(output - labels) / NORM_NUM
+    return loss
 
-        'do_save': True,
-        'save_initial_filters': True,
-        'save_metrics_freq': 5,  # keeps loss from every SAVE_LOSS_FREQ steps.
-        'save_valid_freq': 3000,
-        'save_filters_freq': 30000,
-        'cache_filters_freq': 3000,
-        # 'cache_dir': None,  # defaults to '~/.tfutils'
-    },
+def rep_loss(inputs, outputs, target):
+    loss = tf.nn.l2_loss(outputs - inputs[target]) / NORM_NUM
+    return {'loss': loss}
 
-    'load_params': {
-        # 'host': 'localhost',
-        # 'port': 31001,
-        # 'dbname': 'alexnet-test',
-        # 'collname': 'alexnet',
-        # 'exp_id': 'trainval0',
-        'do_restore': False,
-        'load_query': None
-    },
+def postprocess_config(cfg):
+    cfg = copy.deepcopy(cfg)
+    for k in ['encode', 'decode', 'hidden']:
+        if k in cfg:
+            ks = cfg[k].keys()
+            for _k in ks:
+                cfg[k][int(_k)] = cfg[k].pop(_k)
+    return cfg
 
-    'model_params': {
-        'func': model.alexnet_tfutils, # TODO:
-        'seed': 0,
-        'norm': False  # do you want local response normalization?
-    },
+def main(cfgfile):
+    cfg_initial = postprocess_config(json.load(open(cfgfile)))
+    params = {
+        'save_params': {
+            'host': 'localhost',
+            #'port': 31001,
+            'port': 22334,
+            'dbname': 'normalnet-test',
+            'collname': 'normalnet',
+            'exp_id': 'trainval0',
 
-    'train_params': {
-        'data_params': {
-            'func': Threedworld,
-            'data_path': DATA_PATH,
-            'group': 'train',
-            'crop_size': IMAGE_SIZE_CROP,
-            'batch_size': 1
+            'do_save': True,
+            'save_initial_filters': True,
+            'save_metrics_freq': 5,  # keeps loss from every SAVE_LOSS_FREQ steps.
+            'save_valid_freq': 3000,
+            'save_filters_freq': 30000,
+            'cache_filters_freq': 3000,
+            # 'cache_dir': None,  # defaults to '~/.tfutils'
         },
-        'queue_params': {
-            'queue_type': 'fifo',
-            'batch_size': BATCH_SIZE,
-            'n_threads': 4,
+
+        'load_params': {
+            # 'host': 'localhost',
+            # 'port': 31001,
+            # 'dbname': 'alexnet-test',
+            # 'collname': 'alexnet',
+            # 'exp_id': 'trainval0',
+            'do_restore': False,
+            'load_query': None
+        },
+
+        'model_params': {
+            'func': normal_encoder_asymmetric_with_bypass.normalnet_tfutils,
             'seed': 0,
+            'cfg_initial': cfg_initial
         },
-        'thres_loss': 1000,
-        'num_steps': 90 * NUM_BATCHES_PER_EPOCH  # number of steps to train
-    },
 
-    'loss_params': {
-        'targets': 'labels',
-        'agg_func': tf.reduce_mean,
-        'loss_per_case_func': tf.nn.sparse_softmax_cross_entropy_with_logits, # TODO:
-    },
-
-    'learning_rate_params': {
-        'func': tf.train.exponential_decay,
-        'learning_rate': .01,
-        'decay_rate': .95,
-        'decay_steps': NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
-        'staircase': True
-    },
-
-    'optimizer_params': {
-        'func': optimizer.ClipOptimizer,
-        'optimizer_class': tf.train.MomentumOptimizer,
-        'clip': True,
-        'momentum': .9
-    },
-
-    'validation_params': {
-        'topn': {
+        'train_params': {
             'data_params': {
                 'func': Threedworld,
-                'data_path': DATA_PATH,  # path to image database
-                'group': 'val',
-                'crop_size': IMAGE_SIZE_CROP,  # size after cropping an image
-            },
-            'targets': {
-                'func': in_top_k, # TODO:
-                'target': 'labels',
+                'data_path': DATA_PATH,
+                'group': 'train',
+                'crop_size': IMAGE_SIZE_CROP,
+                'batch_size': 1
             },
             'queue_params': {
                 'queue_type': 'fifo',
@@ -224,16 +204,62 @@ params = {
                 'n_threads': 4,
                 'seed': 0,
             },
-            'num_steps': Threedworld.N_VAL // BATCH_SIZE + 1,
-            'agg_func': lambda x: {k:np.mean(v) for k,v in x.items()},
-            'online_agg_func': online_agg
+            'thres_loss': 1000,
+            'num_steps': 90 * NUM_BATCHES_PER_EPOCH  # number of steps to train
         },
-    },
 
-    'log_device_placement': False,  # if variable placement has to be logged
-}
+        'loss_params': {
+            'targets': 'labels',
+            'agg_func': tf.reduce_mean,
+            'loss_per_case_func': loss_ave_l2
+        },
+
+        'learning_rate_params': {
+            'func': tf.train.exponential_decay,
+            'learning_rate': .01,
+            'decay_rate': .95,
+            'decay_steps': NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
+            'staircase': True
+        },
+
+        'optimizer_params': {
+            'func': optimizer.ClipOptimizer,
+            'optimizer_class': tf.train.MomentumOptimizer,
+            'clip': True,
+            'momentum': .9
+        },
+
+        'validation_params': {
+            'topn': {
+                'data_params': {
+                    'func': Threedworld,
+                    'data_path': DATA_PATH,  # path to image database
+                    'group': 'val',
+                    'crop_size': IMAGE_SIZE_CROP,  # size after cropping an image
+                },
+                'targets': {
+                    'func': rep_loss,
+                    'target': 'labels',
+                },
+                'queue_params': {
+                    'queue_type': 'fifo',
+                    'batch_size': BATCH_SIZE,
+                    'n_threads': 4,
+                    'seed': 0,
+                },
+                'num_steps': Threedworld.N_VAL // BATCH_SIZE + 1,
+                'agg_func': lambda x: {k:np.mean(v) for k,v in x.items()},
+                'online_agg_func': online_agg
+            },
+        },
+
+        'log_device_placement': False,  # if variable placement has to be logged
+    }
+    base.get_params()
+    base.train_from_params(**params)
 
 
 if __name__ == '__main__':
     #base.get_params()
     #base.train_from_params(**params)
+    main('normals_config_winner0.cfg')
