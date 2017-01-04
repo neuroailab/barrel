@@ -136,7 +136,8 @@ class Threedworld(data.HDF5DataProvider):
                      'labels': np.squeeze(batch[self.labels])}
         return feed_dict
 
-BATCH_SIZE = 256
+#BATCH_SIZE = 256
+BATCH_SIZE = 128
 NUM_BATCHES_PER_EPOCH = Threedworld.N_TRAIN // BATCH_SIZE
 IMAGE_SIZE_CROP = 224
 NUM_CHANNELS = 3
@@ -159,8 +160,20 @@ def postprocess_config(cfg):
                 cfg[k][int(_k)] = cfg[k].pop(_k)
     return cfg
 
+
+def preprocess_config(cfg):
+    cfg = copy.deepcopy(cfg)
+    for k in ['encode', 'decode', 'hidden']:
+        if k in cfg:
+            ks = cfg[k].keys()
+            for _k in ks:
+                assert isinstance(_k, int), _k
+                cfg[k][str(_k)] = cfg[k].pop(_k)
+    return cfg
+
 def main(cfgfile):
-    cfg_initial = postprocess_config(json.load(open(cfgfile)))
+    #cfg_initial = postprocess_config(json.load(open(cfgfile)))
+    cfg_initial = preprocess_config(json.load(open(cfgfile)))
     params = {
         'save_params': {
             'host': 'localhost',
