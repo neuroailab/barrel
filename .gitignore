@@ -16,3 +16,4 @@ Makefile
 *.bak
 *.gz
 *.pyc
+!normals_relat/normal_pred/*.cfg
