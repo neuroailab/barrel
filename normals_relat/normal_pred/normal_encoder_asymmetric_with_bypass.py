@@ -267,6 +267,11 @@ def normalnet(inputs, cfg_initial, train=True, seed = None, **kwargs):
         fseed = getFilterSeed(cfg)
     else:
         fseed = seed
+
+    dropout_rate = 0.5
+    if not train:
+        dropout_rate = None
+        
     
     #encoding
     imsize = IMAGE_SIZE
@@ -314,7 +319,7 @@ def normalnet(inputs, cfg_initial, train=True, seed = None, **kwargs):
         for i in range(1, hidden_depth + 1):
             with tf.variable_scope('hid%i' % (i + encode_depth)):
                 nf = getHiddenNumFeatures(i, cfg)
-                m.fc(nf, init='trunc_norm', dropout=.5, bias=.1)
+                m.fc(nf, init='trunc_norm', dropout=dropout_rate, bias=.1)
                 print('hidden layer %d %d' % (i, nf))
 
         #decode
