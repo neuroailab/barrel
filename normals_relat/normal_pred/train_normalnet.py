@@ -184,26 +184,32 @@ def main(cfgfile):
             'dbname': 'normalnet-test',
             'collname': 'normalnet',
             #'exp_id': 'trainval0',
-            #'exp_id': 'trainval1',
-            'exp_id': 'trainval2', # using screen?
+            'exp_id': 'trainval1',
+            #'exp_id': 'trainval2', # using screen?
 
             'do_save': True,
             #'do_save': False,
             'save_initial_filters': True,
             'save_metrics_freq': 2000,  # keeps loss from every SAVE_LOSS_FREQ steps.
-            'save_valid_freq': 2000,
+            'save_valid_freq': 10000,
             'save_filters_freq': 30000,
-            'cache_filters_freq': 2000,
+            'cache_filters_freq': 10000,
             # 'cache_dir': None,  # defaults to '~/.tfutils'
         },
 
         'load_params': {
-            # 'host': 'localhost',
+            'host': 'localhost',
             # 'port': 31001,
             # 'dbname': 'alexnet-test',
             # 'collname': 'alexnet',
             # 'exp_id': 'trainval0',
-            'do_restore': False,
+            'port': 22334,
+            'dbname': 'normalnet-test',
+            'collname': 'normalnet',
+            #'exp_id': 'trainval0',
+            'exp_id': 'trainval1',
+            #'exp_id': 'trainval2', # using screen?
+            'do_restore': True,
             'load_query': None
         },
 
@@ -279,33 +285,6 @@ def main(cfgfile):
     }
     base.get_params()
     base.train_from_params(**params)
-
-'''
-'validation_params': {
-'topn': {
-    'data_params': {
-        'func': Threedworld,
-        'data_path': DATA_PATH,  # path to image database
-        'group': 'val',
-        'crop_size': IMAGE_SIZE_CROP,  # size after cropping an image
-    },
-    'targets': {
-        'func': rep_loss,
-        'target': 'labels',
-    },
-    'queue_params': {
-        'queue_type': 'fifo',
-        'batch_size': BATCH_SIZE,
-        'n_threads': 4,
-        'seed': 0,
-    },
-    'num_steps': Threedworld.N_VAL // BATCH_SIZE + 1,
-    'agg_func': lambda x: {k:np.mean(v) for k,v in x.items()},
-    'online_agg_func': online_agg
-},
-},
-'''
-
 
 if __name__ == '__main__':
     #base.get_params()
