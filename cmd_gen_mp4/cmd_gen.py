@@ -90,6 +90,7 @@ def build_array(x, y):
     z_pos_st        = 0
     z_pos_step      = 10
     const_num_l     = 25
+    #const_num_l     = 4
     #const_num_l     = 2
 
     for indx_x in range(x):
@@ -121,31 +122,40 @@ if __name__=="__main__":
     config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":"float"}, 
             "y_len_link":{"value":2.08, "help":"Size y of cubes", "type":"float"},
             "z_len_link":{"value":0.3, "help":"Size z of cubes", "type":"float"}, 
-            "basic_str":{"value":3000, "help":"Minimal strength of hinge's recover force", "type":"float"}, 
+            #"basic_str":{"value":3000, "help":"Minimal strength of hinge's recover force", "type":"float"}, 
+            "basic_str":{"value":100, "help":"Minimal strength of hinge's recover force", "type":"float"}, 
 
             "x_pos_base":{"value":array_dict['x'], "help":"Position x of base", "type":"list", "type_in":"float"},
             "y_pos_base":{"value":array_dict['y'], "help":"Position y of base", "type":"list", "type_in":"float"},
             "z_pos_base":{"value":array_dict['z'], "help":"Position z of base", "type":"list", "type_in":"float"},
             "const_numLinks":{"value":array_dict['c'], "help":"Number of units", "type":"list", "type_in":"int"},
-            "inter_spring":{"value":(1, 3, 3, 3), "help":"Number of units between two strings", "type":"list", "type_in": "int"}, 
-            "every_spring":{"value":(3, 5, 7, 9), "help":"Number of units between one strings", "type":"list", "type_in": "int"},
+            #"inter_spring":{"value":(1, 3, 3, 3), "help":"Number of units between two strings", "type":"list", "type_in": "int"}, 
+            #"every_spring":{"value":(3, 5, 7, 9), "help":"Number of units between one strings", "type":"list", "type_in": "int"},
+            "inter_spring":{"value":(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), "help":"Number of units between two strings", "type":"list", "type_in": "int"}, 
+            "every_spring":{"value":(3, 5, 7, 9, 4, 6, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19), "help":"Number of units between one strings", "type":"list", "type_in": "int"},
 
             "linear_damp":{"value":0.5, "help":"Control the linear damp ratio", "type":"float"},
             "ang_damp":{"value":0.5, "help":"Control the angle damp ratio", "type":"float"},
+            #"linear_damp":{"value":0.1, "help":"Control the linear damp ratio", "type":"float"},
+            #"ang_damp":{"value":0.1, "help":"Control the angle damp ratio", "type":"float"},
             "time_leap":{"value":1.0/240.0, "help":"Time unit for simulation", "type":"float"},
             "equi_angle":{"value":0, "help":"Control the angle of balance for hinges", "type":"float"}, 
             #"equi_angle":{"value":-0.05, "help":"Control the angle of balance for hinges", "type":"float"}, 
             "spring_stiffness":{"value":500, "help":"Stiffness of spring", "type":"float"}, 
+            #"spring_stiffness":{"value":100, "help":"Stiffness of spring", "type":"float"}, 
             "camera_dist":{"value":90, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
+            #"camera_dist":{"value":30, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
             "spring_offset":{"value":0, "help":"String offset for balance state", "type":"float"}, 
             "time_limit":{"value":50.0/4, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
-            "initial_str":{"value":50000, "help":"Initial strength of force applied", "type":"float"}, 
+            #"initial_str":{"value":50000, "help":"Initial strength of force applied", "type":"float"}, 
+            "initial_str":{"value":150000, "help":"Initial strength of force applied", "type":"float"}, 
             "initial_stime":{"value":0.1/8, "help":"Initial time to apply force", "type":"float"}, 
             "limit_softness":{"value":0.9, "help":"Softness of the hinge limit", "type":"float"}, 
             "limit_bias":{"value":0.3, "help":"Bias of the hinge limit", "type":"float"}, 
             "limit_relax":{"value":1, "help":"Relax of the hinge limit", "type":"float"}, 
             #"limit_low":{"value":-2, "help":"Low bound of the hinge limit", "type":"float"}, 
-            "limit_low":{"value":0.1, "help":"Low bound of the hinge limit", "type":"float"}, 
+            #"limit_low":{"value":0.1, "help":"Low bound of the hinge limit", "type":"float"}, 
+            "limit_low":{"value":0, "help":"Low bound of the hinge limit", "type":"float"}, 
             #"limit_up":{"value":-0.1, "help":"Up bound of the hinge limit", "type":"float"}, 
             "limit_up":{"value":2, "help":"Up bound of the hinge limit", "type":"float"}, 
             #"limit_up":{"value":2, "help":"Up bound of the hinge limit", "type":"float"}, 
