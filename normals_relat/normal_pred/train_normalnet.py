@@ -20,6 +20,8 @@ import copy
 host = os.uname()[1]
 if host == 'freud':  # freud
     DATA_PATH = '/media/data/one_world_dataset/randomperm.hdf5'
+elif host.startswith('node') or host == 'openmind7':  # OpenMind
+    DATA_PATH = '/om/user/chengxuz/Data/one_world_dataset/randomperm.hdf5'
 else:
     print("Not supported yet!")
     exit()
@@ -176,6 +178,7 @@ def preprocess_config(cfg):
 def main(cfgfile):
     #cfg_initial = postprocess_config(json.load(open(cfgfile)))
     cfg_initial = preprocess_config(json.load(open(cfgfile)))
+    exp_id  = 'trainval_om'
     params = {
         'save_params': {
             'host': 'localhost',
@@ -184,7 +187,7 @@ def main(cfgfile):
             'dbname': 'normalnet-test',
             'collname': 'normalnet',
             #'exp_id': 'trainval0',
-            'exp_id': 'trainval1',
+            'exp_id': exp_id,
             #'exp_id': 'trainval2', # using screen?
 
             'do_save': True,
@@ -207,7 +210,7 @@ def main(cfgfile):
             'dbname': 'normalnet-test',
             'collname': 'normalnet',
             #'exp_id': 'trainval0',
-            'exp_id': 'trainval1',
+            'exp_id': exp_id,
             #'exp_id': 'trainval2', # using screen?
             'do_restore': True,
             'load_query': None
