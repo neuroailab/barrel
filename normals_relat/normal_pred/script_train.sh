@@ -1,0 +1,9 @@
+#!/bin/bash
+#SBATCH --gres=gpu:titan-x:1
+#SBATCH --mem=25000
+#SBATCH -t 7-0:0:0
+#SBATCH -c 5
+# Original training script
+source activate env_torch
+source ~/.tunnel
+python train_normalnet.py --expId trainval_om --seed ${1}

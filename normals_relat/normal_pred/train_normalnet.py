@@ -14,6 +14,7 @@ from tfutils import base, data, model, optimizer
 
 import json
 import copy
+import argparse
 
 #os.environ["CUDA_VISIBLE_DEVICES"]="2"
 
@@ -175,15 +176,16 @@ def preprocess_config(cfg):
                 cfg[k][str(_k)] = cfg[k].pop(_k)
     return cfg
 
-def main(cfgfile):
+def main(args):
     #cfg_initial = postprocess_config(json.load(open(cfgfile)))
-    cfg_initial = preprocess_config(json.load(open(cfgfile)))
-    exp_id  = 'trainval_om'
+    os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
+    cfg_initial = preprocess_config(json.load(open(args.pathconfig)))
+    exp_id  = args.expId
     params = {
         'save_params': {
             'host': 'localhost',
             #'port': 31001,
-            'port': 22334,
+            'port': args.nport,
             'dbname': 'normalnet-test',
             'collname': 'normalnet',
             #'exp_id': 'trainval0',
@@ -218,7 +220,7 @@ def main(cfgfile):
 
         'model_params': {
             'func': normal_encoder_asymmetric_with_bypass.normalnet_tfutils,
-            'seed': 0,
+            'seed': args.seed,
             'cfg_initial': cfg_initial
         },
 
@@ -286,10 +288,19 @@ def main(cfgfile):
 
         'log_device_placement': False,  # if variable placement has to be logged
     }
-    base.get_params()
+    #base.get_params()
     base.train_from_params(**params)
 
 if __name__ == '__main__':
     #base.get_params()
     #base.train_from_params(**params)
-    main('normals_config_winner0.cfg')
+    parser = argparse.ArgumentParser(description='The script to train the normalnet')
+    parser.add_argument('--nport', default = 22334, type = int, action = 'store', help = 'Port number of mongodb')
+    parser.add_argument('--pathconfig', default = "normals_config_winner0.cfg", type = str, action = 'store', help = 'Path to config file')
+    parser.add_argument('--expId', default = "trainval2", type = str, action = 'store', help = 'Name of experiment id')
+    parser.add_argument('--seed', default = 0, type = int, action = 'store', help = 'Random seed for model')
+    parser.add_argument('--gpu', default = 0, type = int, action = 'store', help = 'Index of gpu, currently only one gpu is allowed')
+
+    args    = parser.parse_args()
+
+    main(args)
