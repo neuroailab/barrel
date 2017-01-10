@@ -181,6 +181,7 @@ def main(args):
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
     cfg_initial = preprocess_config(json.load(open(args.pathconfig)))
     exp_id  = args.expId
+    cache_dir = os.path.join(args.cacheDirPrefix, '.tfutils', 'localhost:'+ str(args.nport), 'normalnet-test', 'normalnet', exp_id)
     params = {
         'save_params': {
             'host': 'localhost',
@@ -199,7 +200,7 @@ def main(args):
             'save_valid_freq': 10000,
             'save_filters_freq': 30000,
             'cache_filters_freq': 10000,
-            # 'cache_dir': None,  # defaults to '~/.tfutils'
+            'cache_dir': cache_dir,  # defaults to '~/.tfutils'
         },
 
         'load_params': {
@@ -300,6 +301,7 @@ if __name__ == '__main__':
     parser.add_argument('--expId', default = "trainval2", type = str, action = 'store', help = 'Name of experiment id')
     parser.add_argument('--seed', default = 0, type = int, action = 'store', help = 'Random seed for model')
     parser.add_argument('--gpu', default = 0, type = int, action = 'store', help = 'Index of gpu, currently only one gpu is allowed')
+    parser.add_argument('--cacheDirPrefix', default = "/home/chengxuz", type = str, action = 'store', help = 'Prefix of cache directory')
 
     args    = parser.parse_args()
 

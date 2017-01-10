@@ -7,4 +7,4 @@
 source activate env_torch
 source ~/.tunnel
 #python train_normalnet.py --expId trainval_om --seed ${1}
-python train_normalnet.py --expId ${2} --seed ${1}
+python train_normalnet.py --expId ${2} --seed ${1} --cacheDirPrefix /om/user/chengxuz
