@@ -143,8 +143,8 @@ if __name__=="__main__":
             #"equi_angle":{"value":-0.05, "help":"Control the angle of balance for hinges", "type":"float"}, 
             "spring_stiffness":{"value":500, "help":"Stiffness of spring", "type":"float"}, 
             #"spring_stiffness":{"value":100, "help":"Stiffness of spring", "type":"float"}, 
-            "camera_dist":{"value":90, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
-            #"camera_dist":{"value":30, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
+            #"camera_dist":{"value":90, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
+            "camera_dist":{"value":20, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
             "spring_offset":{"value":0, "help":"String offset for balance state", "type":"float"}, 
             "time_limit":{"value":50.0/4, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
             #"initial_str":{"value":50000, "help":"Initial strength of force applied", "type":"float"}, 
@@ -166,6 +166,7 @@ if __name__=="__main__":
             "torque_limit":{"value":200, "help":"While flag_time is 2, used for torque states of hinges to judge whether stop", "type":"float"}, 
             "initial_poi":{"value":24, "help":"Unit to apply the force", "type":"int"}, 
             "hinge_mode":{"value":0, "help":"Whether use hinges rather than springs for connections of two units", "type":"int"},
+            "test_mode":{"value":1, "help":"Whether enter test mode for some temp test codes, default is 0", "type":"int"},
             "flag_time":{"value":0, "help":"Whether open time limit", "type":"int"}}
     '''
     config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":"float"}, 

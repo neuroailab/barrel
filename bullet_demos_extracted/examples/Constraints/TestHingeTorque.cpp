@@ -54,6 +54,7 @@ float force_limit       = 1;
 float torque_limit      = 1;
 
 int hinge_mode          = 1;
+int test_mode           = 0;
 
 struct TestHingeTorque : public CommonRigidBodyBase{
     bool m_once;
@@ -131,6 +132,8 @@ void TestHingeTorque::stepSimulation(float deltaTime){
 
     static int count = 0;
     int all_size_for_big_list   = 0;
+
+    if (test_mode==1) return;
     //if ((count& 0x0f)==0)
     //if (1)
     for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) {
@@ -260,6 +263,7 @@ void TestHingeTorque::initPhysics(){
             ("force_limit", po::value<float>(), "While flag_time is 2, used for forces of rigid bodys to judge whether stop")
             ("torque_limit", po::value<float>(), "While flag_time is 2, used for torques of rigid bodys to judge whether stop")
             ("hinge_mode", po::value<int>(), "Whether use hinges rather than springs for connections of two units")
+            ("test_mode", po::value<int>(), "Whether enter test mode for some temp test codes, default is 0")
         ;
 
         po::variables_map vm;
@@ -391,6 +395,10 @@ void TestHingeTorque::initPhysics(){
         if (vm.count("hinge_mode")){
             hinge_mode      = vm["hinge_mode"].as<int>();
         }
+
+        if (vm.count("test_mode")){
+            test_mode       = vm["test_mode"].as<int>();
+        }
     }
     catch(exception& e) {
         cerr << "error: " << e.what() << "\n";
@@ -420,191 +428,264 @@ void TestHingeTorque::initPhysics(){
     btBoxShape* linkBox1 = new btBoxShape(linkHalfExtents);
     btSphereShape* linkSphere = new btSphereShape(radius);
 
-    for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) { // create one single whisker 
-
-        btAlignedObjectArray< btRigidBody* > m_allbones;
-        btAlignedObjectArray< btHingeConstraint* > m_allhinges;
-
-        m_allbones.clear();
-        m_allhinges.clear();
-        
-        int numLinks = const_numLinks[big_list_indx];
-        btVector3 basePosition = btVector3( x_pos_base[big_list_indx], y_pos_base[big_list_indx], z_pos_base[big_list_indx]);
-        btTransform baseWorldTrans;
-        baseWorldTrans.setIdentity();
-        baseWorldTrans.setOrigin(basePosition);
+    if (test_mode==1) {
+        float deg_away = 0.3;
+        //btQuaternion test_rotation = btQuaternion( 3.1415/2, 3.1415/2, 3.1415/2);
+        //btQuaternion test_rotation = btQuaternion( deg_away, deg_away, deg_away);
+        btQuaternion test_rotation = btQuaternion( deg_away, 0, 0);
+        btVector3 basePosition = btVector3( x_pos_base[0], y_pos_base[0], z_pos_base[0]);
+        btTransform baseWorldTrans(test_rotation, basePosition);
+        //baseWorldTrans.setIdentity();
+        //baseWorldTrans.setOrigin(basePosition);
         
         float baseMass = 0.f;
         float linkMass = 1.f;
-        
-        // Create the base ball
-        btVector3 basePosition_ball = btVector3(x_pos_base[big_list_indx], y_pos_base[big_list_indx] + y_len_link + radius, z_pos_base[big_list_indx]);
-        btTransform baseWorldTrans_ball;
-        baseWorldTrans_ball.setIdentity();
-        baseWorldTrans_ball.setOrigin(basePosition_ball);
 
-        btRigidBody* base_ball = createRigidBody(baseMass,baseWorldTrans_ball,linkSphere);
-        m_dynamicsWorld->removeRigidBody(base_ball);
-        base_ball->setDamping(0,0);
-        m_dynamicsWorld->addRigidBody(base_ball,collisionFilterGroup,collisionFilterMask);
-		
-        // Create the base box
-        btRigidBody* base = createRigidBody(linkMass,baseWorldTrans,baseBox);
+        btRigidBody* base = createRigidBody(baseMass,baseWorldTrans,baseBox);
         m_dynamicsWorld->removeRigidBody(base);
         base->setDamping(linear_damp,ang_damp);
         m_dynamicsWorld->addRigidBody(base,collisionFilterGroup,collisionFilterMask);
 
+        btVector3 basePosition2 = btVector3( x_pos_base[0], y_pos_base[0] + y_len_link*2, z_pos_base[0]);
+        //btQuaternion test_rotation = btQuaternion( 0, 3.1415/2, 0);
+        btTransform baseWorldTrans2(test_rotation, basePosition2);
+
+        btRigidBody* base2 = createRigidBody(linkMass, baseWorldTrans2, baseBox);
+        m_dynamicsWorld->removeRigidBody(base2);
+        base2->setDamping(linear_damp,ang_damp);
+        m_dynamicsWorld->addRigidBody(base2,collisionFilterGroup,collisionFilterMask);
+
         // Special spring for base ball and base box unit 
-        btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, -radius, 0));						//par body's COM to cur body's COM offset
-        btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, radius, 0));							//cur body's COM to cur body's PIV offset
-        btGeneric6DofSpring2Constraint* fixed = new btGeneric6DofSpring2Constraint(*base_ball, *base,pivotInA,pivotInB);
-        fixed->setLinearLowerLimit(btVector3(0,0,0));
-        fixed->setLinearUpperLimit(btVector3(0,0,0));
-        fixed->setAngularLowerLimit(btVector3(0,-1,0));
-        fixed->setAngularUpperLimit(btVector3(0,1,0));
+        btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, y_len_link, 0));						//par body's COM to cur body's COM offset
+        btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, -y_len_link, 0));							//cur body's COM to cur body's PIV offset
+        btGeneric6DofSpring2Constraint* fixed = new btGeneric6DofSpring2Constraint(*base, *base2, pivotInA, pivotInB);
+        //fixed->setLinearLowerLimit(btVector3(-100,-100,-100));
+        //fixed->setLinearUpperLimit(btVector3(100,100,100));
+        //fixed->setLinearLowerLimit(btVector3(0,0,0));
+        //fixed->setLinearUpperLimit(btVector3(0,0,0));
+        //fixed->setAngularLowerLimit(btVector3(0,-3.1415/2,-3.1415/2));
+        //fixed->setAngularUpperLimit(btVector3(0.1,-3.1414/2,-3.1414/2));
+        //fixed->setAngularLowerLimit(btVector3(0,0,0));
+        //fixed->setAngularUpperLimit(btVector3(0,0,0));
+        
+        //fixed->setEquilibriumPoint(4, -3.1415/2);
+        //fixed->setEquilibriumPoint(5, -3.1415/2);
         for (int indx_tmp=3;indx_tmp<6;indx_tmp++){
+        //for (int indx_tmp=3;indx_tmp<4;indx_tmp++){
             fixed->enableSpring(indx_tmp, true);
-            fixed->setStiffness(indx_tmp, basic_str*numLinks/2);
+            fixed->setStiffness(indx_tmp, 1000);
+            //fixed->setEquilibriumPoint(indx_tmp, -deg_away);
+            //fixed->setEquilibriumPoint(indx_tmp, 0.5);
+            //fixed->setEquilibriumPoint(indx_tmp, 0);
         }
-        fixed->setEquilibriumPoint();
+        //for (int indx_tmp=0;indx_tmp<3;indx_tmp++){
+        for (int indx_tmp=1;indx_tmp<2;indx_tmp++){
+            //fixed->setEquilibriumPoint(indx_tmp, 0);
+            //fixed->enableSpring(indx_tmp, true);
+            //fixed->setStiffness(indx_tmp, 1000);
+        }
+        //fixed->setAxis(btVector3(0, 1, 0), btVector3(0, -1, 0));
 
         m_dynamicsWorld->addConstraint(fixed,true);
 
-        btRigidBody* prevBody = base;
-        m_allbones.push_back(base);
+        btVector3 axisInA(1,0,0);
+        btVector3 axisInB(1,0,0);
+        btVector3 pivotInA_h(0,linkHalfExtents[1],0);
+        btVector3 pivotInB_h(0,-linkHalfExtents[1],0);
+        bool useReferenceA = true;
+        btHingeConstraint* hinge = new btHingeConstraint(*base,*base2,
+            pivotInA_h,pivotInB_h,
+            axisInA,axisInB,useReferenceA);
+        m_dynamicsWorld->addConstraint(hinge,true);
 
-        cout << "Push base" << endl;
-        
-        for (int i=0;i<numLinks;i++){
-            btTransform linkTrans;
-            linkTrans = baseWorldTrans;
+    }
+    else {
+        for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) { // create one single whisker 
+
+            btAlignedObjectArray< btRigidBody* > m_allbones;
+            btAlignedObjectArray< btHingeConstraint* > m_allhinges;
+
+            m_allbones.clear();
+            m_allhinges.clear();
             
-            linkTrans.setOrigin(basePosition-btVector3(0,linkHalfExtents[1]*2.f*(i+1),0));
+            int numLinks = const_numLinks[big_list_indx];
+            btVector3 basePosition = btVector3( x_pos_base[big_list_indx], y_pos_base[big_list_indx], z_pos_base[big_list_indx]);
+            btTransform baseWorldTrans;
+            baseWorldTrans.setIdentity();
+            baseWorldTrans.setOrigin(basePosition);
             
-			btCollisionShape* colOb = 0;
-			
-            colOb = linkBox1;
-            /*
-			if (i<limit_numLink){
-				colOb = linkBox1;
-			} else {
-				colOb = linkSphere;
-			}
-            */
+            float baseMass = 0.f;
+            float linkMass = 1.f;
+            
+            // Create the base ball
+            btVector3 basePosition_ball = btVector3(x_pos_base[big_list_indx], y_pos_base[big_list_indx] + y_len_link + radius, z_pos_base[big_list_indx]);
+            btTransform baseWorldTrans_ball;
+            baseWorldTrans_ball.setIdentity();
+            baseWorldTrans_ball.setOrigin(basePosition_ball);
 
-            btRigidBody* linkBody = createRigidBody(linkMass,linkTrans,colOb);
-            m_dynamicsWorld->removeRigidBody(linkBody);
-            linkBody->setDamping(linear_damp,ang_damp);
-            m_dynamicsWorld->addRigidBody(linkBody,collisionFilterGroup,collisionFilterMask);
+            btRigidBody* base_ball = createRigidBody(baseMass,baseWorldTrans_ball,linkSphere);
+            m_dynamicsWorld->removeRigidBody(base_ball);
+            base_ball->setDamping(0,0);
+            m_dynamicsWorld->addRigidBody(base_ball,collisionFilterGroup,collisionFilterMask);
+            
+            // Create the base box
+            btRigidBody* base = createRigidBody(linkMass,baseWorldTrans,baseBox);
+            m_dynamicsWorld->removeRigidBody(base);
+            base->setDamping(linear_damp,ang_damp);
+            m_dynamicsWorld->addRigidBody(base,collisionFilterGroup,collisionFilterMask);
 
-            m_allbones.push_back(linkBody);
-            /*
-            if (i<limit_numLink){
-                m_allbones.push_back(linkBody);
+            // Special spring for base ball and base box unit 
+            btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, -radius, 0));						//par body's COM to cur body's COM offset
+            btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, radius, 0));							//cur body's COM to cur body's PIV offset
+            btGeneric6DofSpring2Constraint* fixed = new btGeneric6DofSpring2Constraint(*base_ball, *base,pivotInA,pivotInB);
+            fixed->setLinearLowerLimit(btVector3(0,0,0));
+            fixed->setLinearUpperLimit(btVector3(0,0,0));
+            fixed->setAngularLowerLimit(btVector3(0,-1,0));
+            fixed->setAngularUpperLimit(btVector3(0,1,0));
+            for (int indx_tmp=3;indx_tmp<6;indx_tmp++){
+                fixed->enableSpring(indx_tmp, true);
+                fixed->setStiffness(indx_tmp, basic_str*numLinks/2);
             }
-            */
+            fixed->setEquilibriumPoint();
 
-			btTypedConstraint* con = 0;
-			
-			//if (i<limit_numLink){
-			if (1) {
-				//create a hinge constraint
-                if (hinge_mode==1){
-                    btVector3 pivotInA(0,-linkHalfExtents[1],0);
-                    btVector3 pivotInB(0,linkHalfExtents[1],0);
-                    btVector3 axisInA(1,0,0);
-                    btVector3 axisInB(1,0,0);
-                    bool useReferenceA = true;
-                    btHingeConstraint* hinge = new btHingeConstraint(*prevBody,*linkBody,
-                        pivotInA,pivotInB,
-                        axisInA,axisInB,useReferenceA);
-                    hinge->setLimit(limit_low, limit_up, limit_softness, limit_bias, limit_relax);
-                    m_allhinges.push_back(hinge);
-                    con = hinge;
+            m_dynamicsWorld->addConstraint(fixed,true);
+
+            btRigidBody* prevBody = base;
+            m_allbones.push_back(base);
+
+            cout << "Push base" << endl;
+            
+            for (int i=0;i<numLinks;i++){
+                btTransform linkTrans;
+                linkTrans = baseWorldTrans;
+                
+                linkTrans.setOrigin(basePosition-btVector3(0,linkHalfExtents[1]*2.f*(i+1),0));
+                
+                btCollisionShape* colOb = 0;
+                
+                colOb = linkBox1;
+                /*
+                if (i<limit_numLink){
+                    colOb = linkBox1;
                 } else {
-                    btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, -linkHalfExtents[1], 0));
-                    btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0,  linkHalfExtents[1], 0));
-                    btGeneric6DofSpring2Constraint* fixed = new btGeneric6DofSpring2Constraint(*prevBody, *linkBody,pivotInA,pivotInB);
-                    fixed->setLinearLowerLimit(btVector3(0,0,0));
-                    fixed->setLinearUpperLimit(btVector3(0,0,0));
-                    fixed->setAngularLowerLimit(btVector3( limit_low,0,0));
-                    fixed->setAngularUpperLimit(btVector3(  limit_up,0,0));
-                    for (int indx_tmp=3;indx_tmp<6;indx_tmp++){
-                        fixed->enableSpring(indx_tmp, true);
-                        fixed->setStiffness(indx_tmp, basic_str*(numLinks-i)/2);
-                    }
-                    for (int indx_tmp=0;indx_tmp<6;indx_tmp++){
-                        if (indx_tmp!=3) {
-                            fixed->setEquilibriumPoint(indx_tmp);
-                        } else {
-                            if (limit_low > 0)
-                                fixed->setEquilibriumPoint(indx_tmp, limit_low);
-                            else if (limit_up < 0)
-                                fixed->setEquilibriumPoint(indx_tmp, limit_up);
-                            else
+                    colOb = linkSphere;
+                }
+                */
+
+                btRigidBody* linkBody = createRigidBody(linkMass,linkTrans,colOb);
+                m_dynamicsWorld->removeRigidBody(linkBody);
+                linkBody->setDamping(linear_damp,ang_damp);
+                m_dynamicsWorld->addRigidBody(linkBody,collisionFilterGroup,collisionFilterMask);
+
+                m_allbones.push_back(linkBody);
+                /*
+                if (i<limit_numLink){
+                    m_allbones.push_back(linkBody);
+                }
+                */
+
+                btTypedConstraint* con = 0;
+                
+                //if (i<limit_numLink){
+                if (1) {
+                    //create a hinge constraint
+                    if (hinge_mode==1){
+                        btVector3 pivotInA(0,-linkHalfExtents[1],0);
+                        btVector3 pivotInB(0,linkHalfExtents[1],0);
+                        btVector3 axisInA(1,0,0);
+                        btVector3 axisInB(1,0,0);
+                        bool useReferenceA = true;
+                        btHingeConstraint* hinge = new btHingeConstraint(*prevBody,*linkBody,
+                            pivotInA,pivotInB,
+                            axisInA,axisInB,useReferenceA);
+                        hinge->setLimit(limit_low, limit_up, limit_softness, limit_bias, limit_relax);
+                        m_allhinges.push_back(hinge);
+                        con = hinge;
+                    } else {
+                        btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, -linkHalfExtents[1], 0));
+                        btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0,  linkHalfExtents[1], 0));
+                        btGeneric6DofSpring2Constraint* fixed = new btGeneric6DofSpring2Constraint(*prevBody, *linkBody,pivotInA,pivotInB);
+                        fixed->setLinearLowerLimit(btVector3(0,0,0));
+                        fixed->setLinearUpperLimit(btVector3(0,0,0));
+                        fixed->setAngularLowerLimit(btVector3( limit_low,0,0));
+                        fixed->setAngularUpperLimit(btVector3(  limit_up,0,0));
+                        for (int indx_tmp=3;indx_tmp<6;indx_tmp++){
+                            fixed->enableSpring(indx_tmp, true);
+                            fixed->setStiffness(indx_tmp, basic_str*(numLinks-i)/2);
+                        }
+                        for (int indx_tmp=0;indx_tmp<6;indx_tmp++){
+                            if (indx_tmp!=3) {
                                 fixed->setEquilibriumPoint(indx_tmp);
+                            } else {
+                                if (limit_low > 0)
+                                    fixed->setEquilibriumPoint(indx_tmp, limit_low);
+                                else if (limit_up < 0)
+                                    fixed->setEquilibriumPoint(indx_tmp, limit_up);
+                                else
+                                    fixed->setEquilibriumPoint(indx_tmp);
+                            }
+                        }
+                        //fixed->setEquilibriumPoint();
+                        con = fixed;
+                    }
+                    
+                    // Create a spring constraint if needed
+                    for (int spring_indx=0;spring_indx < every_spring.size();spring_indx++){
+                        int tmp_every_spring    = every_spring[spring_indx];
+                        int tmp_inter_spring    = inter_spring[spring_indx];
+
+                        if ((i>tmp_every_spring-2) && (i % tmp_inter_spring==0)){
+                            btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, -tmp_every_spring*linkHalfExtents[1]+spring_offset, 0));
+                            btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, tmp_every_spring*linkHalfExtents[1]-spring_offset, 0));
+                            //btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, 0, 0));
+                            //btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, 0, 0));
+                            btGeneric6DofSpring2Constraint* fixed;
+
+                            fixed = new btGeneric6DofSpring2Constraint(*m_allbones[i-(tmp_every_spring)+1], *linkBody,pivotInA,pivotInB);
+                            /*
+                            if (i-tmp_every_spring>-1) {
+                                fixed = new btGeneric6DofSpring2Constraint(*m_allbones[i-(tmp_every_spring)], *linkBody,pivotInA,pivotInB);
+                            } else {
+                                fixed = new btGeneric6DofSpring2Constraint(*base, *linkBody,pivotInA,pivotInB);
+                            }
+                            */
+                            //for (int indx_tmp=0;indx_tmp<3;indx_tmp++){
+                            for (int indx_tmp=0;indx_tmp<6;indx_tmp++){
+                                fixed->enableSpring(indx_tmp, true);
+                                fixed->setStiffness(indx_tmp, spring_stiffness);
+                            }
+                            fixed->setEquilibriumPoint();
+                            m_dynamicsWorld->addConstraint(fixed,true);
                         }
                     }
-                    //fixed->setEquilibriumPoint();
+                } else{
+                    
+                    btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, -radius, 0));						//par body's COM to cur body's COM offset
+                    btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, radius, 0));							//cur body's COM to cur body's PIV offset
+                    btGeneric6DofSpring2Constraint* fixed = new btGeneric6DofSpring2Constraint(*prevBody, *linkBody,pivotInA,pivotInB);
+                    //fixed->setLinearLowerLimit(btVector3(0,0,0));
+                    //fixed->setLinearUpperLimit(btVector3(0,0,0));
+                    //fixed->setAngularLowerLimit(btVector3(0,0,0));
+                    //fixed->setAngularUpperLimit(btVector3(0,0,0));
                     con = fixed;
                 }
-                
-                // Create a spring constraint if needed
-                for (int spring_indx=0;spring_indx < every_spring.size();spring_indx++){
-                    int tmp_every_spring    = every_spring[spring_indx];
-                    int tmp_inter_spring    = inter_spring[spring_indx];
 
-                    if ((i>tmp_every_spring-2) && (i % tmp_inter_spring==0)){
-                        btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, -tmp_every_spring*linkHalfExtents[1]+spring_offset, 0));
-                        btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, tmp_every_spring*linkHalfExtents[1]-spring_offset, 0));
-                        //btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, 0, 0));
-                        //btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, 0, 0));
-                        btGeneric6DofSpring2Constraint* fixed;
+                btAssert(con);
+                if (con){
+                    /* btJointFeedback* fb = new btJointFeedback();
+                    m_jointFeedback.push_back(fb);
+                    con->setJointFeedback(fb); */
 
-                        fixed = new btGeneric6DofSpring2Constraint(*m_allbones[i-(tmp_every_spring)+1], *linkBody,pivotInA,pivotInB);
-                        /*
-                        if (i-tmp_every_spring>-1) {
-                            fixed = new btGeneric6DofSpring2Constraint(*m_allbones[i-(tmp_every_spring)], *linkBody,pivotInA,pivotInB);
-                        } else {
-                            fixed = new btGeneric6DofSpring2Constraint(*base, *linkBody,pivotInA,pivotInB);
-                        }
-                        */
-                        //for (int indx_tmp=0;indx_tmp<3;indx_tmp++){
-                        for (int indx_tmp=0;indx_tmp<6;indx_tmp++){
-                            fixed->enableSpring(indx_tmp, true);
-                            fixed->setStiffness(indx_tmp, spring_stiffness);
-                        }
-                        fixed->setEquilibriumPoint();
-                        m_dynamicsWorld->addConstraint(fixed,true);
-                    }
+                    m_dynamicsWorld->addConstraint(con,true);
                 }
-			} else{
-				
-				btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, -radius, 0));						//par body's COM to cur body's COM offset
-				btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, radius, 0));							//cur body's COM to cur body's PIV offset
-				btGeneric6DofSpring2Constraint* fixed = new btGeneric6DofSpring2Constraint(*prevBody, *linkBody,pivotInA,pivotInB);
-				//fixed->setLinearLowerLimit(btVector3(0,0,0));
-				//fixed->setLinearUpperLimit(btVector3(0,0,0));
-				//fixed->setAngularLowerLimit(btVector3(0,0,0));
-				//fixed->setAngularUpperLimit(btVector3(0,0,0));
-				con = fixed;
-			}
+                prevBody = linkBody;
 
-			btAssert(con);
-			if (con){
-				/* btJointFeedback* fb = new btJointFeedback();
-				m_jointFeedback.push_back(fb);
-				con->setJointFeedback(fb); */
-
-				m_dynamicsWorld->addConstraint(con,true);
-			}
-			prevBody = linkBody;
-
+            }
+            m_allbones_big_list.push_back(m_allbones);
+            m_allhinges_big_list.push_back(m_allhinges);
+            cout << "Push everything" << endl;
         }
-        m_allbones_big_list.push_back(m_allbones);
-        m_allhinges_big_list.push_back(m_allhinges);
-        cout << "Push everything" << endl;
-	}
+    }
 	
     /*
 	if (0)
