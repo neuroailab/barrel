@@ -440,13 +440,15 @@ void TestHingeTorque::initPhysics(){
         
         float baseMass = 0.f;
         float linkMass = 1.f;
+        float string_stiffness_tmp = 10000.f;
 
         btRigidBody* base = createRigidBody(baseMass,baseWorldTrans,baseBox);
         m_dynamicsWorld->removeRigidBody(base);
         base->setDamping(linear_damp,ang_damp);
         m_dynamicsWorld->addRigidBody(base,collisionFilterGroup,collisionFilterMask);
 
-        btVector3 basePosition2 = btVector3( x_pos_base[0], y_pos_base[0] + y_len_link*2, z_pos_base[0]);
+        //btVector3 basePosition2 = btVector3( x_pos_base[0], y_pos_base[0] + y_len_link*2, z_pos_base[0]);
+        btVector3 basePosition2 = btVector3( x_pos_base[0], y_pos_base[0] + y_len_link*4, z_pos_base[0]);
         //btQuaternion test_rotation = btQuaternion( 0, 3.1415/2, 0);
         btTransform baseWorldTrans2(test_rotation, basePosition2);
 
@@ -456,8 +458,10 @@ void TestHingeTorque::initPhysics(){
         m_dynamicsWorld->addRigidBody(base2,collisionFilterGroup,collisionFilterMask);
 
         // Special spring for base ball and base box unit 
-        btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, y_len_link, 0));						//par body's COM to cur body's COM offset
-        btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, -y_len_link, 0));							//cur body's COM to cur body's PIV offset
+        //btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, y_len_link, 0));						//par body's COM to cur body's COM offset
+        //btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, -y_len_link, 0));							//cur body's COM to cur body's PIV offset
+        btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, y_len_link*2, 0));						//par body's COM to cur body's COM offset
+        btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, -y_len_link*2, 0));							//cur body's COM to cur body's PIV offset
         btGeneric6DofSpring2Constraint* fixed = new btGeneric6DofSpring2Constraint(*base, *base2, pivotInA, pivotInB);
         //fixed->setLinearLowerLimit(btVector3(-100,-100,-100));
         //fixed->setLinearUpperLimit(btVector3(100,100,100));
@@ -473,16 +477,16 @@ void TestHingeTorque::initPhysics(){
         for (int indx_tmp=3;indx_tmp<6;indx_tmp++){
         //for (int indx_tmp=3;indx_tmp<4;indx_tmp++){
             fixed->enableSpring(indx_tmp, true);
-            fixed->setStiffness(indx_tmp, 1000);
+            fixed->setStiffness(indx_tmp, string_stiffness_tmp);
             //fixed->setEquilibriumPoint(indx_tmp, -deg_away);
             //fixed->setEquilibriumPoint(indx_tmp, 0.5);
             //fixed->setEquilibriumPoint(indx_tmp, 0);
         }
-        //for (int indx_tmp=0;indx_tmp<3;indx_tmp++){
-        for (int indx_tmp=1;indx_tmp<2;indx_tmp++){
+        for (int indx_tmp=0;indx_tmp<3;indx_tmp++){
+        //for (int indx_tmp=1;indx_tmp<2;indx_tmp++){
             //fixed->setEquilibriumPoint(indx_tmp, 0);
-            //fixed->enableSpring(indx_tmp, true);
-            //fixed->setStiffness(indx_tmp, 1000);
+            fixed->enableSpring(indx_tmp, true);
+            fixed->setStiffness(indx_tmp, string_stiffness_tmp);
         }
         //fixed->setAxis(btVector3(0, 1, 0), btVector3(0, -1, 0));
 
@@ -490,8 +494,10 @@ void TestHingeTorque::initPhysics(){
 
         btVector3 axisInA(1,0,0);
         btVector3 axisInB(1,0,0);
-        btVector3 pivotInA_h(0,linkHalfExtents[1],0);
-        btVector3 pivotInB_h(0,-linkHalfExtents[1],0);
+        //btVector3 pivotInA_h(0,linkHalfExtents[1],0);
+        //btVector3 pivotInB_h(0,-linkHalfExtents[1],0);
+        btVector3 pivotInA_h(0,linkHalfExtents[1]*2,0);
+        btVector3 pivotInB_h(0,-linkHalfExtents[1]*2,0);
         bool useReferenceA = true;
         btHingeConstraint* hinge = new btHingeConstraint(*base,*base2,
             pivotInA_h,pivotInB_h,
