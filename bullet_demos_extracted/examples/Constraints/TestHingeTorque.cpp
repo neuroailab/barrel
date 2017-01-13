@@ -5,6 +5,7 @@
 #include <iterator>
 #include <fstream>
 #include <vector>
+#include <cmath>
 
 namespace po = boost::program_options;
 using namespace std;
@@ -55,6 +56,8 @@ float torque_limit      = 1;
 
 int hinge_mode          = 1;
 int test_mode           = 0;
+
+float percision         = 0.01;
 
 struct TestHingeTorque : public CommonRigidBodyBase{
     bool m_once;
@@ -216,6 +219,59 @@ void TestHingeTorque::stepSimulation(float deltaTime){
     //CommonRigidBodyBase::stepSimulation(deltaTime);
 }
 
+
+float getValueQua(float qua_a, float qua_b, float qua_c, float x_now){
+    float y_now = qua_a*pow(x_now, 2) + qua_b*x_now + qua_c;
+    return y_now;
+}
+
+float getNorm(float x_now, float y_now){
+    float norm_now = sqrt(pow(x_now, 2) + pow(y_now, 2));
+    return norm_now;
+}
+
+float getDistanceQua(float qua_a, float qua_b, float qua_c, float cir_x0, float x_now){
+    float cir_y0 = getValueQua(qua_a, qua_b, qua_c, cir_x0);
+    float y_now = getValueQua(qua_a, qua_b, qua_c, x_now);
+    float distance_now = getNorm(cir_x0 - x_now, cir_y0 - y_now);
+
+    return distance_now;
+}
+
+float findInterQuaCirleBin(float qua_a, float qua_b, float qua_c, float cir_x0, float cir_r0, 
+        float percision, float direction = 1){
+    float curr_distance = 20*direction;
+    while (getDistanceQua(qua_a, qua_b, qua_c, cir_x0, cir_x0 + curr_distance) < cir_r0) {
+        curr_distance = curr_distance*2;
+    }
+
+    float max_dis = curr_distance;
+    float min_dis = 0;
+
+    float final_val = 0;
+
+    while (true){
+        float now_dis_s = getDistanceQua(qua_a, qua_b, qua_c, cir_x0, cir_x0 + min_dis);
+        if (abs(now_dis_s - cir_r0) < percision){
+            final_val = cir_x0 + min_dis;
+            break;
+        }
+        float now_dis_b = getDistanceQua(qua_a, qua_b, qua_c, cir_x0, cir_x0 + max_dis);
+        if (abs(now_dis_b - cir_r0) < percision){
+            final_val = cir_x0 + max_dis;
+            break;
+        }
+
+        curr_distance = (max_dis + min_dis)/2;
+        if (getDistanceQua(qua_a, qua_b, qua_c, cir_x0, cir_x0 + curr_distance) < cir_r0) {
+            min_dis = curr_distance;
+        } else {
+            max_dis = curr_distance;
+        }
+    }
+
+    return final_val;
+}
 
 
 void TestHingeTorque::initPhysics(){
@@ -429,11 +485,20 @@ void TestHingeTorque::initPhysics(){
     btSphereShape* linkSphere = new btSphereShape(radius);
 
     if (test_mode==1) {
-        float deg_away = 0.3;
+        //float next_z = findInterQuaCirleBin(-1, 0, y_pos_base[0], 0, 2*y_len_link, percision, -1);
+        float next_z = findInterQuaCirleBin(-1, 0, y_pos_base[0], 0, 2*y_len_link, percision, -1);
+        float next_y = getValueQua(-1, 0, y_pos_base[0], next_z);
+        float base_y_tmp = (y_pos_base[0] + next_y)/2;
+        float base_z_tmp = (z_pos_base[0] + next_z)/2;
+
+        //float deg_away = 0.3;
+        float deg_away = atan2(next_z - z_pos_base[0], next_y - y_pos_base[0]);
         //btQuaternion test_rotation = btQuaternion( 3.1415/2, 3.1415/2, 3.1415/2);
         //btQuaternion test_rotation = btQuaternion( deg_away, deg_away, deg_away);
-        btQuaternion test_rotation = btQuaternion( deg_away, 0, 0);
-        btVector3 basePosition = btVector3( x_pos_base[0], y_pos_base[0], z_pos_base[0]);
+        //btQuaternion test_rotation = btQuaternion( deg_away, 0, 0);
+        btQuaternion test_rotation = btQuaternion( 0, deg_away, 0);
+        //btVector3 basePosition = btVector3( x_pos_base[0], y_pos_base[0], z_pos_base[0]);
+        btVector3 basePosition = btVector3( x_pos_base[0], base_y_tmp, base_z_tmp);
         btTransform baseWorldTrans(test_rotation, basePosition);
         //baseWorldTrans.setIdentity();
         //baseWorldTrans.setOrigin(basePosition);
@@ -443,25 +508,44 @@ void TestHingeTorque::initPhysics(){
         float string_stiffness_tmp = 10000.f;
 
         btRigidBody* base = createRigidBody(baseMass,baseWorldTrans,baseBox);
+
+        btVector3 tmp_pos = base->getCenterOfMassPosition();
+        //cout << "(" << tmp_pos[0] << ", " << tmp_pos[1] << "," << tmp_pos[2] << ")" << endl;
+
         m_dynamicsWorld->removeRigidBody(base);
         base->setDamping(linear_damp,ang_damp);
         m_dynamicsWorld->addRigidBody(base,collisionFilterGroup,collisionFilterMask);
 
+        float next_z2 = findInterQuaCirleBin(-1, 0, y_pos_base[0], next_z, 2*y_len_link, percision, -1);
+        float next_y2 = getValueQua(-1, 0, y_pos_base[0], next_z2);
+        float base_y_tmp2 = (next_y + next_y2)/2;
+        float base_z_tmp2 = (next_z + next_z2)/2;
+
+        //float deg_away = 0.3;
+        float deg_away2 = atan2(next_z2 - next_z, next_y2 - next_y);
+        btQuaternion test_rotation2 = btQuaternion( 0, deg_away2, 0);
+        btVector3 basePosition2 = btVector3( x_pos_base[0], base_y_tmp2, base_z_tmp2);
+        btTransform baseWorldTrans2(test_rotation2, basePosition2);
         //btVector3 basePosition2 = btVector3( x_pos_base[0], y_pos_base[0] + y_len_link*2, z_pos_base[0]);
-        btVector3 basePosition2 = btVector3( x_pos_base[0], y_pos_base[0] + y_len_link*4, z_pos_base[0]);
+        //btVector3 basePosition2 = btVector3( x_pos_base[0], y_pos_base[0] - y_len_link*4, z_pos_base[0]);
+        //btVector3 basePosition2 = btVector3( x_pos_base[0], y_pos_base[0], z_pos_base[0]);
         //btQuaternion test_rotation = btQuaternion( 0, 3.1415/2, 0);
-        btTransform baseWorldTrans2(test_rotation, basePosition2);
+        //btTransform baseWorldTrans2(test_rotation, basePosition2);
 
         btRigidBody* base2 = createRigidBody(linkMass, baseWorldTrans2, baseBox);
+
+        tmp_pos = base2->getCenterOfMassPosition();
+        //cout << "(" << tmp_pos[0] << ", " << tmp_pos[1] << "," << tmp_pos[2] << ")" << endl;
+
         m_dynamicsWorld->removeRigidBody(base2);
         base2->setDamping(linear_damp,ang_damp);
         m_dynamicsWorld->addRigidBody(base2,collisionFilterGroup,collisionFilterMask);
 
         // Special spring for base ball and base box unit 
-        //btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, y_len_link, 0));						//par body's COM to cur body's COM offset
-        //btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, -y_len_link, 0));							//cur body's COM to cur body's PIV offset
-        btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, y_len_link*2, 0));						//par body's COM to cur body's COM offset
-        btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, -y_len_link*2, 0));							//cur body's COM to cur body's PIV offset
+        btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, y_len_link, 0));						//par body's COM to cur body's COM offset
+        btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, -y_len_link, 0));							//cur body's COM to cur body's PIV offset
+        //btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, y_len_link*2, 0));						//par body's COM to cur body's COM offset
+        //btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, -y_len_link*2, 0));							//cur body's COM to cur body's PIV offset
         btGeneric6DofSpring2Constraint* fixed = new btGeneric6DofSpring2Constraint(*base, *base2, pivotInA, pivotInB);
         //fixed->setLinearLowerLimit(btVector3(-100,-100,-100));
         //fixed->setLinearUpperLimit(btVector3(100,100,100));
@@ -482,6 +566,9 @@ void TestHingeTorque::initPhysics(){
             //fixed->setEquilibriumPoint(indx_tmp, 0.5);
             //fixed->setEquilibriumPoint(indx_tmp, 0);
         }
+
+        fixed->setEquilibriumPoint(3, -(deg_away2 - deg_away));
+
         for (int indx_tmp=0;indx_tmp<3;indx_tmp++){
         //for (int indx_tmp=1;indx_tmp<2;indx_tmp++){
             //fixed->setEquilibriumPoint(indx_tmp, 0);
@@ -494,10 +581,10 @@ void TestHingeTorque::initPhysics(){
 
         btVector3 axisInA(1,0,0);
         btVector3 axisInB(1,0,0);
-        //btVector3 pivotInA_h(0,linkHalfExtents[1],0);
-        //btVector3 pivotInB_h(0,-linkHalfExtents[1],0);
-        btVector3 pivotInA_h(0,linkHalfExtents[1]*2,0);
-        btVector3 pivotInB_h(0,-linkHalfExtents[1]*2,0);
+        btVector3 pivotInA_h(0,linkHalfExtents[1],0);
+        btVector3 pivotInB_h(0,-linkHalfExtents[1],0);
+        //btVector3 pivotInA_h(0,linkHalfExtents[1]*2,0);
+        //btVector3 pivotInB_h(0,-linkHalfExtents[1]*2,0);
         bool useReferenceA = true;
         btHingeConstraint* hinge = new btHingeConstraint(*base,*base2,
             pivotInA_h,pivotInB_h,

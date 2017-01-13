@@ -1,10 +1,12 @@
 #include <iostream>
 
 #include <btBulletDynamicsCommon.h>
+#include <cmath>
 
 int main (void)
 {
 
+        std::cout << pow(2.0, 3) << std::endl;
         btBroadphaseInterface* broadphase = new btDbvtBroadphase();
 
         btDefaultCollisionConfiguration* collisionConfiguration = new btDefaultCollisionConfiguration();
@@ -47,7 +49,7 @@ int main (void)
                 btTransform trans;
                 fallRigidBody->getMotionState()->getWorldTransform(trans);
 
-                std::cout << "sphere height: " << trans.getOrigin().getY() << std::endl;
+                //std::cout << "sphere height: " << trans.getOrigin().getY() << std::endl;
         }
 
         dynamicsWorld->removeRigidBody(fallRigidBody);
