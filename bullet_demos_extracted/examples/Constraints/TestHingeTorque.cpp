@@ -76,6 +76,8 @@ struct TestHingeTorque : public CommonRigidBodyBase{
 	virtual void initPhysics();
 
 	virtual void stepSimulation(float deltaTime);
+    void addQuaUnits(float qua_a, float qua_b, float qua_c, int num_units, 
+            btTransform base_transform);
 
 	
 	virtual void resetCamera(){
@@ -271,6 +273,84 @@ float findInterQuaCirleBin(float qua_a, float qua_b, float qua_c, float cir_x0, 
     }
 
     return final_val;
+}
+
+void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num_units, 
+        btTransform base_transform = btTransform(btQuaternion::getIdentity(),btVector3(0, 0, 0))){
+    float pre_z     = 0;
+    float pre_y     = getValueQua(qua_a, qua_b, qua_c, pre_z);
+    float pre_deg   = 0;
+
+    btRigidBody* pre_unit = 0;
+        
+    float baseMass = 0.f;
+    float linkMass = 1.f;
+    float string_stiffness_tmp = 10000.f;
+
+    float now_mass = 0;
+    btVector3 linkHalfExtents(x_len_link, y_len_link, z_len_link);
+    btBoxShape* baseBox = new btBoxShape(linkHalfExtents);
+
+    for (int indx_unit=0;indx_unit < num_units;indx_unit++){
+        float next_z = findInterQuaCirleBin(qua_a, qua_b, qua_c, pre_z, 2*y_len_link, percision, -1);
+        float next_y = getValueQua(qua_a, qua_b, qua_c, next_z);
+        float base_y_tmp = (pre_y + next_y)/2;
+        float base_z_tmp = (pre_z + next_z)/2;
+
+        float deg_away = atan2(next_z - pre_z, next_y - pre_y);
+        btQuaternion test_rotation = btQuaternion( 0, deg_away, 0);
+        btVector3 basePosition = btVector3( 0, base_y_tmp, base_z_tmp);
+        btTransform baseWorldTrans(test_rotation, basePosition);
+        baseWorldTrans  = base_transform*baseWorldTrans;
+
+        if (pre_unit) {
+            now_mass = linkMass;
+        } else {
+            now_mass = baseMass;
+        }
+
+        btRigidBody* base = createRigidBody(now_mass,baseWorldTrans,baseBox);
+
+        m_dynamicsWorld->removeRigidBody(base);
+        base->setDamping(linear_damp,ang_damp);
+        m_dynamicsWorld->addRigidBody(base,collisionFilterGroup,collisionFilterMask);
+
+        if (pre_unit){
+            btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, y_len_link, 0));						//par body's COM to cur body's COM offset
+            btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, -y_len_link, 0));							//cur body's COM to cur body's PIV offset
+            btGeneric6DofSpring2Constraint* fixed = new btGeneric6DofSpring2Constraint(*pre_unit, *base, pivotInA, pivotInB);
+
+            for (int indx_tmp=3;indx_tmp<6;indx_tmp++){
+                fixed->enableSpring(indx_tmp, true);
+                fixed->setStiffness(indx_tmp, string_stiffness_tmp);
+            }
+
+            fixed->setEquilibriumPoint(3, -(deg_away - pre_deg));
+
+            for (int indx_tmp=0;indx_tmp<3;indx_tmp++){
+                fixed->enableSpring(indx_tmp, true);
+                fixed->setStiffness(indx_tmp, string_stiffness_tmp);
+            }
+
+            m_dynamicsWorld->addConstraint(fixed,true);
+
+            btVector3 axisInA(1,0,0);
+            btVector3 axisInB(1,0,0);
+            btVector3 pivotInA_h(0, y_len_link,0);
+            btVector3 pivotInB_h(0,-y_len_link,0);
+            bool useReferenceA = true;
+            btHingeConstraint* hinge = new btHingeConstraint(*pre_unit,*base,
+                pivotInA_h,pivotInB_h,
+                axisInA,axisInB,useReferenceA);
+            m_dynamicsWorld->addConstraint(hinge,true);
+        }
+
+        pre_unit    = base;
+        pre_y       = next_y;
+        pre_z       = next_z;
+        pre_deg     = deg_away;
+    }
+
 }
 
 
@@ -478,13 +558,15 @@ void TestHingeTorque::initPhysics(){
 
 
     btVector3 linkHalfExtents(x_len_link, y_len_link, z_len_link);
-    btVector3 baseHalfExtents(x_len_link, y_len_link, z_len_link);
 
-    btBoxShape* baseBox = new btBoxShape(baseHalfExtents);
+    btBoxShape* baseBox = new btBoxShape(linkHalfExtents);
     btBoxShape* linkBox1 = new btBoxShape(linkHalfExtents);
     btSphereShape* linkSphere = new btSphereShape(radius);
 
     if (test_mode==1) {
+        addQuaUnits(-1, 0, 0, 4, btTransform(btQuaternion::getIdentity(),btVector3(x_pos_base[0], y_pos_base[0], z_pos_base[0])));
+        //addQuaUnits(-1, 0, y_pos_base[0], 4, btTransform(btQuaternion::getIdentity(),btVector3(0, 7, 0)));
+        /*
         //float next_z = findInterQuaCirleBin(-1, 0, y_pos_base[0], 0, 2*y_len_link, percision, -1);
         float next_z = findInterQuaCirleBin(-1, 0, y_pos_base[0], 0, 2*y_len_link, percision, -1);
         float next_y = getValueQua(-1, 0, y_pos_base[0], next_z);
@@ -590,6 +672,7 @@ void TestHingeTorque::initPhysics(){
             pivotInA_h,pivotInB_h,
             axisInA,axisInB,useReferenceA);
         m_dynamicsWorld->addConstraint(hinge,true);
+        */
 
     }
     else {
