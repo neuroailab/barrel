@@ -20,6 +20,12 @@ vector<float> x_pos_base    = {-0.4};
 vector<float> y_pos_base    = {7};
 vector<float> z_pos_base    = {0};
 vector<int> const_numLinks  = {15};
+vector<float> qua_a_list    = {-1};
+vector<float> yaw_y_base    = {0.5};
+vector<float> pitch_x_base  = {0};
+vector<float> roll_z_base   = {0};
+
+const float SMALL_NUM = 1e-6;
 
 float x_len_link    = 0.53;
 float y_len_link    = 2.08;
@@ -57,7 +63,7 @@ float torque_limit      = 1;
 int hinge_mode          = 1;
 int test_mode           = 0;
 
-float percision         = 0.01;
+float percision         = 0.001;
 
 struct TestHingeTorque : public CommonRigidBodyBase{
     bool m_once;
@@ -105,20 +111,6 @@ TestHingeTorque::~ TestHingeTorque(){
 }
 
 void TestHingeTorque::stepSimulation(float deltaTime){
-    /*
-    if (0)//m_once)
-    {
-        m_once=false;
-        btHingeConstraint* hinge = (btHingeConstraint*)m_dynamicsWorld->getConstraint(0);
-        
-        btRigidBody& bodyA = hinge->getRigidBodyA();
-        btTransform trA = bodyA.getWorldTransform();
-        btVector3 hingeAxisInWorld = trA.getBasis()*hinge->getFrameOffsetA().getBasis().getColumn(2);
-        hinge->getRigidBodyA().applyTorque(-hingeAxisInWorld*10);
-        hinge->getRigidBodyB().applyTorque(hingeAxisInWorld*10);
-        
-    }
-    */
     
     m_dynamicsWorld->stepSimulation(time_leap,0);
     pass_time   = pass_time + time_leap;
@@ -133,14 +125,11 @@ void TestHingeTorque::stepSimulation(float deltaTime){
     curr_force  = 0;
     curr_torque = 0;
 
-    //cout << "In step" << endl;
-
     static int count = 0;
     int all_size_for_big_list   = 0;
 
     if (test_mode==1) return;
-    //if ((count& 0x0f)==0)
-    //if (1)
+
     for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) {
         btAlignedObjectArray< btRigidBody* > m_allbones;
         btAlignedObjectArray< btHingeConstraint* > m_allhinges;
@@ -149,7 +138,6 @@ void TestHingeTorque::stepSimulation(float deltaTime){
         m_allhinges     = m_allhinges_big_list[big_list_indx];
 
         int all_size    = m_allbones.size();
-        //btRigidBody* base = btRigidBody::upcast(m_dynamicsWorld->getCollisionObjectArray()[0]);
 
         if (hinge_mode==1){
             all_size    = m_allhinges.size();
@@ -216,9 +204,6 @@ void TestHingeTorque::stepSimulation(float deltaTime){
         cout << "Now state:" << curr_velo << " " << curr_angl << " " << curr_force << " " << curr_torque << " " << curr_state << endl;
     }
 
-    //cout << "Out step" << endl;
-
-    //CommonRigidBodyBase::stepSimulation(deltaTime);
 }
 
 
@@ -275,6 +260,29 @@ float findInterQuaCirleBin(float qua_a, float qua_b, float qua_c, float cir_x0, 
     return final_val;
 }
 
+btVector3 findLineInter(btVector3 pre_1, btVector3 next_1, btVector3 pre_2, btVector3 next_2){
+    float x_1 = pre_1[2], y_1 = pre_1[1], x_2 = next_1[2], y_2 = next_1[1];
+    float x_p_1 = pre_2[2], y_p_1 = pre_2[1], x_p_2 = next_2[2], y_p_2 = next_2[1]; 
+
+    float a_11 = x_2 - x_1, a_12 = y_1 - y_2;
+    float a_21 = x_p_2 - x_p_1, a_22 = y_p_1 - y_p_2;
+
+    //cout << a_11 << " " << a_12 << " " << a_21 << " " << a_22 << endl;
+
+    float abs_mat = a_11*a_22 - a_21*a_12;
+
+    if (abs(abs_mat) < SMALL_NUM){
+        return (pre_2 + next_1)/2;
+    }
+
+    float b_1 = x_2*y_1 - x_1*y_2, b_2 = x_p_2*y_p_1 - x_p_1*y_p_2;
+
+    float inv_abs = -(1/abs_mat);
+
+    float new_y = inv_abs*(a_22*b_1 - a_21*b_2), new_z = inv_abs*(-a_12*b_1 + a_11*b_2);
+    return btVector3(0, new_y, new_z);
+}
+
 void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num_units, 
         btTransform base_transform = btTransform(btQuaternion::getIdentity(),btVector3(0, 0, 0))){
     float pre_z     = 0;
@@ -285,11 +293,22 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num
         
     float baseMass = 0.f;
     float linkMass = 1.f;
-    float string_stiffness_tmp = 10000.f;
+    //float string_stiffness_tmp = 10000.f;
+    float string_stiffness_tmp = 0;
 
-    float now_mass = 0;
+    btAlignedObjectArray< btRigidBody* > m_allbones;
+    btAlignedObjectArray< btVector3 > m_allpre;
+    btAlignedObjectArray< btVector3 > m_allnext;
+    vector<float> m_alldeg;
+
+    m_allbones.clear();
+    m_allpre.clear();
+    m_allnext.clear();
+    m_alldeg.clear();
+
     btVector3 linkHalfExtents(x_len_link, y_len_link, z_len_link);
     btBoxShape* baseBox = new btBoxShape(linkHalfExtents);
+    btSphereShape* linkSphere = new btSphereShape(radius);
 
     for (int indx_unit=0;indx_unit < num_units;indx_unit++){
         float next_z = findInterQuaCirleBin(qua_a, qua_b, qua_c, pre_z, 2*y_len_link, percision, -1);
@@ -303,13 +322,7 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num
         btTransform baseWorldTrans(test_rotation, basePosition);
         baseWorldTrans  = base_transform*baseWorldTrans;
 
-        if (pre_unit) {
-            now_mass = linkMass;
-        } else {
-            now_mass = baseMass;
-        }
-
-        btRigidBody* base = createRigidBody(now_mass,baseWorldTrans,baseBox);
+        btRigidBody* base = createRigidBody(linkMass,baseWorldTrans,baseBox);
 
         m_dynamicsWorld->removeRigidBody(base);
         base->setDamping(linear_damp,ang_damp);
@@ -343,7 +356,42 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num
                 pivotInA_h,pivotInB_h,
                 axisInA,axisInB,useReferenceA);
             m_dynamicsWorld->addConstraint(hinge,true);
+        } else {
+            btVector3 basePosition_ball = btVector3(0, -radius-y_len_link, 0);
+            btTransform baseWorldTrans_ball;
+            baseWorldTrans_ball.setIdentity();
+            baseWorldTrans_ball.setOrigin(basePosition_ball);
+            baseWorldTrans_ball     = baseWorldTrans*baseWorldTrans_ball;
+
+            btRigidBody* base_ball = createRigidBody(baseMass,baseWorldTrans_ball,linkSphere);
+            m_dynamicsWorld->removeRigidBody(base_ball);
+            base_ball->setDamping(0,0);
+            m_dynamicsWorld->addRigidBody(base_ball,collisionFilterGroup,collisionFilterMask);
+
+            // Special spring for base ball and base box unit 
+            btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, radius, 0));						//par body's COM to cur body's COM offset
+            btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, -y_len_link, 0));							//cur body's COM to cur body's PIV offset
+            btGeneric6DofSpring2Constraint* fixed = new btGeneric6DofSpring2Constraint(*base_ball, *base,pivotInA,pivotInB);
+            fixed->setLinearLowerLimit(btVector3(0,0,0));
+            fixed->setLinearUpperLimit(btVector3(0,0,0));
+            fixed->setAngularLowerLimit(btVector3(0,-1,0));
+            fixed->setAngularUpperLimit(btVector3(0,1,0));
+            for (int indx_tmp=3;indx_tmp<6;indx_tmp++){
+                fixed->enableSpring(indx_tmp, true);
+                fixed->setStiffness(indx_tmp, string_stiffness_tmp);
+            }
+            fixed->setEquilibriumPoint();
+
+            m_dynamicsWorld->addConstraint(fixed,true);
         }
+
+        btVector3 curr_pre  = btVector3(0, pre_y, pre_z);
+        btVector3 curr_next = btVector3(0, next_y, next_z);
+
+        m_allbones.push_back(base);
+        m_allpre.push_back(curr_pre);
+        m_allnext.push_back(curr_next);
+        m_alldeg.push_back(deg_away);
 
         pre_unit    = base;
         pre_y       = next_y;
@@ -369,6 +417,10 @@ void TestHingeTorque::initPhysics(){
             ("y_pos_base", po::value<vector<float>>()->multitoken(), "Position y of base")
             ("z_pos_base", po::value<vector<float>>()->multitoken(), "Position z of base")
             ("const_numLinks", po::value<vector<int>>()->multitoken(), "Number of units")
+            ("qua_a_list", po::value<vector<float>>()->multitoken(), "Quadratic Coefficient")
+            ("yaw_y_base", po::value<vector<float>>()->multitoken(), "Parameter yaw for btQuaternion")
+            ("pitch_x_base", po::value<vector<float>>()->multitoken(), "Parameter pitch for btQuaternion")
+            ("roll_z_base", po::value<vector<float>>()->multitoken(), "Parameter roll for btQuaternion")
             ("x_len_link", po::value<float>(), "Size x of cubes")
             ("y_len_link", po::value<float>(), "Size y of cubes")
             ("z_len_link", po::value<float>(), "Size z of cubes")
@@ -420,8 +472,21 @@ void TestHingeTorque::initPhysics(){
         if (vm.count("const_numLinks")){
             const_numLinks  = vm["const_numLinks"].as< vector<int> >();
         }
+        if (vm.count("qua_a_list")){
+            qua_a_list      = vm["qua_a_list"].as< vector<float> >();
+        }
+        if (vm.count("yaw_y_base")){
+            yaw_y_base      = vm["yaw_y_base"].as< vector<float> >();
+        }
+        if (vm.count("pitch_x_base")){
+            pitch_x_base    = vm["pitch_x_base"].as< vector<float> >();
+        }
+        if (vm.count("roll_z_base")){
+            roll_z_base     = vm["roll_z_base"].as< vector<float> >();
+        }
+
         //limit_numLink = const_numLinks + 1;
-        if ((x_pos_base.size()!=y_pos_base.size()) || (y_pos_base.size()!=z_pos_base.size()) || (x_pos_base.size()!=const_numLinks.size())){
+        if ((x_pos_base.size()!=y_pos_base.size()) || (y_pos_base.size()!=z_pos_base.size()) || (x_pos_base.size()!=const_numLinks.size()) || (x_pos_base.size()!=qua_a_list.size())){
             cerr << "error: size not equal for (xyz,num)!" << endl;
             exit(0);
         }
@@ -565,12 +630,13 @@ void TestHingeTorque::initPhysics(){
 
     if (test_mode==1) {
 
+        btVector3 test_v = findLineInter(btVector3(0,0,0), btVector3(0,1,0), btVector3(0,3,-1), btVector3(0,4,-2));
+        cout << test_v[1] << " " << test_v[2] << endl;
         //addQuaUnits(-1, 0, 0, 4, btTransform(btQuaternion::getIdentity(),btVector3(x_pos_base[0], y_pos_base[0], z_pos_base[0])));
-        addQuaUnits(-1, 0, 0, 4, btTransform(btQuaternion( 0.7, 0, 0),btVector3(x_pos_base[0], y_pos_base[0], z_pos_base[0])));
+        addQuaUnits(qua_a_list[0], 0, 0, 4, btTransform(btQuaternion( yaw_y_base[0], pitch_x_base[0], roll_z_base[0]),btVector3(x_pos_base[0], y_pos_base[0], z_pos_base[0])));
         //addQuaUnits(-1, 0, y_pos_base[0], 4, btTransform(btQuaternion::getIdentity(),btVector3(0, 7, 0)));
 
-    }
-    else {
+    } else {
         for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) { // create one single whisker 
 
             btAlignedObjectArray< btRigidBody* > m_allbones;
@@ -729,16 +795,6 @@ void TestHingeTorque::initPhysics(){
                             m_dynamicsWorld->addConstraint(fixed,true);
                         }
                     }
-                } else{
-                    
-                    btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, -radius, 0));						//par body's COM to cur body's COM offset
-                    btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, radius, 0));							//cur body's COM to cur body's PIV offset
-                    btGeneric6DofSpring2Constraint* fixed = new btGeneric6DofSpring2Constraint(*prevBody, *linkBody,pivotInA,pivotInB);
-                    //fixed->setLinearLowerLimit(btVector3(0,0,0));
-                    //fixed->setLinearUpperLimit(btVector3(0,0,0));
-                    //fixed->setAngularLowerLimit(btVector3(0,0,0));
-                    //fixed->setAngularUpperLimit(btVector3(0,0,0));
-                    con = fixed;
                 }
 
                 btAssert(con);
@@ -758,28 +814,6 @@ void TestHingeTorque::initPhysics(){
         }
     }
 	
-    /*
-	if (0)
-	{
-		btVector3 groundHalfExtents(1,1,0.2);
-		groundHalfExtents[upAxis]=1.f;
-		btBoxShape* box = new btBoxShape(groundHalfExtents);
-		box->initializePolyhedralFeatures();
-		
-		btTransform start; start.setIdentity();
-		btVector3 groundOrigin(-0.4f, 3.f, 0.f);
-		btVector3 basePosition = btVector3(-0.4f, 3.f, 0.f);
-		btQuaternion groundOrn(btVector3(0,1,0),0.25*SIMD_PI);
-		
-		groundOrigin[upAxis] -=.5;
-		groundOrigin[2]-=0.6;
-		start.setOrigin(groundOrigin);
-	//	start.setRotation(groundOrn);
-		btRigidBody* body =  createRigidBody(0,start,box);
-		body->setFriction(0);
-		
-	}
-    */
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
 }
 
