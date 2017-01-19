@@ -277,9 +277,11 @@ btVector3 findLineInter(btVector3 pre_1, btVector3 next_1, btVector3 pre_2, btVe
 
     float b_1 = x_2*y_1 - x_1*y_2, b_2 = x_p_2*y_p_1 - x_p_1*y_p_2;
 
-    float inv_abs = -(1/abs_mat);
+    //cout << b_1 << " " << b_2 << endl;
 
-    float new_y = inv_abs*(a_22*b_1 - a_21*b_2), new_z = inv_abs*(-a_12*b_1 + a_11*b_2);
+    float inv_abs = (1/abs_mat);
+
+    float new_y = inv_abs*(a_22*b_1 - a_12*b_2), new_z = inv_abs*(a_11*b_2 - a_21*b_1);
     return btVector3(0, new_y, new_z);
 }
 
@@ -385,8 +387,46 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num
             m_dynamicsWorld->addConstraint(fixed,true);
         }
 
+
         btVector3 curr_pre  = btVector3(0, pre_y, pre_z);
         btVector3 curr_next = btVector3(0, next_y, next_z);
+
+        // Create more spings between distant units
+        for (int spring_indx=0;spring_indx < every_spring.size();spring_indx++){
+            int tmp_every_spring    = every_spring[spring_indx];
+            int tmp_inter_spring    = inter_spring[spring_indx];
+
+            if ((indx_unit>=tmp_every_spring) && (indx_unit % tmp_inter_spring==0)){
+
+                int new_indx = indx_unit - tmp_every_spring;
+
+                //cout << "Add spring between " << new_indx << " " << indx_unit << endl;
+
+                btVector3 inter_point = findLineInter(m_allpre[new_indx], m_allnext[new_indx], curr_pre, curr_next);
+                //btVector3 inter_point = findLineInter(curr_pre, curr_next, m_allpre[new_indx], m_allnext[new_indx]);
+
+                //cout << inter_point[1] << " " << inter_point[2] << endl;
+                //cout << m_allpre[new_indx][1] << " " << m_allpre[new_indx][2] << endl;
+                //cout << m_allnext[new_indx][1] << " " << m_allnext[new_indx][2] << endl;
+                //cout << curr_pre[1] << " " << curr_pre[2] << endl;
+                //cout << curr_next[1] << " " << curr_next[2] << endl;
+
+                btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0,  inter_point.distance((m_allpre[new_indx] + m_allnext[new_indx])/2), 0));
+                btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, -inter_point.distance((curr_pre + curr_next)/2), 0));
+
+                btGeneric6DofSpring2Constraint* fixed;
+
+                fixed = new btGeneric6DofSpring2Constraint(*m_allbones[new_indx], *base, pivotInA,pivotInB);
+
+                for (int indx_tmp=0;indx_tmp<6;indx_tmp++){
+                    fixed->enableSpring(indx_tmp, true);
+                    fixed->setStiffness(indx_tmp, spring_stiffness);
+                }
+                fixed->setEquilibriumPoint(3, -(deg_away - m_alldeg[new_indx]));
+                
+                m_dynamicsWorld->addConstraint(fixed,true);
+            }
+        }
 
         m_allbones.push_back(base);
         m_allpre.push_back(curr_pre);
@@ -630,8 +670,8 @@ void TestHingeTorque::initPhysics(){
 
     if (test_mode==1) {
 
-        btVector3 test_v = findLineInter(btVector3(0,0,0), btVector3(0,1,0), btVector3(0,3,-1), btVector3(0,4,-2));
-        cout << test_v[1] << " " << test_v[2] << endl;
+        //btVector3 test_v = findLineInter(btVector3(0,0,0), btVector3(0,1,0), btVector3(0,3,-1), btVector3(0,4,-2));
+        //cout << test_v[1] << " " << test_v[2] << endl;
         //addQuaUnits(-1, 0, 0, 4, btTransform(btQuaternion::getIdentity(),btVector3(x_pos_base[0], y_pos_base[0], z_pos_base[0])));
         addQuaUnits(qua_a_list[0], 0, 0, 4, btTransform(btQuaternion( yaw_y_base[0], pitch_x_base[0], roll_z_base[0]),btVector3(x_pos_base[0], y_pos_base[0], z_pos_base[0])));
         //addQuaUnits(-1, 0, y_pos_base[0], 4, btTransform(btQuaternion::getIdentity(),btVector3(0, 7, 0)));
