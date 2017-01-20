@@ -5,6 +5,10 @@ import copy
 import multiprocessing
 import numpy as np
 
+'''
+The script to run the whisker thing and generate the mp4s through command line
+'''
+
 args        = []
 all_items   = []
 config_dict = {}
