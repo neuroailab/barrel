@@ -83,6 +83,10 @@ def build_array(x, y):
     y_pos_base      = []
     z_pos_base      = []
     const_numLinks  = []
+    qua_list        = []
+    yaw_y_base      = []
+    pitch_x_base    = []
+    roll_z_base     = []
 
     x_pos_st        = -0.4
     x_pos_step      = 10
@@ -93,14 +97,25 @@ def build_array(x, y):
     #const_num_l     = 4
     #const_num_l     = 2
 
+    qua_st          = -0.1
+    yaw_y_base_st   = 0.5
+    pitch_x_base_st = 0.3
+    roll_z_base_st  = 0.6
+
+
     for indx_x in range(x):
         for indx_y in range(y):
             x_pos_base.append(x_pos_st + indx_x*x_pos_step)
             z_pos_base.append(z_pos_st + indx_y*z_pos_step)
             y_pos_base.append(y_pos_va)
             const_numLinks.append(const_num_l)
+            qua_list.append(qua_st)
+            yaw_y_base.append(yaw_y_base_st)
+            pitch_x_base.append(pitch_x_base_st)
+            roll_z_base.append(roll_z_base_st)
 
-    return {'x':x_pos_base, 'y':y_pos_base, 'z':z_pos_base, 'c':const_numLinks}
+    return {'x':x_pos_base, 'y':y_pos_base, 'z':z_pos_base, 'c':const_numLinks, 
+            'yaw':yaw_y_base, 'pitch':pitch_x_base, 'roll':roll_z_base, 'qua':qua_list}
     
 
 if __name__=="__main__":
@@ -122,17 +137,21 @@ if __name__=="__main__":
     config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":"float"}, 
             "y_len_link":{"value":2.08, "help":"Size y of cubes", "type":"float"},
             "z_len_link":{"value":0.3, "help":"Size z of cubes", "type":"float"}, 
-            #"basic_str":{"value":3000, "help":"Minimal strength of hinge's recover force", "type":"float"}, 
-            "basic_str":{"value":100, "help":"Minimal strength of hinge's recover force", "type":"float"}, 
+            "basic_str":{"value":3000, "help":"Minimal strength of hinge's recover force", "type":"float"}, 
 
             "x_pos_base":{"value":array_dict['x'], "help":"Position x of base", "type":"list", "type_in":"float"},
             "y_pos_base":{"value":array_dict['y'], "help":"Position y of base", "type":"list", "type_in":"float"},
             "z_pos_base":{"value":array_dict['z'], "help":"Position z of base", "type":"list", "type_in":"float"},
             "const_numLinks":{"value":array_dict['c'], "help":"Number of units", "type":"list", "type_in":"int"},
-            #"inter_spring":{"value":(1, 3, 3, 3), "help":"Number of units between two strings", "type":"list", "type_in": "int"}, 
-            #"every_spring":{"value":(3, 5, 7, 9), "help":"Number of units between one strings", "type":"list", "type_in": "int"},
-            "inter_spring":{"value":(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), "help":"Number of units between two strings", "type":"list", "type_in": "int"}, 
-            "every_spring":{"value":(3, 5, 7, 9, 4, 6, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19), "help":"Number of units between one strings", "type":"list", "type_in": "int"},
+            "yaw_y_base":{"value":array_dict['yaw'], "help":"Yaw of base", "type":"list", "type_in":"float"},
+            "pitch_x_base":{"value":array_dict['pitch'], "help":"Pitch of base", "type":"list", "type_in":"float"},
+            "roll_z_base":{"value":array_dict['roll'], "help":"Roll of base", "type":"list", "type_in":"float"},
+            "qua_a_list":{"value":array_dict['qua'], "help":"Quadratic Coefficient", "type":"list", "type_in":"float"},
+
+            "inter_spring":{"value":(1, 3, 3, 3), "help":"Number of units between two strings", "type":"list", "type_in": "int"}, 
+            "every_spring":{"value":(3, 5, 7, 9), "help":"Number of units between one strings", "type":"list", "type_in": "int"},
+            #"inter_spring":{"value":(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), "help":"Number of units between two strings", "type":"list", "type_in": "int"}, 
+            #"every_spring":{"value":(3, 5, 7, 9, 4, 6, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19), "help":"Number of units between one strings", "type":"list", "type_in": "int"},
 
             "linear_damp":{"value":0.5, "help":"Control the linear damp ratio", "type":"float"},
             "ang_damp":{"value":0.5, "help":"Control the angle damp ratio", "type":"float"},
@@ -141,14 +160,15 @@ if __name__=="__main__":
             "time_leap":{"value":1.0/240.0, "help":"Time unit for simulation", "type":"float"},
             "equi_angle":{"value":0, "help":"Control the angle of balance for hinges", "type":"float"}, 
             #"equi_angle":{"value":-0.05, "help":"Control the angle of balance for hinges", "type":"float"}, 
-            "spring_stiffness":{"value":500, "help":"Stiffness of spring", "type":"float"}, 
+            "spring_stiffness":{"value":520, "help":"Stiffness of spring", "type":"float"}, 
+            "spring_stfperunit":{"value":3000, "help":"Stiffness of spring per unit", "type":"float"}, 
             #"spring_stiffness":{"value":100, "help":"Stiffness of spring", "type":"float"}, 
-            #"camera_dist":{"value":90, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
-            "camera_dist":{"value":20, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
+            "camera_dist":{"value":90, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
+            #"camera_dist":{"value":20, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
             "spring_offset":{"value":0, "help":"String offset for balance state", "type":"float"}, 
             "time_limit":{"value":50.0/4, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
-            #"initial_str":{"value":50000, "help":"Initial strength of force applied", "type":"float"}, 
-            "initial_str":{"value":150000, "help":"Initial strength of force applied", "type":"float"}, 
+            "initial_str":{"value":50000, "help":"Initial strength of force applied", "type":"float"}, 
+            #"initial_str":{"value":150000, "help":"Initial strength of force applied", "type":"float"}, 
             "initial_stime":{"value":0.1/8, "help":"Initial time to apply force", "type":"float"}, 
             "limit_softness":{"value":0.9, "help":"Softness of the hinge limit", "type":"float"}, 
             "limit_bias":{"value":0.3, "help":"Bias of the hinge limit", "type":"float"}, 
@@ -159,15 +179,15 @@ if __name__=="__main__":
             #"limit_up":{"value":-0.1, "help":"Up bound of the hinge limit", "type":"float"}, 
             "limit_up":{"value":2, "help":"Up bound of the hinge limit", "type":"float"}, 
             #"limit_up":{"value":2, "help":"Up bound of the hinge limit", "type":"float"}, 
-            "angl_ban_limit":{"value":1.5, "help":"While flag_time is 2, used for angular velocities of rigid bodys to judge whether stop", "type":"float"}, 
-            "velo_ban_limit":{"value":1.5, "help":"While flag_time is 2, used for linear velocities of rigid bodys to judge whether stop", "type":"float"}, 
-            "state_ban_limit":{"value":1, "help":"While flag_time is 2, used for angle states of hinges to judge whether stop", "type":"float"}, 
+            "angl_ban_limit":{"value":0.5, "help":"While flag_time is 2, used for angular velocities of rigid bodys to judge whether stop", "type":"float"}, 
+            "velo_ban_limit":{"value":0.5, "help":"While flag_time is 2, used for linear velocities of rigid bodys to judge whether stop", "type":"float"}, 
+            "state_ban_limit":{"value":0.5, "help":"While flag_time is 2, used for angle states of hinges to judge whether stop", "type":"float"}, 
             "force_limit":{"value":100, "help":"While flag_time is 2, used for force states of hinges to judge whether stop", "type":"float"}, 
             "torque_limit":{"value":200, "help":"While flag_time is 2, used for torque states of hinges to judge whether stop", "type":"float"}, 
-            "initial_poi":{"value":24, "help":"Unit to apply the force", "type":"int"}, 
+            "initial_poi":{"value":23, "help":"Unit to apply the force", "type":"int"}, 
             "hinge_mode":{"value":0, "help":"Whether use hinges rather than springs for connections of two units", "type":"int"},
-            "test_mode":{"value":1, "help":"Whether enter test mode for some temp test codes, default is 0", "type":"int"},
-            "flag_time":{"value":0, "help":"Whether open time limit", "type":"int"}}
+            "test_mode":{"value":0, "help":"Whether enter test mode for some temp test codes, default is 0", "type":"int"},
+            "flag_time":{"value":2, "help":"Whether open time limit", "type":"int"}}
     '''
     config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":"float"}, 
             "y_len_link":{"value":2.08, "help":"Size y of cubes", "type":"float"},

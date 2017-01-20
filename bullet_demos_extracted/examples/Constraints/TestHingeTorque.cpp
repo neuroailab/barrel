@@ -42,6 +42,7 @@ vector<int> inter_spring = {5};
 vector<int> every_spring = {1};
 
 float spring_stiffness = 520;
+float spring_stfperunit     = 1000;
 float camera_dist     = 45;
 float spring_offset   = 0;
 float time_limit    = 5.0/4;
@@ -73,9 +74,10 @@ struct TestHingeTorque : public CommonRigidBodyBase{
     float curr_state;
     float curr_force;
     float curr_torque;
-    //btAlignedObjectArray<btJointFeedback*> m_jointFeedback;
+
     btAlignedObjectArray< btAlignedObjectArray< btRigidBody* > > m_allbones_big_list;
     btAlignedObjectArray< btAlignedObjectArray< btHingeConstraint* > > m_allhinges_big_list;
+    btAlignedObjectArray< btAlignedObjectArray<btJointFeedback*> > m_jointFeedback_big_list;
 
 	TestHingeTorque(struct GUIHelperInterface* helper);
 	virtual ~ TestHingeTorque();
@@ -84,6 +86,7 @@ struct TestHingeTorque : public CommonRigidBodyBase{
 	virtual void stepSimulation(float deltaTime);
     void addQuaUnits(float qua_a, float qua_b, float qua_c, int num_units, 
             btTransform base_transform);
+    btJointFeedback* addFeedbackForSpring(btGeneric6DofSpring2Constraint* con);
 
 	
 	virtual void resetCamera(){
@@ -119,27 +122,31 @@ void TestHingeTorque::stepSimulation(float deltaTime){
             exit(0);
         }
     }
-    curr_velo   = 0;
-    curr_angl   = 0;
-    curr_state  = 0;
-    curr_force  = 0;
-    curr_torque = 0;
+
+    curr_velo   = 0; //Linear speed
+    curr_angl   = 0; //angle speed
+    curr_state  = 0; //Not used. Hinge's difference from their balance point
+    curr_force  = 0; //force applied by springs 
+    curr_torque = 0; // torque applied by springs
 
     static int count = 0;
     int all_size_for_big_list   = 0;
-
-    if (test_mode==1) return;
+    int all_size_for_fb         = 0;
 
     for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) {
         btAlignedObjectArray< btRigidBody* > m_allbones;
         btAlignedObjectArray< btHingeConstraint* > m_allhinges;
+        btAlignedObjectArray< btJointFeedback* > m_jointFeedback;
+
+        m_allhinges.clear();
 
         m_allbones      = m_allbones_big_list[big_list_indx];
-        m_allhinges     = m_allhinges_big_list[big_list_indx];
+        m_jointFeedback = m_jointFeedback_big_list[big_list_indx];
 
         int all_size    = m_allbones.size();
 
         if (hinge_mode==1){
+            m_allhinges     = m_allhinges_big_list[big_list_indx];
             all_size    = m_allhinges.size();
             for (int i=0;i<all_size;i++){
                 btVector3 tmp_center_pos = m_allbones[i]->getCenterOfMassPosition();
@@ -174,8 +181,16 @@ void TestHingeTorque::stepSimulation(float deltaTime){
         for (int i=0;i<all_size;i++){
             curr_velo   += m_allbones[i]->getLinearVelocity().norm();
             curr_angl   += m_allbones[i]->getAngularVelocity().norm();
-            curr_force  += m_allbones[i]->getTotalForce().norm();
-            curr_torque += m_allbones[i]->getTotalTorque().norm();
+            //curr_force  += m_allbones[i]->getTotalForce().norm();
+            //curr_torque += m_allbones[i]->getTotalTorque().norm();
+        }
+
+        for (int i=0;i<m_jointFeedback.size();i++){
+            curr_force  += m_jointFeedback[i]->m_appliedForceBodyA.norm();
+            curr_force  += m_jointFeedback[i]->m_appliedForceBodyB.norm();
+
+            curr_torque += m_jointFeedback[i]->m_appliedTorqueBodyA.norm();
+            curr_torque += m_jointFeedback[i]->m_appliedTorqueBodyB.norm();
         }
 
         if ((pass_time < initial_stime) && (initial_poi < all_size-1)){
@@ -188,20 +203,20 @@ void TestHingeTorque::stepSimulation(float deltaTime){
         }
 
         all_size_for_big_list   += all_size;
+        all_size_for_fb         += m_jointFeedback.size();
     }
     count++;
     curr_velo   /= all_size_for_big_list;
     curr_angl   /= all_size_for_big_list;
-    curr_force  /= all_size_for_big_list;
-    curr_torque /= all_size_for_big_list;
     curr_state  /= all_size_for_big_list;
+    curr_force  /= all_size_for_fb;
+    curr_torque /= all_size_for_fb;
 
-
-    if (flag_time==2){
+    if ((flag_time==2) && (pass_time > initial_stime)){
         if ((curr_velo < velo_ban_limit) && (curr_state < state_ban_limit) && (curr_angl < angl_ban_limit) && (curr_force < force_limit) && (curr_torque < torque_limit)){
+            cout << "Now state:" << curr_velo << " " << curr_angl << " " << curr_force << " " << curr_torque << " " << curr_state << endl;
             exit(0);
         }
-        cout << "Now state:" << curr_velo << " " << curr_angl << " " << curr_force << " " << curr_torque << " " << curr_state << endl;
     }
 
 }
@@ -285,6 +300,12 @@ btVector3 findLineInter(btVector3 pre_1, btVector3 next_1, btVector3 pre_2, btVe
     return btVector3(0, new_y, new_z);
 }
 
+btJointFeedback* TestHingeTorque::addFeedbackForSpring(btGeneric6DofSpring2Constraint* con){
+    btJointFeedback* fb = new btJointFeedback();
+    con->setJointFeedback(fb);
+    return fb;
+}
+
 void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num_units, 
         btTransform base_transform = btTransform(btQuaternion::getIdentity(),btVector3(0, 0, 0))){
     float pre_z     = 0;
@@ -295,12 +316,11 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num
         
     float baseMass = 0.f;
     float linkMass = 1.f;
-    //float string_stiffness_tmp = 10000.f;
-    float string_stiffness_tmp = 0;
 
     btAlignedObjectArray< btRigidBody* > m_allbones;
     btAlignedObjectArray< btVector3 > m_allpre;
     btAlignedObjectArray< btVector3 > m_allnext;
+    btAlignedObjectArray<btJointFeedback*> m_jointFeedback;
     vector<float> m_alldeg;
 
     m_allbones.clear();
@@ -337,15 +357,17 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num
 
             for (int indx_tmp=3;indx_tmp<6;indx_tmp++){
                 fixed->enableSpring(indx_tmp, true);
-                fixed->setStiffness(indx_tmp, string_stiffness_tmp);
+                fixed->setStiffness(indx_tmp, basic_str + spring_stfperunit*(num_units - indx_unit -1));
             }
 
             fixed->setEquilibriumPoint(3, -(deg_away - pre_deg));
 
             for (int indx_tmp=0;indx_tmp<3;indx_tmp++){
                 fixed->enableSpring(indx_tmp, true);
-                fixed->setStiffness(indx_tmp, string_stiffness_tmp);
+                fixed->setStiffness(indx_tmp, basic_str + spring_stfperunit*(num_units - indx_unit -1));
             }
+
+            m_jointFeedback.push_back(addFeedbackForSpring(fixed));
 
             m_dynamicsWorld->addConstraint(fixed,true);
 
@@ -380,9 +402,11 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num
             fixed->setAngularUpperLimit(btVector3(0,1,0));
             for (int indx_tmp=3;indx_tmp<6;indx_tmp++){
                 fixed->enableSpring(indx_tmp, true);
-                fixed->setStiffness(indx_tmp, string_stiffness_tmp);
+                fixed->setStiffness(indx_tmp, basic_str + spring_stfperunit*(num_units - indx_unit -1));
             }
             fixed->setEquilibriumPoint();
+
+            m_jointFeedback.push_back(addFeedbackForSpring(fixed));
 
             m_dynamicsWorld->addConstraint(fixed,true);
         }
@@ -400,16 +424,7 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num
 
                 int new_indx = indx_unit - tmp_every_spring;
 
-                //cout << "Add spring between " << new_indx << " " << indx_unit << endl;
-
                 btVector3 inter_point = findLineInter(m_allpre[new_indx], m_allnext[new_indx], curr_pre, curr_next);
-                //btVector3 inter_point = findLineInter(curr_pre, curr_next, m_allpre[new_indx], m_allnext[new_indx]);
-
-                //cout << inter_point[1] << " " << inter_point[2] << endl;
-                //cout << m_allpre[new_indx][1] << " " << m_allpre[new_indx][2] << endl;
-                //cout << m_allnext[new_indx][1] << " " << m_allnext[new_indx][2] << endl;
-                //cout << curr_pre[1] << " " << curr_pre[2] << endl;
-                //cout << curr_next[1] << " " << curr_next[2] << endl;
 
                 btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0,  inter_point.distance((m_allpre[new_indx] + m_allnext[new_indx])/2), 0));
                 btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, -inter_point.distance((curr_pre + curr_next)/2), 0));
@@ -420,10 +435,12 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num
 
                 for (int indx_tmp=0;indx_tmp<6;indx_tmp++){
                     fixed->enableSpring(indx_tmp, true);
-                    fixed->setStiffness(indx_tmp, spring_stiffness);
+                    fixed->setStiffness(indx_tmp, spring_stiffness + (num_units - (new_indx + indx_unit)/2)*spring_stfperunit);
                 }
                 fixed->setEquilibriumPoint(3, -(deg_away - m_alldeg[new_indx]));
                 
+
+                m_jointFeedback.push_back(addFeedbackForSpring(fixed));
                 m_dynamicsWorld->addConstraint(fixed,true);
             }
         }
@@ -439,6 +456,8 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num
         pre_deg     = deg_away;
     }
 
+    m_allbones_big_list.push_back(m_allbones);
+    m_jointFeedback_big_list.push_back(m_jointFeedback);
 }
 
 
@@ -473,6 +492,7 @@ void TestHingeTorque::initPhysics(){
             ("inter_spring", po::value<vector<int>>()->multitoken(), "Number of units between two strings")
             ("every_spring", po::value<vector<int>>()->multitoken(), "Number of units between one strings")
             ("spring_stiffness", po::value<float>(), "Stiffness of spring")
+            ("spring_stfperunit", po::value<float>(), "Stiffness of spring")
             ("camera_dist", po::value<float>(), "Distance of camera")
             ("spring_offset", po::value<float>(), "String offset for balance state")
             ("time_limit", po::value<float>(), "Time limit for recording")
@@ -579,6 +599,9 @@ void TestHingeTorque::initPhysics(){
         if (vm.count("spring_stiffness")){
             spring_stiffness    = vm["spring_stiffness"].as<float>();
         }
+        if (vm.count("spring_stfperunit")){
+            spring_stfperunit   = vm["spring_stfperunit"].as<float>();
+        }
         if (vm.count("camera_dist")){
             camera_dist     = vm["camera_dist"].as<float>();
         }
@@ -673,10 +696,14 @@ void TestHingeTorque::initPhysics(){
         //btVector3 test_v = findLineInter(btVector3(0,0,0), btVector3(0,1,0), btVector3(0,3,-1), btVector3(0,4,-2));
         //cout << test_v[1] << " " << test_v[2] << endl;
         //addQuaUnits(-1, 0, 0, 4, btTransform(btQuaternion::getIdentity(),btVector3(x_pos_base[0], y_pos_base[0], z_pos_base[0])));
-        addQuaUnits(qua_a_list[0], 0, 0, 4, btTransform(btQuaternion( yaw_y_base[0], pitch_x_base[0], roll_z_base[0]),btVector3(x_pos_base[0], y_pos_base[0], z_pos_base[0])));
+        addQuaUnits(qua_a_list[0], 0, 0, const_numLinks[0], btTransform(btQuaternion( yaw_y_base[0], pitch_x_base[0], roll_z_base[0]),btVector3(x_pos_base[0], y_pos_base[0], z_pos_base[0])));
         //addQuaUnits(-1, 0, y_pos_base[0], 4, btTransform(btQuaternion::getIdentity(),btVector3(0, 7, 0)));
 
     } else {
+        for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) { // create one single whisker 
+            addQuaUnits(qua_a_list[big_list_indx], 0, 0, const_numLinks[big_list_indx], btTransform(btQuaternion( yaw_y_base[big_list_indx], pitch_x_base[big_list_indx], roll_z_base[big_list_indx]),btVector3(x_pos_base[big_list_indx], y_pos_base[big_list_indx], z_pos_base[big_list_indx])));
+        }
+        /*
         for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) { // create one single whisker 
 
             btAlignedObjectArray< btRigidBody* > m_allbones;
@@ -741,13 +768,6 @@ void TestHingeTorque::initPhysics(){
                 btCollisionShape* colOb = 0;
                 
                 colOb = linkBox1;
-                /*
-                if (i<limit_numLink){
-                    colOb = linkBox1;
-                } else {
-                    colOb = linkSphere;
-                }
-                */
 
                 btRigidBody* linkBody = createRigidBody(linkMass,linkTrans,colOb);
                 m_dynamicsWorld->removeRigidBody(linkBody);
@@ -755,15 +775,9 @@ void TestHingeTorque::initPhysics(){
                 m_dynamicsWorld->addRigidBody(linkBody,collisionFilterGroup,collisionFilterMask);
 
                 m_allbones.push_back(linkBody);
-                /*
-                if (i<limit_numLink){
-                    m_allbones.push_back(linkBody);
-                }
-                */
 
                 btTypedConstraint* con = 0;
                 
-                //if (i<limit_numLink){
                 if (1) {
                     //create a hinge constraint
                     if (hinge_mode==1){
@@ -819,13 +833,6 @@ void TestHingeTorque::initPhysics(){
                             btGeneric6DofSpring2Constraint* fixed;
 
                             fixed = new btGeneric6DofSpring2Constraint(*m_allbones[i-(tmp_every_spring)+1], *linkBody,pivotInA,pivotInB);
-                            /*
-                            if (i-tmp_every_spring>-1) {
-                                fixed = new btGeneric6DofSpring2Constraint(*m_allbones[i-(tmp_every_spring)], *linkBody,pivotInA,pivotInB);
-                            } else {
-                                fixed = new btGeneric6DofSpring2Constraint(*base, *linkBody,pivotInA,pivotInB);
-                            }
-                            */
                             //for (int indx_tmp=0;indx_tmp<3;indx_tmp++){
                             for (int indx_tmp=0;indx_tmp<6;indx_tmp++){
                                 fixed->enableSpring(indx_tmp, true);
@@ -839,9 +846,9 @@ void TestHingeTorque::initPhysics(){
 
                 btAssert(con);
                 if (con){
-                    /* btJointFeedback* fb = new btJointFeedback();
-                    m_jointFeedback.push_back(fb);
-                    con->setJointFeedback(fb); */
+                    // btJointFeedback* fb = new btJointFeedback();
+                    // m_jointFeedback.push_back(fb);
+                    // con->setJointFeedback(fb);
 
                     m_dynamicsWorld->addConstraint(con,true);
                 }
@@ -852,6 +859,7 @@ void TestHingeTorque::initPhysics(){
             m_allhinges_big_list.push_back(m_allhinges);
             cout << "Push everything" << endl;
         }
+        */
     }
 	
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
