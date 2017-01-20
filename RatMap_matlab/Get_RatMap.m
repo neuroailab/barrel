@@ -562,6 +562,8 @@ S.C_baseZ = S.C_baseZ + EYE.*S.E_C(3);
 % Left-side points are just mirror of right-side points across y-axis
 S.C_baseX(~SIDE) = S.C_baseX(~SIDE).*(-1);
 
+disp(S.C_baseX)
+
 function [x,y,z] = LOCAL_ConstructWhisker3D(S)
 %% function [x,y,z] = LOCAL_ConstructWhisker3D(S)
 
