@@ -85,6 +85,8 @@ def LOCAL_UnpackEquations(S):
     S.C_s = S.EQ_W_s[0]*COL + S.EQ_W_s[1]*ROW + S.EQ_W_s[2]
     S.C_a = np.exp(1/(S.EQ_W_a[0]*COL + S.EQ_W_a[1]*ROW + S.EQ_W_a[2]))
 
+    #print(S.C_a)
+
     S.C_thetaP = S.EQ_W_th[0]*COL + S.EQ_W_th[1]*ROW + S.EQ_W_th[2]
     S.C_phiP = S.EQ_W_phi[0]*COL + S.EQ_W_phi[1]*ROW + S.EQ_W_phi[2]
     S.C_psiP = S.EQ_W_psi[1]*COL + S.EQ_W_psi[1]*ROW + S.EQ_W_psi[2]
@@ -117,8 +119,30 @@ def LOCAL_CalculateParameters(S):
             elif (thetaP_tmp >= 0) and (thetaP_tmp <= 90):
                 S.C_theta[indx] = 270 - thetaP_tmp
 
-    S.C_phi = S.C_phiE*(d2r)
+    #S.C_phi = S.C_phiE*(d2r)
+    S.C_phi = np.zeros(len(S.C_phiE))
+    for indx, theta_tmp in enumerate(S.C_theta):
+        if (theta_tmp <= 45) and (theta_tmp >= 0):
+            S.C_phi[indx] = np.arctan( np.tan(S.C_phiP[indx]*d2r) * np.cos(S.C_theta[indx]*d2r))
+        if (theta_tmp <= 90) and (theta_tmp > 45):
+            S.C_phi[indx] = np.arctan( np.tan((180 - S.C_psiP[indx])*d2r) * np.sin(S.C_theta[indx]*d2r))
+        if (theta_tmp <= 135) and (theta_tmp > 90):
+            S.C_phi[indx] = np.arctan( np.tan((180 - S.C_psiP[indx])*d2r) * np.sin((180 - S.C_theta[indx])*d2r))
+        if (theta_tmp <= 225) and (theta_tmp > 135):
+            S.C_phi[indx] = np.arctan( np.tan((S.C_phiP[indx])*d2r) * np.cos((180 - S.C_theta[indx])*d2r))
+        if (theta_tmp <= 270) and (theta_tmp > 225) and (S.C_psiP[indx] <= 90) and (S.C_psiP[indx] >=0):
+            S.C_phi[indx] = np.arctan( np.tan((S.C_psiP[indx])*d2r) * np.sin(abs(180 - S.C_theta[indx])*d2r))
+        if (theta_tmp <= 270) and (theta_tmp > 225) and (S.C_psiP[indx] >= 270):
+            S.C_phi[indx] = np.arctan( np.tan((S.C_psiP[indx] - 360)*d2r) * np.sin(abs(180 - S.C_theta[indx])*d2r))
+        if (theta_tmp <= 315) and (theta_tmp > 270) and (S.C_psiP[indx] <= 90) and (S.C_psiP[indx] >=0):
+            S.C_phi[indx] = np.arctan( np.tan((S.C_psiP[indx])*d2r) * np.sin((360 - S.C_theta[indx])*d2r))
+        if (theta_tmp <= 315) and (theta_tmp > 270) and (S.C_psiP[indx] >= 270):
+            S.C_phi[indx] = np.arctan( np.tan((S.C_psiP[indx] - 360)*d2r) * np.sin((360 - S.C_theta[indx])*d2r))
+        if (theta_tmp <= 360) and (theta_tmp > 315):
+            S.C_phi[indx] = np.arctan( np.tan((S.C_phiP[indx])*d2r) * np.cos((360 - S.C_theta[indx])*d2r))
     S.C_phi = S.C_phi*(-1)
+
+    #print(S.C_phi)
 
     S.C_zeta = S.C_zeta*d2r
     S.C_theta = S.C_theta*d2r
@@ -162,6 +186,15 @@ def LOCAL_Calculate3DBasePoints(S):
 
     return S
 
+def get_wholeS():
+    S   = LOCAL_SetupDefaults()
+    wselect = []
+    S.wname = LOCAL_SetupWhiskerNames(wselect)
+    S   = LOCAL_UnpackEquations(S)
+    S   = LOCAL_CalculateParameters(S)
+    S   = LOCAL_Calculate3DBasePoints(S)
+    return S
+
 if __name__=="__main__":
     S   = LOCAL_SetupDefaults()
     wselect = []
@@ -169,6 +202,3 @@ if __name__=="__main__":
     S   = LOCAL_UnpackEquations(S)
     S   = LOCAL_CalculateParameters(S)
     S   = LOCAL_Calculate3DBasePoints(S)
-
-    #print(S.EQ_W_phiE)
-    #print(S.wname)

@@ -178,32 +178,34 @@ void TestHingeTorque::stepSimulation(float deltaTime){
             }
         }
 
-        for (int i=0;i<all_size;i++){
-            curr_velo   += m_allbones[i]->getLinearVelocity().norm();
-            curr_angl   += m_allbones[i]->getAngularVelocity().norm();
-            //curr_force  += m_allbones[i]->getTotalForce().norm();
-            //curr_torque += m_allbones[i]->getTotalTorque().norm();
+        if (flag_time==2){
+            for (int i=0;i<all_size;i++){
+                curr_velo   += m_allbones[i]->getLinearVelocity().norm();
+                curr_angl   += m_allbones[i]->getAngularVelocity().norm();
+                //curr_force  += m_allbones[i]->getTotalForce().norm();
+                //curr_torque += m_allbones[i]->getTotalTorque().norm();
+            }
+
+            for (int i=0;i<m_jointFeedback.size();i++){
+                curr_force  += m_jointFeedback[i]->m_appliedForceBodyA.norm();
+                curr_force  += m_jointFeedback[i]->m_appliedForceBodyB.norm();
+
+                curr_torque += m_jointFeedback[i]->m_appliedTorqueBodyA.norm();
+                curr_torque += m_jointFeedback[i]->m_appliedTorqueBodyB.norm();
+            }
+
+            for (int i=0;i<m_allhinges.size();i++){
+                curr_state  += m_allhinges[i]->getHingeAngle() - limit_up;
+            }
         }
 
-        for (int i=0;i<m_jointFeedback.size();i++){
-            curr_force  += m_jointFeedback[i]->m_appliedForceBodyA.norm();
-            curr_force  += m_jointFeedback[i]->m_appliedForceBodyB.norm();
-
-            curr_torque += m_jointFeedback[i]->m_appliedTorqueBodyA.norm();
-            curr_torque += m_jointFeedback[i]->m_appliedTorqueBodyB.norm();
-        }
+        all_size_for_big_list   += all_size;
+        all_size_for_fb         += m_jointFeedback.size();
 
         if ((pass_time < initial_stime) && (initial_poi < all_size-1)){
             m_allbones[initial_poi+1]->applyForce(btVector3(0,0,initial_str), btVector3(0,0,0));
             cout << "Applied" << endl;
         }
-
-        for (int i=0;i<m_allhinges.size();i++){
-            curr_state  += m_allhinges[i]->getHingeAngle() - limit_up;
-        }
-
-        all_size_for_big_list   += all_size;
-        all_size_for_fb         += m_jointFeedback.size();
     }
     count++;
     curr_velo   /= all_size_for_big_list;
@@ -333,7 +335,8 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num
     btSphereShape* linkSphere = new btSphereShape(radius);
 
     for (int indx_unit=0;indx_unit < num_units;indx_unit++){
-        float next_z = findInterQuaCirleBin(qua_a, qua_b, qua_c, pre_z, 2*y_len_link, percision, -1);
+        //float next_z = findInterQuaCirleBin(qua_a, qua_b, qua_c, pre_z, 2*y_len_link, percision, -1);
+        float next_z = findInterQuaCirleBin(qua_a, qua_b, qua_c, pre_z, 2*y_len_link, percision, 1);
         float next_y = getValueQua(qua_a, qua_b, qua_c, next_z);
         float base_y_tmp = (pre_y + next_y)/2;
         float base_z_tmp = (pre_z + next_z)/2;
@@ -341,6 +344,7 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num
         float deg_away = atan2(next_z - pre_z, next_y - pre_y);
         btQuaternion test_rotation = btQuaternion( 0, deg_away, 0);
         btVector3 basePosition = btVector3( 0, base_y_tmp, base_z_tmp);
+        //btVector3 basePosition = btVector3( base_z_tmp, base_y_tmp, 0);
         btTransform baseWorldTrans(test_rotation, basePosition);
         baseWorldTrans  = base_transform*baseWorldTrans;
 
@@ -456,6 +460,7 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num
         pre_deg     = deg_away;
     }
 
+    //cout << pre_z << endl;
     m_allbones_big_list.push_back(m_allbones);
     m_jointFeedback_big_list.push_back(m_jointFeedback);
 }
@@ -701,7 +706,22 @@ void TestHingeTorque::initPhysics(){
 
     } else {
         for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) { // create one single whisker 
-            addQuaUnits(qua_a_list[big_list_indx], 0, 0, const_numLinks[big_list_indx], btTransform(btQuaternion( yaw_y_base[big_list_indx], pitch_x_base[big_list_indx], roll_z_base[big_list_indx]),btVector3(x_pos_base[big_list_indx], y_pos_base[big_list_indx], z_pos_base[big_list_indx])));
+            //addQuaUnits(qua_a_list[big_list_indx], 0, 0, const_numLinks[big_list_indx], btTransform(btQuaternion( yaw_y_base[big_list_indx], pitch_x_base[big_list_indx], roll_z_base[big_list_indx]),btVector3(x_pos_base[big_list_indx], y_pos_base[big_list_indx], z_pos_base[big_list_indx])));
+            float yaw_now = yaw_y_base[big_list_indx];
+            float pitch_now = pitch_x_base[big_list_indx];
+            float roll_now = roll_z_base[big_list_indx];
+            //btTransform tmp_trans(btQuaternion(0,0,-3.1415926/4), btVector3(0,0,0));
+            btTransform tmp_trans(btQuaternion(0,0,0), btVector3(0,0,0));
+            float c_x = cos(pitch_now), s_x = sin(pitch_now);
+            float c_y = cos(yaw_now), s_y = sin(yaw_now);
+            float c_z = cos(roll_now), s_z = sin(roll_now);
+            float xx = c_y*c_z, xy = c_z*s_x*s_y - c_x*s_z, xz = s_x*s_z + c_x*c_z*s_y;
+            float yx = c_y*s_z, yy = c_x*c_z + s_x*s_y*s_z, yz = c_x*s_y*s_z - c_z*s_x;
+            float zx = -s_y, zy = c_y*s_x, zz = c_x*c_y;
+            //btMatrix3x3 qua_mat(xx, xy, xz, yx, yy, yz, zx, zy, zz);
+            btMatrix3x3 qua_mat(zz, zy, zx, yz, yy, yx, xz, xy, xx);
+            //addQuaUnits(qua_a_list[big_list_indx], 0, 0, const_numLinks[big_list_indx], tmp_trans*btTransform(btQuaternion( yaw_y_base[big_list_indx], pitch_x_base[big_list_indx], roll_z_base[big_list_indx]),btVector3(x_pos_base[big_list_indx], y_pos_base[big_list_indx], z_pos_base[big_list_indx])));
+            addQuaUnits(qua_a_list[big_list_indx], 0, 0, const_numLinks[big_list_indx], tmp_trans*btTransform(qua_mat,btVector3(x_pos_base[big_list_indx], y_pos_base[big_list_indx], z_pos_base[big_list_indx])));
         }
         /*
         for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) { // create one single whisker 

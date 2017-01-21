@@ -193,6 +193,11 @@ S = LOCAL_CalculateParameters(S);
 %% + Calculate base-point 3D locations
 S = LOCAL_Calculate3DBasePoints(S);
 
+%disp(S.C_a)
+disp(S.C_theta)
+disp('123123')
+disp(S.C_zeta)
+
 %% + Construct whisker
 [x,y,z] = LOCAL_ConstructWhisker3D(S);
 varargout{1} = S;
@@ -514,6 +519,8 @@ end
 % Minus sign for correct rotation direction
 S.C_phi = S.C_phi.*(-1);
 
+%disp(S.C_phi)
+
 % Convert to radians (Phi in radians already) -----------------------------
 S.C_zeta = S.C_zeta.*d2r;
 S.C_theta = S.C_theta.*d2r;
@@ -562,7 +569,7 @@ S.C_baseZ = S.C_baseZ + EYE.*S.E_C(3);
 % Left-side points are just mirror of right-side points across y-axis
 S.C_baseX(~SIDE) = S.C_baseX(~SIDE).*(-1);
 
-disp(S.C_baseX)
+%disp(S.C_baseX)
 
 function [x,y,z] = LOCAL_ConstructWhisker3D(S)
 %% function [x,y,z] = LOCAL_ConstructWhisker3D(S)
@@ -591,6 +598,8 @@ EYE = ones(1,S.Npts);
 % Determine target x and parabolic shape, 
 % then rotate and translate the whisker
 x_target = LOCAL_GetXfromAandS(S.C_a,S.C_s);
+disp('345345')
+disp(x_target)
 for ii = 1:size(S.wname,1),
     
     % Construct whisker in standard orientation:
