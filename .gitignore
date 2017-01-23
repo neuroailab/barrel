@@ -17,3 +17,4 @@ Makefile
 *.gz
 *.pyc
 !normals_relat/normal_pred/*.cfg
+*.pkl

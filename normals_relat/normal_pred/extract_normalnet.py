@@ -309,6 +309,7 @@ def main(args):
     fh.close()
     features = saved_data['validation_results']['valid1']['features']
     print(features.shape)
+    cPickle.dump(saved_data, open('save_features.pkl', 'wb'))
     #assert features.shape == (100, 128)
     #assert features.dtype == np.float32
 
