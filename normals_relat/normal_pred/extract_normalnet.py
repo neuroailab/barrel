@@ -208,6 +208,9 @@ def get_extraction_target(inputs, outputs, to_extract, **loss_params):
     # names = [[x.name for x in op.values()] for op in tf.get_default_graph().get_operations()]
     # print("NAMES are: ", names)
 
+    loss_params['loss_per_case_func'] = loss_ave_l2
+    loss_params['loss_per_case_func_params'] = {}
+
     targets = {k: tf.get_default_graph().get_tensor_by_name(v) for k, v in to_extract.items()}
     targets['loss'] = utils.get_loss(inputs, outputs, **loss_params)
     return targets
@@ -234,7 +237,11 @@ def main(args):
     """
     # set up parameters
     params = {}
-    params['model_params'] = {'func': normal_encoder_asymmetric_with_bypass.normalnet_tfutils}
+    params['model_params'] = {
+            'func': normal_encoder_asymmetric_with_bypass.normalnet_tfutils,
+            'seed': args.seed,
+            'cfg_initial': cfg_initial
+            }
     params['load_params'] = {'host': 'localhost',
                              'port': 22334,
                              'dbname': 'normalnet-test',
@@ -247,44 +254,56 @@ def main(args):
                              'save_to_gfs': ['features']}
 
     targdict = {'func': get_extraction_target,
-                'to_extract': {'features': 'validation/valid1/dec7/conv:0'}}
+                'to_extract': {'features': 'validation/valid1/dec7/conv:0'},
+                }
     targdict.update(base.DEFAULT_LOSS_PARAMS)
     params['validation_params'] = {'valid1': {'data_params': {'func': Threedworld,
+                                                              'data_path': DATA_PATH,
                                                               'batch_size': 1,
+                                                              'crop_size': IMAGE_SIZE_CROP,
                                                               'group': 'val'},
                                               'queue_params': {'queue_type': 'fifo',
                                                                'batch_size': 100,
                                                                'n_threads': 4},
                                               'targets': targdict,
-                                              'num_steps': 10,
+                                              'num_steps': 2,
                                               'online_agg_func': utils.reduce_mean_dict}}
+    '''
+    params['loss_params'] = {
+            'targets': 'labels',
+            'agg_func': tf.reduce_mean,
+            'loss_per_case_func': loss_ave_l2
+        }
+    '''
 
     # actually run the feature extraction
-    base.test_from_params(**params)
+    #base.test_from_params(**params)
 
     # check that things are as expected.
-    conn = pm.MongoClient(host=testhost,
-                          port=testport)
-    coll = conn[testdbname][testcol+'.files']
-    assert coll.find({'exp_id': 'validation1'}).count() == 11
+    conn = pm.MongoClient(host='localhost',
+                          port=22334)
+    coll = conn['normalnet-test']['normalnet'+'.files']
+    #assert coll.find({'exp_id': 'validation1'}).count() == 11
+    print(coll.find({'exp_id': 'validation1'}).count())
 
     # ... load the containing the final "aggregate" result after all features have been extracted
     q = {'exp_id': 'validation1', 'validation_results.valid1.intermediate_steps': {'$exists': True}}
-    assert coll.find(q).count() == 1
+    #assert coll.find(q).count() == 1
+    print(coll.find(q).count())
     r = coll.find(q)[0]
     # ... check that the record is well-formed
-    asserts_for_record(r, params, train=False)
+    #asserts_for_record(r, params, train=False)
 
     # ... check that the correct "intermediate results" (the actual features extracted) records exist
     # and are correctly referenced.
     q1 = {'exp_id': 'validation1', 'validation_results.valid1.intermediate_steps': {'$exists': False}}
     ids = coll.find(q1).distinct('_id')
-    assert r['validation_results']['valid1']['intermediate_steps'] == ids
+    #assert r['validation_results']['valid1']['intermediate_steps'] == ids
 
     # ... actually load feature batch 3
-    idval = r['validation_results']['valid1']['intermediate_steps'][3]
+    idval = r['validation_results']['valid1']['intermediate_steps'][0]
     fn = coll.find({'item_for': idval})[0]['filename']
-    fs = gridfs.GridFS(coll.database, testcol)
+    fs = gridfs.GridFS(coll.database, 'normalnet')
     fh = fs.get_last_version(fn)
     saved_data = cPickle.loads(fh.read())
     fh.close()
