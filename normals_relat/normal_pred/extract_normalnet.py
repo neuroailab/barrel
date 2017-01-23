@@ -1,5 +1,5 @@
 """
-Script used for training the normalnet using tfutils
+Script used for extracting the normalnet using tfutils
 """
 
 from __future__ import division, print_function, absolute_import
@@ -10,7 +10,11 @@ import tensorflow as tf
 
 import normal_encoder_asymmetric_with_bypass
 
-from tfutils import base, data, model, optimizer
+from tfutils import base, data, model, optimizer, utils
+import cPickle
+
+import pymongo as pm
+import gridfs
 
 import json
 import copy
@@ -66,7 +70,8 @@ class Threedworld(data.HDF5DataProvider):
     #N_TRAIN = 2048000 - 102400
     #N_VAL = 102400 
     N_TRAIN = 2048000
-    N_VAL = 128000
+    #N_VAL = 128000
+    N_VAL = 256
 
     def __init__(self,
                  data_path,
@@ -162,6 +167,8 @@ def loss_ave_l2(output, labels):
 
 def rep_loss(inputs, outputs, target):
     loss = tf.nn.l2_loss(outputs - inputs[target]) / NORM_NUM
+    #output_ary = outputs.eval()
+    print('Temp')
     return {'loss': loss}
 
 def postprocess_config(cfg):
@@ -184,6 +191,28 @@ def preprocess_config(cfg):
                 cfg[k][str(_k)] = cfg[k].pop(_k)
     return cfg
 
+def get_extraction_target(inputs, outputs, to_extract, **loss_params):
+    """
+    Example validation target function to use to provide targets for extracting features.
+    This function also adds a standard "loss" target which you may or not may not want
+
+    The to_extract argument must be a dictionary of the form
+          {name_for_saving: name_of_actual_tensor, ...}
+    where the "name_for_saving" is a human-friendly name you want to save extracted
+    features under, and name_of_actual_tensor is a name of the tensor in the tensorflow
+    graph outputing the features desired to be extracted.  To figure out what the names
+    of the tensors you want to extract are "to_extract" argument,  uncomment the
+    commented-out lines, which will print a list of all available tensor names.
+    """
+
+    # names = [[x.name for x in op.values()] for op in tf.get_default_graph().get_operations()]
+    # print("NAMES are: ", names)
+
+    targets = {k: tf.get_default_graph().get_tensor_by_name(v) for k, v in to_extract.items()}
+    targets['loss'] = utils.get_loss(inputs, outputs, **loss_params)
+    return targets
+
+
 def main(args):
     #cfg_initial = postprocess_config(json.load(open(cfgfile)))
     if args.gpu>-1:
@@ -191,115 +220,78 @@ def main(args):
     cfg_initial = preprocess_config(json.load(open(args.pathconfig)))
     exp_id  = args.expId
     cache_dir = os.path.join(args.cacheDirPrefix, '.tfutils', 'localhost:'+ str(args.nport), 'normalnet-test', 'normalnet', exp_id)
-    params = {
-        'save_params': {
-            'host': 'localhost',
-            #'port': 31001,
-            'port': args.nport,
-            'dbname': 'normalnet-test',
-            'collname': 'normalnet',
-            #'exp_id': 'trainval0',
-            'exp_id': exp_id,
-            #'exp_id': 'trainval2', # using screen?
 
-            'do_save': True,
-            #'do_save': False,
-            'save_initial_filters': True,
-            'save_metrics_freq': 2000,  # keeps loss from every SAVE_LOSS_FREQ steps.
-            'save_valid_freq': 10000,
-            'save_filters_freq': 30000,
-            'cache_filters_freq': 10000,
-            'cache_dir': cache_dir,  # defaults to '~/.tfutils'
-        },
+    """
+    This is a test illustrating how to perform feature extraction using
+    tfutils.base.test_from_params.
+    The basic idea is to specify a validation target that is simply the actual output of
+    the model at some layer. (See the "get_extraction_target" function above as well.)
+    This test assumes that test_train has run first.
 
-        'load_params': {
-            'host': 'localhost',
-            # 'port': 31001,
-            # 'dbname': 'alexnet-test',
-            # 'collname': 'alexnet',
-            # 'exp_id': 'trainval0',
-            'port': 22334,
-            'dbname': 'normalnet-test',
-            'collname': 'normalnet',
-            #'exp_id': 'trainval0',
-            'exp_id': exp_id,
-            #'exp_id': 'trainval2', # using screen?
-            'do_restore': True,
-            'load_query': None
-        },
+    After the test is run, the results of the feature extraction are saved in the Grid
+    File System associated with the mongo database, with one file per batch of feature
+    results.  See how the features are accessed by reading the test code below.
+    """
+    # set up parameters
+    params = {}
+    params['model_params'] = {'func': normal_encoder_asymmetric_with_bypass.normalnet_tfutils}
+    params['load_params'] = {'host': 'localhost',
+                             'port': 22334,
+                             'dbname': 'normalnet-test',
+                             'collname': 'normalnet',
+                             'do_restore': True,
+                             'exp_id': exp_id}
+    #params['save_params'] = {'exp_id': 'validation1',
+    params['save_params'] = {'exp_id': 'validation1',
+                             'save_intermediate_freq': 1,
+                             'save_to_gfs': ['features']}
 
-        'model_params': {
-            'func': normal_encoder_asymmetric_with_bypass.normalnet_tfutils,
-            'seed': args.seed,
-            'cfg_initial': cfg_initial
-        },
+    targdict = {'func': get_extraction_target,
+                'to_extract': {'features': 'validation/valid1/dec7/conv:0'}}
+    targdict.update(base.DEFAULT_LOSS_PARAMS)
+    params['validation_params'] = {'valid1': {'data_params': {'func': Threedworld,
+                                                              'batch_size': 1,
+                                                              'group': 'val'},
+                                              'queue_params': {'queue_type': 'fifo',
+                                                               'batch_size': 100,
+                                                               'n_threads': 4},
+                                              'targets': targdict,
+                                              'num_steps': 10,
+                                              'online_agg_func': utils.reduce_mean_dict}}
 
-        'train_params': {
-            'data_params': {
-                'func': Threedworld,
-                'data_path': DATA_PATH,
-                'group': 'train',
-                'crop_size': IMAGE_SIZE_CROP,
-                'batch_size': 1
-            },
-            'queue_params': {
-                'queue_type': 'fifo',
-                'batch_size': BATCH_SIZE,
-                'n_threads': 4,
-                'seed': 0,
-            },
-            'thres_loss': 1000,
-            'num_steps': 90 * NUM_BATCHES_PER_EPOCH  # number of steps to train
-        },
+    # actually run the feature extraction
+    base.test_from_params(**params)
 
-        'loss_params': {
-            'targets': 'labels',
-            'agg_func': tf.reduce_mean,
-            'loss_per_case_func': loss_ave_l2
-        },
+    # check that things are as expected.
+    conn = pm.MongoClient(host=testhost,
+                          port=testport)
+    coll = conn[testdbname][testcol+'.files']
+    assert coll.find({'exp_id': 'validation1'}).count() == 11
 
-        'learning_rate_params': {
-            'func': tf.train.exponential_decay,
-            'learning_rate': .01,
-            'decay_rate': .95,
-            'decay_steps': NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
-            'staircase': True
-        },
+    # ... load the containing the final "aggregate" result after all features have been extracted
+    q = {'exp_id': 'validation1', 'validation_results.valid1.intermediate_steps': {'$exists': True}}
+    assert coll.find(q).count() == 1
+    r = coll.find(q)[0]
+    # ... check that the record is well-formed
+    asserts_for_record(r, params, train=False)
 
-        'optimizer_params': {
-            'func': optimizer.ClipOptimizer,
-            'optimizer_class': tf.train.MomentumOptimizer,
-            'clip': True,
-            'momentum': .9
-        },
-        'validation_params': {
-            'topn': {
-                'data_params': {
-                    'func': Threedworld,
-                    'data_path': DATA_PATH,  # path to image database
-                    'group': 'val',
-                    'crop_size': IMAGE_SIZE_CROP,  # size after cropping an image
-                },
-                'targets': {
-                    'func': rep_loss,
-                    'target': 'labels',
-                },
-                'queue_params': {
-                    'queue_type': 'fifo',
-                    'batch_size': BATCH_SIZE,
-                    'n_threads': 4,
-                    'seed': 0,
-                },
-                'num_steps': Threedworld.N_VAL // BATCH_SIZE + 1,
-                'agg_func': lambda x: {k:np.mean(v) for k,v in x.items()},
-                'online_agg_func': online_agg
-            },
-        },
+    # ... check that the correct "intermediate results" (the actual features extracted) records exist
+    # and are correctly referenced.
+    q1 = {'exp_id': 'validation1', 'validation_results.valid1.intermediate_steps': {'$exists': False}}
+    ids = coll.find(q1).distinct('_id')
+    assert r['validation_results']['valid1']['intermediate_steps'] == ids
 
-        'log_device_placement': False,  # if variable placement has to be logged
-    }
-    #base.get_params()
-    base.train_from_params(**params)
+    # ... actually load feature batch 3
+    idval = r['validation_results']['valid1']['intermediate_steps'][3]
+    fn = coll.find({'item_for': idval})[0]['filename']
+    fs = gridfs.GridFS(coll.database, testcol)
+    fh = fs.get_last_version(fn)
+    saved_data = cPickle.loads(fh.read())
+    fh.close()
+    features = saved_data['validation_results']['valid1']['features']
+    print(features.shape)
+    #assert features.shape == (100, 128)
+    #assert features.dtype == np.float32
 
 if __name__ == '__main__':
     #base.get_params()
