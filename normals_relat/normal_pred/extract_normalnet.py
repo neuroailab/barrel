@@ -70,8 +70,8 @@ class Threedworld(data.HDF5DataProvider):
     #N_TRAIN = 2048000 - 102400
     #N_VAL = 102400 
     N_TRAIN = 2048000
-    #N_VAL = 128000
-    N_VAL = 256
+    N_VAL = 128000
+    #N_VAL = 256
 
     def __init__(self,
                  data_path,
@@ -246,7 +246,7 @@ def main(args):
                              'port': 22334,
                              'dbname': 'normalnet-test',
                              'collname': 'normalnet',
-                             'do_restore': True,
+                             'do_restore': False,
                              'exp_id': exp_id}
     #params['save_params'] = {'exp_id': 'validation1',
     params['save_params'] = {'exp_id': 'validation1',
@@ -259,14 +259,15 @@ def main(args):
     targdict.update(base.DEFAULT_LOSS_PARAMS)
     params['validation_params'] = {'valid1': {'data_params': {'func': Threedworld,
                                                               'data_path': DATA_PATH,
-                                                              'batch_size': 1,
+                                                              'batch_size': 100,
                                                               'crop_size': IMAGE_SIZE_CROP,
                                                               'group': 'val'},
                                               'queue_params': {'queue_type': 'fifo',
                                                                'batch_size': 100,
                                                                'n_threads': 4},
+                                                               #'n_threads': 1},
                                               'targets': targdict,
-                                              'num_steps': 2,
+                                              'num_steps': 8,
                                               'online_agg_func': utils.reduce_mean_dict}}
     '''
     params['loss_params'] = {
@@ -277,7 +278,7 @@ def main(args):
     '''
 
     # actually run the feature extraction
-    #base.test_from_params(**params)
+    base.test_from_params(**params)
 
     # check that things are as expected.
     conn = pm.MongoClient(host='localhost',
@@ -301,7 +302,8 @@ def main(args):
     #assert r['validation_results']['valid1']['intermediate_steps'] == ids
 
     # ... actually load feature batch 3
-    idval = r['validation_results']['valid1']['intermediate_steps'][0]
+    #idval = r['validation_results']['valid1']['intermediate_steps'][0]
+    idval = r['validation_results']['valid1']['intermediate_steps'][2]
     fn = coll.find({'item_for': idval})[0]['filename']
     fs = gridfs.GridFS(coll.database, 'normalnet')
     fh = fs.get_last_version(fn)
@@ -309,7 +311,9 @@ def main(args):
     fh.close()
     features = saved_data['validation_results']['valid1']['features']
     print(features.shape)
-    cPickle.dump(saved_data, open('save_features.pkl', 'wb'))
+    #cPickle.dump(saved_data, open('save_features.pkl', 'wb'))
+    #cPickle.dump(saved_data, open('save_features_3.pkl', 'wb'))
+    cPickle.dump(saved_data, open('save_features_4.pkl', 'wb'))
     #assert features.shape == (100, 128)
     #assert features.dtype == np.float32
 
