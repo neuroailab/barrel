@@ -169,11 +169,11 @@ if __name__=="__main__":
 
     #array_dict      = build_array(3,3)
     #array_dict      = build_array(1,1)
-    array_dict      = build_array(62)
+    #array_dict      = build_array(62)
     #array_dict      = build_array(31)
     #array_dict      = build_array(11)
     #array_dict      = build_array(5)
-    #array_dict      = build_array(1)
+    array_dict      = build_array(1)
 
     config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":"float"}, 
             "y_len_link":{"value":y_len_link, "help":"Size y of cubes", "type":"float"},
@@ -208,9 +208,9 @@ if __name__=="__main__":
             "camera_dist":{"value":40, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
             "spring_offset":{"value":0, "help":"String offset for balance state", "type":"float"}, 
             "time_limit":{"value":50.0/4, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
-            "initial_str":{"value":50000, "help":"Initial strength of force applied", "type":"float"}, 
+            "initial_str":{"value":30000, "help":"Initial strength of force applied", "type":"float"}, 
             #"initial_str":{"value":150000, "help":"Initial strength of force applied", "type":"float"}, 
-            "initial_stime":{"value":0.1/8, "help":"Initial time to apply force", "type":"float"}, 
+            "initial_stime":{"value":1.1/8, "help":"Initial time to apply force", "type":"float"}, 
             "limit_softness":{"value":0.9, "help":"Softness of the hinge limit", "type":"float"}, 
             "limit_bias":{"value":0.3, "help":"Bias of the hinge limit", "type":"float"}, 
             "limit_relax":{"value":1, "help":"Relax of the hinge limit", "type":"float"}, 
@@ -229,7 +229,7 @@ if __name__=="__main__":
             "initial_poi":{"value":33, "help":"Unit to apply the force", "type":"int"}, 
             "hinge_mode":{"value":0, "help":"Whether use hinges rather than springs for connections of two units", "type":"int"},
             "test_mode":{"value":0, "help":"Whether enter test mode for some temp test codes, default is 0", "type":"int"},
-            "flag_time":{"value":0, "help":"Whether open time limit", "type":"int"}}
+            "flag_time":{"value":2, "help":"Whether open time limit", "type":"int"}}
     '''
     config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":"float"}, 
             "y_len_link":{"value":2.08, "help":"Size y of cubes", "type":"float"},

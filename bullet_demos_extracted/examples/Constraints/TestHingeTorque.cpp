@@ -74,6 +74,8 @@ struct TestHingeTorque : public CommonRigidBodyBase{
     float curr_state;
     float curr_force;
     float curr_torque;
+    float loss_ret; // Final return value, the loss function
+    float min_dis;
 
     btAlignedObjectArray< btAlignedObjectArray< btRigidBody* > > m_allbones_big_list;
     btAlignedObjectArray< btAlignedObjectArray< btHingeConstraint* > > m_allhinges_big_list;
@@ -178,33 +180,45 @@ void TestHingeTorque::stepSimulation(float deltaTime){
             }
         }
 
-        if (flag_time==2){
-            for (int i=0;i<all_size;i++){
-                curr_velo   += m_allbones[i]->getLinearVelocity().norm();
-                curr_angl   += m_allbones[i]->getAngularVelocity().norm();
-                //curr_force  += m_allbones[i]->getTotalForce().norm();
-                //curr_torque += m_allbones[i]->getTotalTorque().norm();
+        for (int i=0;i<all_size;i++){
+            float curr_speed_norm = m_allbones[i]->getLinearVelocity().norm();
+            if ((pass_time >= initial_stime)){
+                loss_ret += curr_speed_norm*time_leap;
             }
+            curr_velo   += curr_speed_norm;
+            curr_angl   += m_allbones[i]->getAngularVelocity().norm();
+            //curr_force  += m_allbones[i]->getTotalForce().norm();
+            //curr_torque += m_allbones[i]->getTotalTorque().norm();
+        }
 
-            for (int i=0;i<m_jointFeedback.size();i++){
-                curr_force  += m_jointFeedback[i]->m_appliedForceBodyA.norm();
-                curr_force  += m_jointFeedback[i]->m_appliedForceBodyB.norm();
+        for (int i=0;i<m_jointFeedback.size();i++){
+            curr_force  += m_jointFeedback[i]->m_appliedForceBodyA.norm();
+            curr_force  += m_jointFeedback[i]->m_appliedForceBodyB.norm();
 
-                curr_torque += m_jointFeedback[i]->m_appliedTorqueBodyA.norm();
-                curr_torque += m_jointFeedback[i]->m_appliedTorqueBodyB.norm();
-            }
+            curr_torque += m_jointFeedback[i]->m_appliedTorqueBodyA.norm();
+            curr_torque += m_jointFeedback[i]->m_appliedTorqueBodyB.norm();
+        }
 
-            for (int i=0;i<m_allhinges.size();i++){
-                curr_state  += m_allhinges[i]->getHingeAngle() - limit_up;
-            }
+        for (int i=0;i<m_allhinges.size();i++){
+            curr_state  += m_allhinges[i]->getHingeAngle() - limit_up;
         }
 
         all_size_for_big_list   += all_size;
         all_size_for_fb         += m_jointFeedback.size();
 
-        if ((pass_time < initial_stime) && (initial_poi < all_size-1)){
-            m_allbones[initial_poi+1]->applyForce(btVector3(0,0,initial_str), btVector3(0,0,0));
-            cout << "Applied" << endl;
+        //if ((pass_time < initial_stime) && (initial_poi < all_size-1)){
+        if ((pass_time < initial_stime)){
+
+            //m_allbones[initial_poi+1]->applyForce(btVector3(0,0,initial_str), btVector3(0,0,0));
+            //cout << "Applied" << endl;
+            btVector3 base_loc  = m_allbones[0]->getCenterOfMassPosition();
+            btVector3 end_loc   = m_allbones[m_allbones.size()-1]->getCenterOfMassPosition();
+            btVector3 direc_f   = base_loc - end_loc;
+            min_dis = direc_f.norm();
+            //cout << "Loss now: " << loss_ret << endl;
+            direc_f.normalize();
+            m_allbones[m_allbones.size()-1]->applyForce(initial_str*direc_f, btVector3(0,0,0));
+
         }
     }
     count++;
@@ -217,6 +231,9 @@ void TestHingeTorque::stepSimulation(float deltaTime){
     if ((flag_time==2) && (pass_time > initial_stime)){
         if ((curr_velo < velo_ban_limit) && (curr_state < state_ban_limit) && (curr_angl < angl_ban_limit) && (curr_force < force_limit) && (curr_torque < torque_limit)){
             cout << "Now state:" << curr_velo << " " << curr_angl << " " << curr_force << " " << curr_torque << " " << curr_state << endl;
+            cout << "Current distance: " << loss_ret << endl;
+            cout << "Mini distance: " << min_dis << endl;
+            cout << "Passed time: " << pass_time << endl;
             exit(0);
         }
     }
@@ -469,10 +486,12 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num
 void TestHingeTorque::initPhysics(){
 	int upAxis = 1;
     pass_time   = 0;
+    loss_ret    = 0;
+    min_dis     = 0;
     m_allbones_big_list.clear();
     m_allhinges_big_list.clear();
     
-    b3Printf("Config name = %s",m_guiHelper->getconfigname());
+    //b3Printf("Config name = %s",m_guiHelper->getconfigname());
     try {
         po::options_description desc("Allowed options");
         desc.add_options()
@@ -520,7 +539,10 @@ void TestHingeTorque::initPhysics(){
         ;
 
         po::variables_map vm;
+        //cout << "Enter -1" << endl;
         const char* file_name = m_guiHelper->getconfigname();
+        //cout << "Enter 0" << endl;
+        //const char* file_name = "/Users/chengxuz/barrel/bullet/barrel_github/cmd_gen_mp4/test.cfg";
         ifstream ifs(file_name);
         po::store(po::parse_config_file(ifs, desc), vm);
         po::notify(vm);    
@@ -668,6 +690,8 @@ void TestHingeTorque::initPhysics(){
         if (vm.count("test_mode")){
             test_mode       = vm["test_mode"].as<int>();
         }
+
+
     }
     catch(exception& e) {
         cerr << "error: " << e.what() << "\n";
@@ -687,7 +711,10 @@ void TestHingeTorque::initPhysics(){
 	int mode = 	btIDebugDraw::DBG_DrawWireframe
 				+btIDebugDraw::DBG_DrawConstraints
 				+btIDebugDraw::DBG_DrawConstraintLimits;
-	m_dynamicsWorld->getDebugDrawer()->setDebugMode(mode);
+
+    if (m_guiHelper->have_visualize==1) {
+        m_dynamicsWorld->getDebugDrawer()->setDebugMode(mode);
+    }
 
 
     btVector3 linkHalfExtents(x_len_link, y_len_link, z_len_link);
@@ -723,7 +750,7 @@ void TestHingeTorque::initPhysics(){
             //addQuaUnits(qua_a_list[big_list_indx], 0, 0, const_numLinks[big_list_indx], tmp_trans*btTransform(btQuaternion( yaw_y_base[big_list_indx], pitch_x_base[big_list_indx], roll_z_base[big_list_indx]),btVector3(x_pos_base[big_list_indx], y_pos_base[big_list_indx], z_pos_base[big_list_indx])));
             addQuaUnits(qua_a_list[big_list_indx], 0, 0, const_numLinks[big_list_indx], tmp_trans*btTransform(qua_mat,btVector3(x_pos_base[big_list_indx], y_pos_base[big_list_indx], z_pos_base[big_list_indx])));
         }
-        /*
+        /* Not used anymore, maybe delete it later
         for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) { // create one single whisker 
 
             btAlignedObjectArray< btRigidBody* > m_allbones;

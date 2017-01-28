@@ -14,4 +14,5 @@ FIND_PACKAGE( Boost 1.40 COMPONENTS program_options REQUIRED )
 INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
 
 SUBDIRS( HelloWorld BasicDemo )
+SUBDIRS( Constraints )
 SUBDIRS( ExampleBrowser ThirdPartyLibs/Gwen ThirdPartyLibs/BussIK OpenGLWindow )
