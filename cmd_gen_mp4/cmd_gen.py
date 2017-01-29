@@ -5,6 +5,7 @@ import copy
 import multiprocessing
 import numpy as np
 from get_ratMap import get_wholeS
+import copy
 
 '''
 The script to run the whisker thing and generate the mp4s through command line
@@ -84,7 +85,6 @@ def run_it(ind):
 
         os.system(cmd_str)
 
-#def build_array(x, y):
 def build_array(num_whskr):
     x_pos_base      = []
     y_pos_base      = []
@@ -101,8 +101,6 @@ def build_array(num_whskr):
     z_pos_st        = 0
     z_pos_step      = 10
     const_num_l     = 25
-    #const_num_l     = 4
-    #const_num_l     = 2
 
     qua_st          = -0.1
     yaw_y_base_st   = 0.5
@@ -111,48 +109,42 @@ def build_array(num_whskr):
 
     S   = get_wholeS()
 
-    '''
-    for indx_x in range(x):
-        for indx_y in range(y):
-            x_pos_base.append(x_pos_st + indx_x*x_pos_step)
-            z_pos_base.append(z_pos_st + indx_y*z_pos_step)
-            y_pos_base.append(y_pos_va)
-            const_numLinks.append(const_num_l)
-            qua_list.append(qua_st)
-            yaw_y_base.append(yaw_y_base_st)
-            pitch_x_base.append(pitch_x_base_st)
-            roll_z_base.append(roll_z_base_st)
-    '''
-
     for indx_w in xrange(num_whskr):
-        #x_pos_base.append(S.C_baseX[indx_w])
-        #y_pos_base.append(S.C_baseY[indx_w])
-        #z_pos_base.append(S.C_baseZ[indx_w])
-        #x_pos_base.append(S.C_baseY[indx_w])
-        #y_pos_base.append(S.C_baseZ[indx_w])
-        #z_pos_base.append(S.C_baseX[indx_w])
         x_pos_base.append(S.C_baseZ[indx_w])
         y_pos_base.append(S.C_baseY[indx_w])
         z_pos_base.append(S.C_baseX[indx_w])
 
         const_numLinks.append(np.ceil(S.C_s[indx_w]/(y_len_link*2)))
-        #const_numLinks.append(2)
         qua_list.append(-S.C_a[indx_w])
 
         yaw_y_base.append(S.C_phi[indx_w])
         pitch_x_base.append(S.C_zeta[indx_w])
         roll_z_base.append(S.C_theta[indx_w])
-        #yaw_y_base.append(0)
-        #pitch_x_base.append(0)
-        #roll_z_base.append(0)
 
-
-    #print(S.C_zeta)
-    #print(S.C_theta)
-    #print(S.C_phi)
     return {'x':x_pos_base, 'y':y_pos_base, 'z':z_pos_base, 'c':const_numLinks, 
             'yaw':yaw_y_base, 'pitch':pitch_x_base, 'roll':roll_z_base, 'qua':qua_list}
-    
+
+def make_hash(o):
+
+    """
+    Makes a hash from a dictionary, list, tuple or set to any level, that contains
+    only other hashable types (including any lists, tuples, sets, and
+    dictionaries).
+    """
+
+    if isinstance(o, (set, tuple, list)):
+
+        return tuple([make_hash(e) for e in o])        
+
+    elif not isinstance(o, dict):
+
+        return hash(o)
+
+    new_o = copy.deepcopy(o)
+    for k, v in new_o.items():
+        new_o[k] = make_hash(v)
+
+    return hash(tuple(frozenset(sorted(new_o.items()))))
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='The script to generate the mp4s through command line')
@@ -306,7 +298,7 @@ if __name__=="__main__":
         r.get()
         #print('Done!')
         #run_it(0)
-    else:
+    elif args.testmode==1:
         # Make config files
         now_config_fn   = "test.cfg"
         now_mp4_fn      = "test.mp4"
@@ -318,5 +310,14 @@ if __name__=="__main__":
         else:
             cmd_tmp         = "%s --config_filename=%s --start_demo_name=TestHingeTorque"
             cmd_str         = cmd_tmp % (args.pathexe, now_config_fn)
+
+        os.system(cmd_str)
+    else:
+        now_config_fn   = "test.cfg"
+
+        print(make_hash(config_dict))
+        make_config(config_dict, now_config_fn)
+        cmd_tmp         = "%s %s"
+        cmd_str         = cmd_tmp % (args.pathexe, now_config_fn)
 
         os.system(cmd_str)
