@@ -6,7 +6,7 @@ For compiling the examples, you need to have:
 
 - `cmake`
 - `boost`, for parsing the config files
-- `bullet`, we use this as physic engine
+- `bullet`, we use this as physic engine. We also required that the build of bullet is done in "bullet\_build" under bullet source code directory.
 
 ### Using cmake
 
