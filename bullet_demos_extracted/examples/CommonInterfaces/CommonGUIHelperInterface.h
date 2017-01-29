@@ -72,8 +72,8 @@ struct GUIHelperInterface
         return configname;
     };
 
-    char* configname=(char*)"";
-    int have_visualize=1;
+    char* configname;
+    int have_visualize;
 
     void setconfigname(char* inputname){
         configname  = inputname;

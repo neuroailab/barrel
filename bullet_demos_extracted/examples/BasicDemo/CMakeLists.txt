@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 2.8)
 #SET (BULLET_PHYSICS_SOURCE_DIR /Users/chengxuz/barrel/bullet/bullet3)
 
 find_package(OpenGL REQUIRED)
-find_package( Bullet REQUIRED )
+#find_package( Bullet REQUIRED )
 
 IF (Bullet_FOUND)
 	MESSAGE("Bullet FOUND")
@@ -18,7 +18,8 @@ ENDIF (Bullet_FOUND)
 #)
 
 LINK_LIBRARIES(
-    /usr/local/lib/libBullet3Common.${DYLIB_SUFFIX} 
+    #/usr/local/lib/libBullet3Common.${DYLIB_SUFFIX} 
+    ${BULLET_ROOT}/lib/libBullet3Common.${DYLIB_SUFFIX} 
 )
 #LINK_LIBRARIES(
 # BulletDynamics BulletCollision LinearMath
@@ -71,7 +72,7 @@ ADD_DEFINITIONS(-DB3_USE_STANDALONE_EXAMPLE)
 #        BulletDynamics BulletCollision LinearMath OpenGLWindow Bullet3Common ${OPENGL_gl_LIBRARY} ${OPENGL_glu_LIBRARY}
 #)
 LINK_LIBRARIES(
-     /usr/local/lib/libBullet3Common.${DYLIB_SUFFIX} OpenGLWindow ${OPENGL_gl_LIBRARY} ${OPENGL_glu_LIBRARY}
+     ${BULLET_ROOT}/lib/libBullet3Common.${DYLIB_SUFFIX} OpenGLWindow ${OPENGL_gl_LIBRARY} ${OPENGL_glu_LIBRARY}
 )
 
 LINK_LIBRARIES(

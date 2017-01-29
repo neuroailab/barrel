@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 2.8)
 
-find_package( Bullet REQUIRED )
+#find_package( Bullet REQUIRED )
 
-FIND_PACKAGE( Boost 1.40 COMPONENTS program_options REQUIRED )
+#FIND_PACKAGE( Boost 1.40 COMPONENTS program_options REQUIRED )
 INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
 
 LINK_LIBRARIES(
-    /usr/local/lib/libBullet3Common.${DYLIB_SUFFIX} 
+    ${BULLET_ROOT}/lib/libBullet3Common.${DYLIB_SUFFIX} 
 )
 
 IF (WIN32)

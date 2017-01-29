@@ -331,7 +331,7 @@ SET(BulletExampleBrowser_SRCS
 
 
 LINK_LIBRARIES(
-    /usr/local/lib/libBullet3Common.${DYLIB_SUFFIX} BulletExampleBrowserLib /usr/local/lib/libBulletInverseDynamics.${DYLIB_SUFFIX} ${BULLET_PHYSICS_SOURCE_DIR}/bullet_build/Extras/InverseDynamics/libBulletInverseDynamicsUtils.${DYLIB_SUFFIX}
+    ${BULLET_ROOT}/lib/libBullet3Common.${DYLIB_SUFFIX} BulletExampleBrowserLib ${BULLET_ROOT}/lib/libBulletInverseDynamics.${DYLIB_SUFFIX} ${BULLET_PHYSICS_SOURCE_DIR}/bullet_build/Extras/InverseDynamics/libBulletInverseDynamicsUtils.${DYLIB_SUFFIX}
 )
 
 ADD_EXECUTABLE(App_ExampleBrowser

@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
 	CommonExampleOptions options(&noGfx);
     //options.m_guiHelper->setconfigname("/Users/chengxuz/barrel/bullet/barrel_github/cmd_gen_mp4/test.cfg");
     options.m_guiHelper->setconfigname(argv[1]);
-    options.m_guiHelper->have_visualize = 0;
+    options.m_guiHelper->have_visualize = 100;
 	CommonExampleInterface*    example = TestHingeTorqueCreateFunc(options);
 	example->initPhysics();
     while (true){

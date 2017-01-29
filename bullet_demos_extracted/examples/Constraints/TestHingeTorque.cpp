@@ -712,7 +712,7 @@ void TestHingeTorque::initPhysics(){
 				+btIDebugDraw::DBG_DrawConstraints
 				+btIDebugDraw::DBG_DrawConstraintLimits;
 
-    if (m_guiHelper->have_visualize==1) {
+    if (m_guiHelper->have_visualize!=100) {
         m_dynamicsWorld->getDebugDrawer()->setDebugMode(mode);
     }
 

@@ -29,3 +29,4 @@ IF (INTERNAL_ADD_POSTFIX_EXECUTABLE_NAMES)
 ENDIF(INTERNAL_ADD_POSTFIX_EXECUTABLE_NAMES)
 
 target_link_libraries(App_HelloWorld ${BULLET_LIBRARIES})
+#target_link_libraries(App_HelloWorld Bullet)
