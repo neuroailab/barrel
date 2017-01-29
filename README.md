@@ -10,7 +10,7 @@ For compiling the examples, you need to have:
 
 ### Using cmake
 
-For compiling: `cmake -D BULLET_PHYSICS_SOURCE_DIR:SPRING=/path/to/your/bullet/repo/ /path/to/your/repo/bullet_demos_extracted/examples/`. Currently, only linux and mac is supported. And bullet should be installed using sudo.
+For compiling: `cmake -D BULLET_PHYSICS_SOURCE_DIR:SPRING=/path/to/your/bullet/repo/ /path/to/your/repo/bullet_demos_extracted/examples/`. Currently, only linux and mac is supported. And bullet should be installed using sudo. If your bullet and boost is installed locally, then you also need to specify the "BOOST\_ROOT" and "BULLET\_ROOT" by "-D BOOST\_ROOT:SPRING=/path/to/your/boost/".
 
 ### Parameters for running the examples
 
