@@ -8,6 +8,7 @@ from get_ratMap import get_wholeS
 import copy
 import subprocess
 from hyperopt import fmin, tpe, hp
+from hyperopt.mongoexp import MongoTrials
 
 '''
 The script to run the whisker thing and generate the mp4s through command line
@@ -249,13 +250,20 @@ def my_suggest(new_ids, domain, trials, seed,
     return tpe.suggest(new_ids, domain, trials, seed,
             prior_weight, n_startup_jobs, n_EI_candidates, gamma)
 
-def do_hyperopt(eval_num):
+def do_hyperopt(eval_num, use_mongo = False, portn = 23333, db_name = "test_db", exp_name = "exp1"):
+
+    if (use_mongo):
+        trials = MongoTrials('mongo://localhost:%i/%s/jobs' % (portn, db_name), exp_key=exp_name)
+    else:
+        trials = Trials()
+
     best = fmin(fn=get_value, 
         space=hp.choice('a', [
             {'basic_str': hp.uniform('b_s', 1000, 9000), 'linear_damp':hp.uniform('l_d', 0, 1), 'ang_damp':hp.uniform('a_d', 0, 1),
                 'spring_stiffness': hp.uniform('s_s', 100, 5000), 'spring_stfperunit':hp.uniform('s_sp', 1000, 9000)},
             ]),
         algo=my_suggest,
+        trials=trials,
         max_evals=eval_num)
     print best
 
