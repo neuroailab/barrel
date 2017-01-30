@@ -202,7 +202,7 @@ def get_value(kwargs, pathconfig ="/scratch/users/chengxuz/barrel/barrel_relat_f
         if key in config_dict:
             config_dict[key]['value'] = value
 
-    inner_loop = {0: {'force_mode': 0}, 1: {'force_mode': 1}}
+    inner_loop = {0: {'force_mode': 0, "initial_str": 30000}, 1: {'force_mode': 1, "initial_str": 10000}}
 
     all_ret_val = 0
     for key, value in inner_loop.iteritems():
