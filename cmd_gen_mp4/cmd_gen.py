@@ -228,13 +228,32 @@ def get_value(kwargs, pathconfig ="/scratch/users/chengxuz/barrel/barrel_relat_f
 
     return all_ret_val
 
+
+_default_prior_weight = 1.0
+
+# -- suggest best of this many draws on every iteration
+_default_n_EI_candidates = 24
+
+# -- gamma * sqrt(n_trials) is fraction of to use as good
+_default_gamma = 0.25
+
+_default_n_startup_jobs = 100
+
+def my_suggest(new_ids, domain, trials, seed,
+            prior_weight=_default_prior_weight,
+            n_startup_jobs=_default_n_startup_jobs,
+            n_EI_candidates=_default_n_EI_candidates,
+            gamma=_default_gamma):
+    return tpe.suggest(new_ids, domain, trials, seed,
+            prior_weight, n_startup_jobs, n_EI_candidates, gamma)
+
 def do_hyperopt(eval_num):
     best = fmin(fn=get_value, 
         space=hp.choice('a', [
             {'basic_str': hp.uniform('b_s', 1000, 9000), 'linear_damp':hp.uniform('l_d', 0, 1), 'ang_damp':hp.uniform('a_d', 0, 1),
                 'spring_stiffness': hp.uniform('s_s', 100, 5000), 'spring_stfperunit':hp.uniform('s_sp', 1000, 9000)},
             ]),
-        algo=tpe.suggest,
+        algo=my_suggest,
         max_evals=eval_num)
     print best
 
@@ -249,14 +268,6 @@ if __name__=="__main__":
     parser.add_argument('--testmode', default = 0, type = int, action = 'store', help = 'Whether run the test command or not')
 
     args    = parser.parse_args()
-    #print(args.nproc)
-
-    #array_dict      = build_array(3,3)
-    #array_dict      = build_array(1,1)
-    #array_dict      = build_array(62)
-    #array_dict      = build_array(31)
-    #array_dict      = build_array(11)
-    #array_dict      = build_array(5)
 
     if args.testmode==0:
         para_search     = {"basic_str":{"range":[1000, 3000, 5000, 7000], "short":"ba"}, 
@@ -267,8 +278,6 @@ if __name__=="__main__":
                 "every_spring":{"range":[2, 3, 5, 7, 9, 11, 13, 17, 21], "short":"es"},
                 "spring_stiffness":{"range":[300, 500, 700, 900], "short":"ss"}
                 }
-
-        #print(len(list(my_product(para_search))))
 
         for check_item in my_product(para_search):
 
@@ -286,8 +295,6 @@ if __name__=="__main__":
 
             if right_flag==1:
                 all_items.append(check_item)
-
-        #print(len(all_items), all_items[0])
 
 
         nu_args     = range(int(np.ceil(len(all_items)*1.0/args.mapn)))
