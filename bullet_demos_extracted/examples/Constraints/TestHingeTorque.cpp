@@ -83,6 +83,9 @@ struct TestHingeTorque : public CommonRigidBodyBase{
     btAlignedObjectArray< btAlignedObjectArray< btHingeConstraint* > > m_allhinges_big_list;
     btAlignedObjectArray< btAlignedObjectArray<btJointFeedback*> > m_jointFeedback_big_list;
 
+    btVector3 base_ball_location;
+    btTransform base_ball_trans;
+
 	TestHingeTorque(struct GUIHelperInterface* helper);
 	virtual ~ TestHingeTorque();
 	virtual void initPhysics();
@@ -211,26 +214,24 @@ void TestHingeTorque::stepSimulation(float deltaTime){
         //if ((pass_time < initial_stime) && (initial_poi < all_size-1)){
         if ((pass_time < initial_stime)){
 
+            btVector3 base_loc  = m_allbones[0]->getCenterOfMassPosition();
+            btVector3 end_loc   = m_allbones[m_allbones.size()-1]->getCenterOfMassPosition();
+            btVector3 direc_f   = base_loc - end_loc;
+            if (direc_f.norm() < min_dis) min_dis = direc_f.norm();
+
             //cout << force_mode << endl;
             if (force_mode==0){
-                //m_allbones[initial_poi+1]->applyForce(btVector3(0,0,initial_str), btVector3(0,0,0));
-                //cout << "Applied" << endl;
-                btVector3 base_loc  = m_allbones[0]->getCenterOfMassPosition();
-                btVector3 end_loc   = m_allbones[m_allbones.size()-1]->getCenterOfMassPosition();
-                btVector3 direc_f   = base_loc - end_loc;
-                min_dis = direc_f.norm();
-                //cout << "Loss now: " << loss_ret << endl;
                 direc_f.normalize();
                 m_allbones[m_allbones.size()-1]->applyForce(initial_str*direc_f, btVector3(0,0,0));
             } else if (force_mode==1){
-                //cout << "Get in another mode!" << endl;
-                btVector3 base_loc  = m_allbones[0]->getCenterOfMassPosition();
-                btVector3 end_loc   = m_allbones[m_allbones.size()-1]->getCenterOfMassPosition();
-                btVector3 direc_f   = base_loc - end_loc;
-                min_dis = direc_f.norm();
-                //cout << "Loss now: " << loss_ret << endl;
+                direc_f = base_ball_location - base_ball_trans( btVector3(0,0,-1));
                 direc_f.normalize();
-                direc_f =m_allbones[0]->getCenterOfMassTransform()( btVector3(0,0,1));
+                float force_needed = initial_str * pass_time;
+                if (force_needed > max_str ) force_needed = max_str;
+                m_allbones[m_allbones.size()-1]->applyForce(force_needed*direc_f, btVector3(0,0,0));
+            } else if (force_mode==2){
+                direc_f = base_ball_location - base_ball_trans( btVector3(1,0,0));
+                direc_f.normalize();
                 float force_needed = initial_str * pass_time;
                 if (force_needed > max_str ) force_needed = max_str;
                 m_allbones[m_allbones.size()-1]->applyForce(force_needed*direc_f, btVector3(0,0,0));
@@ -430,6 +431,9 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num
             base_ball->setDamping(0,0);
             m_dynamicsWorld->addRigidBody(base_ball,collisionFilterGroup,collisionFilterMask);
 
+            base_ball_location = base_ball->getCenterOfMassPosition();
+            base_ball_trans = base_ball->getCenterOfMassTransform();
+
             // Special spring for base ball and base box unit 
             btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, radius, 0));						//par body's COM to cur body's COM offset
             btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, -y_len_link, 0));							//cur body's COM to cur body's PIV offset
@@ -505,7 +509,7 @@ void TestHingeTorque::initPhysics(){
 	int upAxis = 1;
     pass_time   = 0;
     loss_ret    = 0;
-    min_dis     = 0;
+    min_dis     = 10000;
     m_allbones_big_list.clear();
     m_allhinges_big_list.clear();
     
