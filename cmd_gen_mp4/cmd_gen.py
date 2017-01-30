@@ -179,6 +179,7 @@ def get_value(kwargs, pathconfig ="/scratch/users/chengxuz/barrel/barrel_relat_f
             "spring_stiffness":{"value":520, "help":"Stiffness of spring", "type":"float"}, 
             "spring_stfperunit":{"value":3000, "help":"Stiffness of spring per unit", "type":"float"}, 
             "initial_str":{"value":30000, "help":"Initial strength of force applied", "type":"float"}, 
+            "max_str":{"value":10000, "help":"Max strength of force applied", "type":"float"}, 
             "initial_stime":{"value":1.1/8, "help":"Initial time to apply force", "type":"float"}, 
             "angl_ban_limit":{"value":0.5, "help":"While flag_time is 2, used for angular velocities of rigid bodys to judge whether stop", "type":"float"}, 
             "velo_ban_limit":{"value":0.5, "help":"While flag_time is 2, used for linear velocities of rigid bodys to judge whether stop", "type":"float"}, 
@@ -187,27 +188,38 @@ def get_value(kwargs, pathconfig ="/scratch/users/chengxuz/barrel/barrel_relat_f
             "torque_limit":{"value":200, "help":"While flag_time is 2, used for torque states of hinges to judge whether stop", "type":"float"}, 
             "hinge_mode":{"value":0, "help":"Whether use hinges rather than springs for connections of two units", "type":"int"},
             "test_mode":{"value":0, "help":"Whether enter test mode for some temp test codes, default is 0", "type":"int"},
+            "force_mode":{"value":0, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
             "flag_time":{"value":2, "help":"Whether open time limit", "type":"int"}}
 
     for key, value in kwargs.iteritems():
         if key in config_dict:
             config_dict[key]['value'] = value
 
-    hash_value = make_hash(config_dict)
-    #print(hash_value)
-    #print(pathconfig)
-    now_config_fn   = os.path.join(pathconfig, "test_%s.cfg" % str(hash_value))
+    inner_loop = {0: {}, 1: {'force_mode': 1}}
 
-    make_config(config_dict, now_config_fn)
+    all_ret_val = 0
+    for key, value in inner_loop.iteritems():
+        for key_i, value_i in value.iteritems():
+            if key_i in config_dict:
+                config_dict[key_i]['value'] = value_i
 
-    tmp_outputs = subprocess.check_output([pathexe, now_config_fn])
-    tmp_splits = tmp_outputs.split('\n')
-    curr_dis = float(tmp_splits[1].split(':')[1])
-    min_dis = float(tmp_splits[2].split(':')[1])
-    all_time = float(tmp_splits[3].split(':')[1])
-    retval = coe_curr_dis*curr_dis + coe_min_dis*min_dis + coe_all_time*all_time
+        hash_value = make_hash(config_dict)
+        #print(hash_value)
+        #print(pathconfig)
+        now_config_fn   = os.path.join(pathconfig, "test_%s.cfg" % str(hash_value))
 
-    return retval
+        make_config(config_dict, now_config_fn)
+
+        tmp_outputs = subprocess.check_output([pathexe, now_config_fn])
+        tmp_splits = tmp_outputs.split('\n')
+        curr_dis = float(tmp_splits[1].split(':')[1])
+        min_dis = float(tmp_splits[2].split(':')[1])
+        all_time = float(tmp_splits[3].split(':')[1])
+        retval = coe_curr_dis*curr_dis + coe_min_dis*min_dis + coe_all_time*all_time
+
+        all_ret_val = all_ret_val + retval
+
+    return all_ret_val
 
 def do_hyperopt(eval_num):
     best = fmin(fn=get_value, 
@@ -265,8 +277,9 @@ if __name__=="__main__":
             "camera_dist":{"value":40, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
             "spring_offset":{"value":0, "help":"String offset for balance state", "type":"float"}, 
             "time_limit":{"value":50.0/4, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
-            "initial_str":{"value":30000, "help":"Initial strength of force applied", "type":"float"}, 
-            "initial_stime":{"value":1.1/8, "help":"Initial time to apply force", "type":"float"}, 
+            "initial_str":{"value":10000, "help":"Initial strength of force applied", "type":"float"}, 
+            "max_str":{"value":10000, "help":"Max strength of force applied", "type":"float"}, 
+            "initial_stime":{"value":6.1/8, "help":"Initial time to apply force", "type":"float"}, 
             "angl_ban_limit":{"value":0.5, "help":"While flag_time is 2, used for angular velocities of rigid bodys to judge whether stop", "type":"float"}, 
             "velo_ban_limit":{"value":0.5, "help":"While flag_time is 2, used for linear velocities of rigid bodys to judge whether stop", "type":"float"}, 
             "state_ban_limit":{"value":0.5, "help":"While flag_time is 2, used for angle states of hinges to judge whether stop", "type":"float"}, 
@@ -274,6 +287,7 @@ if __name__=="__main__":
             "torque_limit":{"value":200, "help":"While flag_time is 2, used for torque states of hinges to judge whether stop", "type":"float"}, 
             "hinge_mode":{"value":0, "help":"Whether use hinges rather than springs for connections of two units", "type":"int"},
             "test_mode":{"value":0, "help":"Whether enter test mode for some temp test codes, default is 0", "type":"int"},
+            "force_mode":{"value":1, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
             "flag_time":{"value":2, "help":"Whether open time limit", "type":"int"}}
 
     if args.testmode==0:

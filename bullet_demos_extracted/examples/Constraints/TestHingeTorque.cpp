@@ -47,6 +47,7 @@ float camera_dist     = 45;
 float spring_offset   = 0;
 float time_limit    = 5.0/4;
 float initial_str   = 10000;
+float max_str   = 10000;
 float initial_stime = 1.0/8;
 int initial_poi     = 14;
 int flag_time       = 0;
@@ -63,6 +64,7 @@ float torque_limit      = 1;
 
 int hinge_mode          = 1;
 int test_mode           = 0;
+int force_mode          = 0;
 
 float percision         = 0.001;
 
@@ -209,15 +211,30 @@ void TestHingeTorque::stepSimulation(float deltaTime){
         //if ((pass_time < initial_stime) && (initial_poi < all_size-1)){
         if ((pass_time < initial_stime)){
 
-            //m_allbones[initial_poi+1]->applyForce(btVector3(0,0,initial_str), btVector3(0,0,0));
-            //cout << "Applied" << endl;
-            btVector3 base_loc  = m_allbones[0]->getCenterOfMassPosition();
-            btVector3 end_loc   = m_allbones[m_allbones.size()-1]->getCenterOfMassPosition();
-            btVector3 direc_f   = base_loc - end_loc;
-            min_dis = direc_f.norm();
-            //cout << "Loss now: " << loss_ret << endl;
-            direc_f.normalize();
-            m_allbones[m_allbones.size()-1]->applyForce(initial_str*direc_f, btVector3(0,0,0));
+            //cout << force_mode << endl;
+            if (force_mode==0){
+                //m_allbones[initial_poi+1]->applyForce(btVector3(0,0,initial_str), btVector3(0,0,0));
+                //cout << "Applied" << endl;
+                btVector3 base_loc  = m_allbones[0]->getCenterOfMassPosition();
+                btVector3 end_loc   = m_allbones[m_allbones.size()-1]->getCenterOfMassPosition();
+                btVector3 direc_f   = base_loc - end_loc;
+                min_dis = direc_f.norm();
+                //cout << "Loss now: " << loss_ret << endl;
+                direc_f.normalize();
+                m_allbones[m_allbones.size()-1]->applyForce(initial_str*direc_f, btVector3(0,0,0));
+            } else if (force_mode==1){
+                //cout << "Get in another mode!" << endl;
+                btVector3 base_loc  = m_allbones[0]->getCenterOfMassPosition();
+                btVector3 end_loc   = m_allbones[m_allbones.size()-1]->getCenterOfMassPosition();
+                btVector3 direc_f   = base_loc - end_loc;
+                min_dis = direc_f.norm();
+                //cout << "Loss now: " << loss_ret << endl;
+                direc_f.normalize();
+                direc_f =m_allbones[0]->getCenterOfMassTransform()( btVector3(0,0,1));
+                float force_needed = initial_str * pass_time;
+                if (force_needed > max_str ) force_needed = max_str;
+                m_allbones[m_allbones.size()-1]->applyForce(force_needed*direc_f, btVector3(0,0,0));
+            }
 
         }
     }
@@ -456,7 +473,8 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num
 
                 for (int indx_tmp=0;indx_tmp<6;indx_tmp++){
                     fixed->enableSpring(indx_tmp, true);
-                    fixed->setStiffness(indx_tmp, spring_stiffness + (num_units - (new_indx + indx_unit)/2)*spring_stfperunit);
+                    //fixed->setStiffness(indx_tmp, spring_stiffness + (num_units - (new_indx + indx_unit)/2)*spring_stfperunit);
+                    fixed->setStiffness(indx_tmp, spring_stiffness + (num_units - indx_unit)*spring_stfperunit);
                 }
                 fixed->setEquilibriumPoint(3, -(deg_away - m_alldeg[new_indx]));
                 
@@ -521,6 +539,7 @@ void TestHingeTorque::initPhysics(){
             ("spring_offset", po::value<float>(), "String offset for balance state")
             ("time_limit", po::value<float>(), "Time limit for recording")
             ("initial_str", po::value<float>(), "Initial strength of force applied")
+            ("max_str", po::value<float>(), "Max strength of force applied, used when force_mode=1")
             ("initial_stime", po::value<float>(), "Initial time to apply force")
             ("initial_poi", po::value<int>(), "Unit to apply the force")
             ("flag_time", po::value<int>(), "Whether open time limit")
@@ -536,6 +555,7 @@ void TestHingeTorque::initPhysics(){
             ("torque_limit", po::value<float>(), "While flag_time is 2, used for torques of rigid bodys to judge whether stop")
             ("hinge_mode", po::value<int>(), "Whether use hinges rather than springs for connections of two units")
             ("test_mode", po::value<int>(), "Whether enter test mode for some temp test codes, default is 0")
+            ("force_mode", po::value<int>(), "Force mode to apply at the beginning, default is 0")
         ;
 
         po::variables_map vm;
@@ -641,6 +661,9 @@ void TestHingeTorque::initPhysics(){
         if (vm.count("initial_str")){
             initial_str     = vm["initial_str"].as<float>();
         }
+        if (vm.count("max_str")){
+            max_str         = vm["max_str"].as<float>();
+        }
         if (vm.count("initial_stime")){
             initial_stime   = vm["initial_stime"].as<float>();
         }
@@ -689,6 +712,10 @@ void TestHingeTorque::initPhysics(){
 
         if (vm.count("test_mode")){
             test_mode       = vm["test_mode"].as<int>();
+        }
+
+        if (vm.count("force_mode")){
+            force_mode      = vm["force_mode"].as<int>();
         }
 
 
