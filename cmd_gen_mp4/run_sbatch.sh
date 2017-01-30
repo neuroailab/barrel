@@ -1,4 +1,5 @@
-for k in 100 1000 5000 10000 50000 100000
+#for k in 100 1000 5000
+for k in 100 500 1000
 do
-    sbatch --job-name=hyper${k} script_sbatch.sh ${k}
+    sbatch --job-name=dnhyper${k} script_sbatch.sh ${k}
 done
