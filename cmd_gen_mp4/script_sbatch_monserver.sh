@@ -4,4 +4,4 @@
 #SBATCH --output=/scratch/users/chengxuz/slurm_output/hyper_monserver_%j.out
 
 source ~/.tunnel
-python cmd_hyperopt.py --neval ${1} --usemongo 1
+python cmd_hyperopt.py --neval ${1} --usemongo 1 --expname exp2

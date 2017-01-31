@@ -259,7 +259,8 @@ def do_hyperopt(eval_num, use_mongo = False, portn = 23333, db_name = "test_db",
 
     best = fmin(fn=get_value, 
         space=hp.choice('a', [
-            {'basic_str': hp.uniform('b_s', 1000, 9000), 'linear_damp':hp.uniform('l_d', 0, 1), 'ang_damp':hp.uniform('a_d', 0, 1),
+            {'basic_str': hp.uniform('b_s', 1000, 9000), 
+                'linear_damp':hp.uniform('l_d', 0, 0.9), 'ang_damp':hp.uniform('a_d', 0, 0.9),
                 'spring_stiffness': hp.uniform('s_s', 100, 5000), 'spring_stfperunit':hp.uniform('s_sp', 1000, 9000)},
             ]),
         algo=my_suggest,
