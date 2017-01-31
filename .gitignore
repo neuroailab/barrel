@@ -19,3 +19,4 @@ Makefile
 !normals_relat/normal_pred/*.cfg
 *.pkl
 *ipynb*
+*logfile.txt

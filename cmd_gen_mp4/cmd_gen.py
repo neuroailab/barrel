@@ -9,6 +9,7 @@ import copy
 import subprocess
 from hyperopt import fmin, tpe, hp, Trials
 from hyperopt.mongoexp import MongoTrials
+import copy
 
 '''
 The script to run the whisker thing and generate the mp4s through command line
@@ -161,7 +162,7 @@ for indx_spring in xrange(3, 30):
 config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":"float"}, 
         "y_len_link":{"value":y_len_link, "help":"Size y of cubes", "type":"float"},
         "z_len_link":{"value":0.3, "help":"Size z of cubes", "type":"float"}, 
-        "basic_str":{"value":2508, "help":"Minimal strength of hinge's recover force", "type":"float"}, 
+        "basic_str":{"value":2563, "help":"Minimal strength of hinge's recover force", "type":"float"}, 
         "x_pos_base":{"value":array_dict['x'], "help":"Position x of base", "type":"list", "type_in":"float"},
         "y_pos_base":{"value":array_dict['y'], "help":"Position y of base", "type":"list", "type_in":"float"},
         "z_pos_base":{"value":array_dict['z'], "help":"Position z of base", "type":"list", "type_in":"float"},
@@ -174,20 +175,20 @@ config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":
         "every_spring":{"value":every_spring_value, "help":"Number of units between one strings", "type":"list", "type_in": "int"},
         #"linear_damp":{"value":0.7, "help":"Control the linear damp ratio", "type":"float"},
         #"linear_damp":{"value":0.997, "help":"Control the linear damp ratio", "type":"float"},
-        "linear_damp":{"value":0.95, "help":"Control the linear damp ratio", "type":"float"},
+        "linear_damp":{"value":0.39, "help":"Control the linear damp ratio", "type":"float"},
         #"ang_damp":{"value":0.7, "help":"Control the angle damp ratio", "type":"float"},
         #"ang_damp":{"value":0.18, "help":"Control the angle damp ratio", "type":"float"},
         "ang_damp":{"value":0.54, "help":"Control the angle damp ratio", "type":"float"},
         "time_leap":{"value":1.0/240.0, "help":"Time unit for simulation", "type":"float"},
         "equi_angle":{"value":0, "help":"Control the angle of balance for hinges", "type":"float"}, 
-        "spring_stiffness":{"value":3233, "help":"Stiffness of spring", "type":"float"}, 
-        "spring_stfperunit":{"value":2117, "help":"Stiffness of spring per unit", "type":"float"}, 
+        "spring_stiffness":{"value":641, "help":"Stiffness of spring", "type":"float"}, 
+        "spring_stfperunit":{"value":7878, "help":"Stiffness of spring per unit", "type":"float"}, 
         "camera_dist":{"value":40, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
         "spring_offset":{"value":0, "help":"String offset for balance state", "type":"float"}, 
         "time_limit":{"value":50.0/4, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
         "initial_str":{"value":10000, "help":"Initial strength of force applied", "type":"float"}, 
         "max_str":{"value":10000, "help":"Max strength of force applied", "type":"float"}, 
-        "initial_stime":{"value":2.1/8, "help":"Initial time to apply force", "type":"float"}, 
+        "initial_stime":{"value":3.1/8, "help":"Initial time to apply force", "type":"float"}, 
         "angl_ban_limit":{"value":0.5, "help":"While flag_time is 2, used for angular velocities of rigid bodys to judge whether stop", "type":"float"}, 
         "velo_ban_limit":{"value":0.5, "help":"While flag_time is 2, used for linear velocities of rigid bodys to judge whether stop", "type":"float"}, 
         "state_ban_limit":{"value":0.5, "help":"While flag_time is 2, used for angle states of hinges to judge whether stop", "type":"float"}, 
@@ -195,17 +196,20 @@ config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":
         "torque_limit":{"value":120, "help":"While flag_time is 2, used for torque states of hinges to judge whether stop", "type":"float"}, 
         "hinge_mode":{"value":0, "help":"Whether use hinges rather than springs for connections of two units", "type":"int"},
         "test_mode":{"value":0, "help":"Whether enter test mode for some temp test codes, default is 0", "type":"int"},
-        "force_mode":{"value":2, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
+        #"force_mode":{"value":2, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
+        "force_mode":{"value":1, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
         "flag_time":{"value":2, "help":"Whether open time limit", "type":"int"}}
 
+orig_config_dict = copy.deepcopy(config_dict)
+
 def get_value(kwargs, pathconfig ="/scratch/users/chengxuz/barrel/barrel_relat_files/configs", pathexe ="/scratch/users/chengxuz/barrel/examples_build/Constraints/App_TestHinge",  
-        coe_curr_dis = 1.0/40.0, coe_min_dis = 1.0, coe_all_time = 20.0):
+        coe_curr_dis = 1.0/40.0, coe_min_dis = 1.0, coe_all_time = 20.0, coe_ave_speed = -10):
 
     for key, value in kwargs.iteritems():
         if key in config_dict:
             config_dict[key]['value'] = value
 
-    inner_loop = {0: {'force_mode': 0, "initial_str": 30000}, 1: {'force_mode': 1, "initial_str": 10000}, 2: {'force_mode': 2, "initial_str": 10000}}
+    inner_loop = {0: {'force_mode': 0, "initial_str": 30000}, 1: {'force_mode': 1, "initial_str": 10000}, 2: {'force_mode': 2, "initial_str": 10000}, 3: {'force_mode': 2, "initial_str": 8000}}
 
     all_ret_val = 0
     for key, value in inner_loop.iteritems():
@@ -225,9 +229,14 @@ def get_value(kwargs, pathconfig ="/scratch/users/chengxuz/barrel/barrel_relat_f
         curr_dis = float(tmp_splits[1].split(':')[1])
         min_dis = float(tmp_splits[2].split(':')[1])
         all_time = float(tmp_splits[3].split(':')[1])
-        retval = coe_curr_dis*curr_dis + coe_min_dis*min_dis + coe_all_time*all_time
+        ave_speed = curr_dis/all_time
+        retval = coe_curr_dis*curr_dis + coe_min_dis*min_dis + coe_all_time*all_time + coe_ave_speed*ave_speed
 
         all_ret_val = all_ret_val + retval
+
+        for key_i, value_i in value.iteritems():
+            if key_i in config_dict:
+                config_dict[key_i]['value'] = orig_config_dict[key_i]['value']
 
     return all_ret_val
 
