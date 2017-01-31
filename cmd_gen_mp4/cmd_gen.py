@@ -7,7 +7,7 @@ import numpy as np
 from get_ratMap import get_wholeS
 import copy
 import subprocess
-from hyperopt import fmin, tpe, hp
+from hyperopt import fmin, tpe, hp, Trials
 from hyperopt.mongoexp import MongoTrials
 
 '''
