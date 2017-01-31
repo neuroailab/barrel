@@ -162,7 +162,7 @@ for indx_spring in xrange(3, 30):
 config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":"float"}, 
         "y_len_link":{"value":y_len_link, "help":"Size y of cubes", "type":"float"},
         "z_len_link":{"value":0.3, "help":"Size z of cubes", "type":"float"}, 
-        "basic_str":{"value":2563, "help":"Minimal strength of hinge's recover force", "type":"float"}, 
+        "basic_str":{"value":8374, "help":"Minimal strength of hinge's recover force", "type":"float"}, 
         "x_pos_base":{"value":array_dict['x'], "help":"Position x of base", "type":"list", "type_in":"float"},
         "y_pos_base":{"value":array_dict['y'], "help":"Position y of base", "type":"list", "type_in":"float"},
         "z_pos_base":{"value":array_dict['z'], "help":"Position z of base", "type":"list", "type_in":"float"},
@@ -175,14 +175,14 @@ config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":
         "every_spring":{"value":every_spring_value, "help":"Number of units between one strings", "type":"list", "type_in": "int"},
         #"linear_damp":{"value":0.7, "help":"Control the linear damp ratio", "type":"float"},
         #"linear_damp":{"value":0.997, "help":"Control the linear damp ratio", "type":"float"},
-        "linear_damp":{"value":0.39, "help":"Control the linear damp ratio", "type":"float"},
+        "linear_damp":{"value":0.66, "help":"Control the linear damp ratio", "type":"float"},
         #"ang_damp":{"value":0.7, "help":"Control the angle damp ratio", "type":"float"},
         #"ang_damp":{"value":0.18, "help":"Control the angle damp ratio", "type":"float"},
-        "ang_damp":{"value":0.54, "help":"Control the angle damp ratio", "type":"float"},
+        "ang_damp":{"value":0.015, "help":"Control the angle damp ratio", "type":"float"},
         "time_leap":{"value":1.0/240.0, "help":"Time unit for simulation", "type":"float"},
         "equi_angle":{"value":0, "help":"Control the angle of balance for hinges", "type":"float"}, 
-        "spring_stiffness":{"value":641, "help":"Stiffness of spring", "type":"float"}, 
-        "spring_stfperunit":{"value":7878, "help":"Stiffness of spring per unit", "type":"float"}, 
+        "spring_stiffness":{"value":3964, "help":"Stiffness of spring", "type":"float"}, 
+        "spring_stfperunit":{"value":2517, "help":"Stiffness of spring per unit", "type":"float"}, 
         "camera_dist":{"value":40, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
         "spring_offset":{"value":0, "help":"String offset for balance state", "type":"float"}, 
         "time_limit":{"value":50.0/4, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
@@ -202,14 +202,14 @@ config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":
 
 orig_config_dict = copy.deepcopy(config_dict)
 
+inner_loop = {0: {'force_mode': 0, "initial_str": 30000}, 1: {'force_mode': 1, "initial_str": 10000}, 2: {'force_mode': 2, "initial_str": 10000}, 3: {'force_mode': 2, "initial_str": 8000}}
+
 def get_value(kwargs, pathconfig ="/scratch/users/chengxuz/barrel/barrel_relat_files/configs", pathexe ="/scratch/users/chengxuz/barrel/examples_build/Constraints/App_TestHinge",  
         coe_curr_dis = 1.0/40.0, coe_min_dis = 1.0, coe_all_time = 20.0, coe_ave_speed = -10):
 
     for key, value in kwargs.iteritems():
         if key in config_dict:
             config_dict[key]['value'] = value
-
-    inner_loop = {0: {'force_mode': 0, "initial_str": 30000}, 1: {'force_mode': 1, "initial_str": 10000}, 2: {'force_mode': 2, "initial_str": 10000}, 3: {'force_mode': 2, "initial_str": 8000}}
 
     all_ret_val = 0
     for key, value in inner_loop.iteritems():
@@ -286,8 +286,15 @@ if __name__=="__main__":
     parser.add_argument('--mp4flag', default = 1, type = int, action = 'store', help = 'Whether generate mp4 files')
     parser.add_argument('--mapn', default = 30, type = int, action = 'store', help = 'Number of items in each processes')
     parser.add_argument('--testmode', default = 0, type = int, action = 'store', help = 'Whether run the test command or not')
+    parser.add_argument('--innernum', default = -1, type = int, action = 'store', help = 'Number of inner loop')
 
     args    = parser.parse_args()
+
+    if args.innernum>=0 and args.innernum in inner_loop:
+        inner_loop_orig = copy.deepcopy(inner_loop)
+        for key in inner_loop_orig:
+            if not key==args.innernum:
+                inner_loop.pop(key)
 
     if args.testmode==0:
         para_search     = {"basic_str":{"range":[1000, 3000, 5000, 7000], "short":"ba"}, 
@@ -329,21 +336,38 @@ if __name__=="__main__":
         now_config_fn   = "test.cfg"
         now_mp4_fn      = "test.mp4"
 
-        make_config(config_dict, now_config_fn)
-        if args.mp4flag==1:
-            cmd_tmp         = "%s --config_filename=%s --mp4=%s --start_demo_name=TestHingeTorque"
-            cmd_str         = cmd_tmp % (args.pathexe, now_config_fn, now_mp4_fn)
-        else:
-            cmd_tmp         = "%s --config_filename=%s --start_demo_name=TestHingeTorque"
-            cmd_str         = cmd_tmp % (args.pathexe, now_config_fn)
+        for key, value in inner_loop.iteritems():
+            for key_i, value_i in value.iteritems():
+                if key_i in config_dict:
+                    config_dict[key_i]['value'] = value_i
 
-        os.system(cmd_str)
+            make_config(config_dict, now_config_fn)
+            if args.mp4flag==1:
+                cmd_tmp         = "%s --config_filename=%s --mp4=%s --start_demo_name=TestHingeTorque"
+                cmd_str         = cmd_tmp % (args.pathexe, now_config_fn, now_mp4_fn)
+            else:
+                cmd_tmp         = "%s --config_filename=%s --start_demo_name=TestHingeTorque"
+                cmd_str         = cmd_tmp % (args.pathexe, now_config_fn)
+
+            os.system(cmd_str)
+
+            for key_i, value_i in value.iteritems():
+                if key_i in config_dict:
+                    config_dict[key_i]['value'] = orig_config_dict[key_i]['value']
     else:
         now_config_fn   = "test.cfg"
 
         print(make_hash(config_dict))
-        make_config(config_dict, now_config_fn)
-        cmd_tmp         = "%s %s"
-        cmd_str         = cmd_tmp % (args.pathexe, now_config_fn)
+        for key, value in inner_loop.iteritems():
+            for key_i, value_i in value.iteritems():
+                if key_i in config_dict:
+                    config_dict[key_i]['value'] = value_i
+            make_config(config_dict, now_config_fn)
+            cmd_tmp         = "%s %s"
+            cmd_str         = cmd_tmp % (args.pathexe, now_config_fn)
 
-        os.system(cmd_str)
+            os.system(cmd_str)
+
+            for key_i, value_i in value.iteritems():
+                if key_i in config_dict:
+                    config_dict[key_i]['value'] = orig_config_dict[key_i]['value']
