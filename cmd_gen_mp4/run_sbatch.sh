@@ -4,8 +4,9 @@
 #    sbatch --job-name=dnhyper${k} script_sbatch.sh ${k}
 #done
 
-k=500
-sbatch --job-name=dhmons${k} script_sbatch_monserver.sh ${k} exp4
+k=400
+#sbatch --job-name=dhmons${k} script_sbatch_monserver.sh ${k} exp4
+sbatch --job-name=dhmons${k} script_sbatch_monserver.sh ${k} exp5
 sleep 5
 for k in $(seq 1 15)
 do

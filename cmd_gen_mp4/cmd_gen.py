@@ -279,12 +279,12 @@ def do_hyperopt(eval_num, use_mongo = False, portn = 23333, db_name = "test_db",
     space_base_spring_stiffness = []
     space_spring_stfperunit_list = []
     for indx_spring in xrange(2, 30):
-        space_base_spring_stiffness.append(hp.uniform('base_spring_stiffness$%i' % indx_spring, -20000, 20000))
-        space_spring_stfperunit_list.append(hp.uniform('spring_stfperunit_list$%i' % indx_spring, -20000, 20000))
+        space_base_spring_stiffness.append(hp.uniform('base_spring_stiffness$%i' % indx_spring, 0, 20000))
+        space_spring_stfperunit_list.append(hp.uniform('spring_stfperunit_list$%i' % indx_spring, 0, 20000))
 
     best = fmin(fn=get_value, 
         space=hp.choice('a', [
-            {'basic_str': hp.uniform('basic_str', -9000, 9000), 'base_ball_base_spring_stf': hp.uniform('base_ball_base_spring_stf', -20000, 20000), 'spring_stfperunit':hp.uniform('spring_stfperunit', -9000, 9000),
+            {'basic_str': hp.uniform('basic_str', 0, 9000), 'base_ball_base_spring_stf': hp.uniform('base_ball_base_spring_stf', 0, 20000), 'spring_stfperunit':hp.uniform('spring_stfperunit', 0, 9000),
              'linear_damp':hp.uniform('linear_damp', 0, 0.9), 'ang_damp':hp.uniform('ang_damp', 0, 0.9),
              'base_spring_stiffness': space_base_spring_stiffness, "spring_stfperunit_list": space_spring_stfperunit_list,
              },
