@@ -7,7 +7,7 @@
 k=500
 #k=1000
 #sbatch --job-name=dhmons${k} script_sbatch_monserver.sh ${k} exp4
-sbatch --job-name=dhmons${k} script_sbatch_monserver.sh ${k} exp9
+sbatch --job-name=dhmons${k} script_sbatch_monserver.sh ${k} exp12
 sleep 5
 for k in $(seq 1 15)
 do
