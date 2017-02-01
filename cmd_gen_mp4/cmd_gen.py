@@ -24,6 +24,12 @@ else:
     default_pathconfig = "/scratch/users/chengxuz/barrel/barrel_relat_files/configs"
     default_pathexe = "/scratch/users/chengxuz/barrel/examples_build/Constraints/App_TestHinge"
 
+host_name = os.uname()[1]
+
+if host_name.startswith('node') or host_name == 'openmind7':
+    default_pathconfig = "/om/user/chengxuz/barrel/configs"
+    default_pathexe = "/om/user/chengxuz/barrel/example_build/Constraints/App_TestHinge"
+
 args        = []
 all_items   = []
 config_dict = {}
