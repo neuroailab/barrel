@@ -5,4 +5,4 @@
 
 source ~/.tunnel
 source ~/.bashrc
-hyperopt-mongo-worker --mongo=localhost:${1}/${2} --poll-interval=0.1
+hyperopt-mongo-worker --mongo=localhost:${1}/${2} --poll-interval=1
