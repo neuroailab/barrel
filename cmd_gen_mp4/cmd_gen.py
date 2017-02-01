@@ -15,6 +15,15 @@ import copy
 The script to run the whisker thing and generate the mp4s through command line
 '''
 
+host_sys = os.uname()[0]
+
+if host_sys=='Darwin':
+    default_pathconfig = "/Users/chengxuz/barrel/bullet/barrle_related_files/configs"
+    default_pathexe = "/Users/chengxuz/barrel/bullet/example_build/Constraints/App_TestHinge"
+else:
+    default_pathconfig = "/scratch/users/chengxuz/barrel/barrel_relat_files/configs"
+    default_pathexe = "/scratch/users/chengxuz/barrel/examples_build/Constraints/App_TestHinge"
+
 args        = []
 all_items   = []
 config_dict = {}
@@ -29,7 +38,8 @@ def make_config(config_dict, config_filename):
 
     for key_value in config_dict:
         tmp_key     = config_dict[key_value]
-        fout.write(line_com % tmp_key["help"])
+        if "help" in tmp_key:
+            fout.write(line_com % tmp_key["help"])
         if not tmp_key["type"]=="list":
             fout.write(line_tmp[tmp_key["type"]] % (key_value, tmp_key["value"]))
         else:
@@ -154,15 +164,17 @@ array_dict      = build_array(1)
 
 every_spring_value = []
 inter_spring_value = []
-for indx_spring in xrange(3, 30):
+base_spring_stiffness = []
+spring_stfperunit_list = []
+for indx_spring in xrange(2, 30):
     every_spring_value.append(indx_spring)
     inter_spring_value.append(1)
-
+    base_spring_stiffness.append(3964)
+    spring_stfperunit_list.append(2517)
 
 config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":"float"}, 
         "y_len_link":{"value":y_len_link, "help":"Size y of cubes", "type":"float"},
         "z_len_link":{"value":0.3, "help":"Size z of cubes", "type":"float"}, 
-        "basic_str":{"value":8374, "help":"Minimal strength of hinge's recover force", "type":"float"}, 
         "x_pos_base":{"value":array_dict['x'], "help":"Position x of base", "type":"list", "type_in":"float"},
         "y_pos_base":{"value":array_dict['y'], "help":"Position y of base", "type":"list", "type_in":"float"},
         "z_pos_base":{"value":array_dict['z'], "help":"Position z of base", "type":"list", "type_in":"float"},
@@ -171,17 +183,18 @@ config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":
         "pitch_x_base":{"value":array_dict['pitch'], "help":"Pitch of base", "type":"list", "type_in":"float"},
         "roll_z_base":{"value":array_dict['roll'], "help":"Roll of base", "type":"list", "type_in":"float"},
         "qua_a_list":{"value":array_dict['qua'], "help":"Quadratic Coefficient", "type":"list", "type_in":"float"},
+        
         "inter_spring":{"value":inter_spring_value, "help":"Number of units between two strings", "type":"list", "type_in": "int"}, 
         "every_spring":{"value":every_spring_value, "help":"Number of units between one strings", "type":"list", "type_in": "int"},
-        #"linear_damp":{"value":0.7, "help":"Control the linear damp ratio", "type":"float"},
-        #"linear_damp":{"value":0.997, "help":"Control the linear damp ratio", "type":"float"},
+        "basic_str":{"value":8374, "type":"float"}, 
+        "base_ball_base_spring_stf":{"value":8374, "type":"float"}, 
+        "spring_stfperunit":{"value":2517, "type":"float"}, 
+        "base_spring_stiffness":{"value":base_spring_stiffness, "type":"list", "type_in": "float"}, 
+        "spring_stfperunit_list":{"value":spring_stfperunit_list, "type":"list", "type_in": "float"}, 
         "linear_damp":{"value":0.66, "help":"Control the linear damp ratio", "type":"float"},
-        #"ang_damp":{"value":0.7, "help":"Control the angle damp ratio", "type":"float"},
-        #"ang_damp":{"value":0.18, "help":"Control the angle damp ratio", "type":"float"},
         "ang_damp":{"value":0.015, "help":"Control the angle damp ratio", "type":"float"},
+        
         "time_leap":{"value":1.0/240.0, "help":"Time unit for simulation", "type":"float"},
-        "spring_stiffness":{"value":3964, "help":"Stiffness of spring", "type":"float"}, 
-        "spring_stfperunit":{"value":2517, "help":"Stiffness of spring per unit", "type":"float"}, 
         "camera_dist":{"value":40, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
         "time_limit":{"value":50.0/4, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
         "initial_str":{"value":10000, "help":"Initial strength of force applied", "type":"float"}, 
@@ -201,7 +214,7 @@ orig_config_dict = copy.deepcopy(config_dict)
 
 inner_loop = {0: {'force_mode': 0, "initial_str": 30000}, 1: {'force_mode': 1, "initial_str": 10000}, 2: {'force_mode': 2, "initial_str": 10000}, 3: {'force_mode': 2, "initial_str": 8000}}
 
-def get_value(kwargs, pathconfig ="/scratch/users/chengxuz/barrel/barrel_relat_files/configs", pathexe ="/scratch/users/chengxuz/barrel/examples_build/Constraints/App_TestHinge",  
+def get_value(kwargs, pathconfig =default_pathconfig, pathexe =default_pathexe,  
         coe_curr_dis = 1.0/40.0, coe_min_dis = 1.0, coe_all_time = 20.0, coe_ave_speed = -2):
 
     for key, value in kwargs.iteritems():
@@ -263,11 +276,18 @@ def do_hyperopt(eval_num, use_mongo = False, portn = 23333, db_name = "test_db",
     else:
         trials = Trials()
 
+    space_base_spring_stiffness = []
+    space_spring_stfperunit_list = []
+    for indx_spring in xrange(2, 30):
+        space_base_spring_stiffness.append(hp.uniform('base_spring_stiffness$%i' % indx_spring, -20000, 20000))
+        space_spring_stfperunit_list.append(hp.uniform('spring_stfperunit_list$%i' % indx_spring, -20000, 20000))
+
     best = fmin(fn=get_value, 
         space=hp.choice('a', [
-            {'basic_str': hp.uniform('b_s', 1000, 9000), 
-             'linear_damp':hp.uniform('l_d', 0, 0.9), 'ang_damp':hp.uniform('a_d', 0, 0.9),
-             'spring_stiffness': hp.uniform('s_s', 100, 5000), 'spring_stfperunit':hp.uniform('s_sp', 1000, 9000)},
+            {'basic_str': hp.uniform('basic_str', -9000, 9000), 'base_ball_base_spring_stf': hp.uniform('base_ball_base_spring_stf', -20000, 20000), 'spring_stfperunit':hp.uniform('spring_stfperunit', -9000, 9000),
+             'linear_damp':hp.uniform('linear_damp', 0, 0.9), 'ang_damp':hp.uniform('ang_damp', 0, 0.9),
+             'base_spring_stiffness': space_base_spring_stiffness, "spring_stfperunit_list": space_spring_stfperunit_list,
+             },
             ]),
         algo=my_suggest,
         trials=trials,

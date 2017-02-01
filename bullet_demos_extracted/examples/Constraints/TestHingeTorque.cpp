@@ -31,7 +31,6 @@ float x_len_link    = 0.53;
 float y_len_link    = 2.08;
 float z_len_link    = 0.3;
 float radius        = 1;
-float basic_str     = 3000;
 float linear_damp   = 0.77;
 float ang_damp      = 0.79;
 float time_leap     = 1.0/240.0;
@@ -39,8 +38,11 @@ float time_leap     = 1.0/240.0;
 
 vector<int> inter_spring = {5};
 vector<int> every_spring = {1};
+vector<float> base_spring_stiffness = {520};
+vector<float> spring_stfperunit_list = {1000};
 
-float spring_stiffness = 520;
+float basic_str     = 3000;
+float base_ball_base_spring_stf = 3000;
 float spring_stfperunit     = 1000;
 float camera_dist     = 45;
 float time_limit    = 5.0/4;
@@ -335,7 +337,6 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num
     btSphereShape* linkSphere = new btSphereShape(radius);
 
     for (int indx_unit=0;indx_unit < num_units;indx_unit++){
-        //float next_z = findInterQuaCirleBin(qua_a, qua_b, qua_c, pre_z, 2*y_len_link, percision, -1);
         float next_z = findInterQuaCirleBin(qua_a, qua_b, qua_c, pre_z, 2*y_len_link, percision, 1);
         float next_y = getValueQua(qua_a, qua_b, qua_c, next_z);
         float base_y_tmp = (pre_y + next_y)/2;
@@ -344,7 +345,6 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num
         float deg_away = atan2(next_z - pre_z, next_y - pre_y);
         btQuaternion test_rotation = btQuaternion( 0, deg_away, 0);
         btVector3 basePosition = btVector3( 0, base_y_tmp, base_z_tmp);
-        //btVector3 basePosition = btVector3( base_z_tmp, base_y_tmp, 0);
         btTransform baseWorldTrans(test_rotation, basePosition);
         baseWorldTrans  = base_transform*baseWorldTrans;
 
@@ -361,14 +361,18 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num
 
             for (int indx_tmp=3;indx_tmp<6;indx_tmp++){
                 fixed->enableSpring(indx_tmp, true);
-                fixed->setStiffness(indx_tmp, basic_str + spring_stfperunit*(num_units - indx_unit -1));
+                float tmp_stiff = basic_str + spring_stfperunit*(num_units - indx_unit -1);
+                if (tmp_stiff<100) tmp_stiff = 100;
+                fixed->setStiffness(indx_tmp, tmp_stiff);
             }
 
             fixed->setEquilibriumPoint(3, -(deg_away - pre_deg));
 
             for (int indx_tmp=0;indx_tmp<3;indx_tmp++){
                 fixed->enableSpring(indx_tmp, true);
-                fixed->setStiffness(indx_tmp, basic_str + spring_stfperunit*(num_units - indx_unit -1));
+                float tmp_stiff = basic_str + spring_stfperunit*(num_units - indx_unit -1);
+                if (tmp_stiff<100) tmp_stiff = 100;
+                fixed->setStiffness(indx_tmp, tmp_stiff);
             }
 
             m_jointFeedback.push_back(addFeedbackForSpring(fixed));
@@ -409,7 +413,9 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num
             fixed->setAngularUpperLimit(btVector3(0,1,0));
             for (int indx_tmp=3;indx_tmp<6;indx_tmp++){
                 fixed->enableSpring(indx_tmp, true);
-                fixed->setStiffness(indx_tmp, basic_str + spring_stfperunit*(num_units - indx_unit -1));
+                float tmp_stiff = base_ball_base_spring_stf + spring_stfperunit*(num_units - indx_unit -1);
+                if (tmp_stiff<100) tmp_stiff = 100;
+                fixed->setStiffness(indx_tmp, tmp_stiff);
             }
             fixed->setEquilibriumPoint();
 
@@ -442,8 +448,9 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num
 
                 for (int indx_tmp=0;indx_tmp<6;indx_tmp++){
                     fixed->enableSpring(indx_tmp, true);
-                    //fixed->setStiffness(indx_tmp, spring_stiffness + (num_units - (new_indx + indx_unit)/2)*spring_stfperunit);
-                    fixed->setStiffness(indx_tmp, spring_stiffness + (num_units - indx_unit)*spring_stfperunit);
+                    float tmp_stiff = base_spring_stiffness[spring_indx] + (num_units - indx_unit)*spring_stfperunit_list[spring_indx];
+                    if (tmp_stiff<100) tmp_stiff = 100;
+                    fixed->setStiffness(indx_tmp, tmp_stiff);
                 }
                 fixed->setEquilibriumPoint(3, -(deg_away - m_alldeg[new_indx]));
                 
@@ -503,8 +510,10 @@ void TestHingeTorque::initPhysics(){
             ("time_leap", po::value<float>(), "Time unit for simulation")
             ("inter_spring", po::value<vector<int>>()->multitoken(), "Number of units between two strings")
             ("every_spring", po::value<vector<int>>()->multitoken(), "Number of units between one strings")
-            ("spring_stiffness", po::value<float>(), "Stiffness of spring")
-            ("spring_stfperunit", po::value<float>(), "Stiffness of spring")
+            ("base_spring_stiffness", po::value<vector<float>>(), "Base stiffness of spring, only applied to springs between distant units")
+            ("spring_stfperunit_list", po::value<vector<float>>(), "Coefficient of stiffness of spring for index of units, only applied to springs between distant units")
+            ("base_ball_base_spring_stf", po::value<float>(), "Base stiffness of spring for spring between base ball and first unit")
+            ("spring_stfperunit", po::value<float>(), "Coefficient of stiffness of spring for index of units, only applied to springs between adjacent units")
             ("camera_dist", po::value<float>(), "Distance of camera")
             ("time_limit", po::value<float>(), "Time limit for recording")
             ("initial_str", po::value<float>(), "Initial strength of force applied")
@@ -579,10 +588,6 @@ void TestHingeTorque::initPhysics(){
             radius          = vm["radius"].as<float>();
         }
 
-        if (vm.count("basic_str")){
-            basic_str       = vm["basic_str"].as<float>();
-        }
-
 
         if (vm.count("linear_damp")){
             linear_damp     = vm["linear_damp"].as<float>();
@@ -601,18 +606,28 @@ void TestHingeTorque::initPhysics(){
         if (vm.count("every_spring")){
             every_spring    = vm["every_spring"].as< vector<int> >();
         }
+        if (vm.count("base_spring_stiffness")){
+            base_spring_stiffness   = vm["base_spring_stiffness"].as< vector<float> >();
+        }
+        if (vm.count("spring_stfperunit_list")){
+            spring_stfperunit_list   = vm["spring_stfperunit_list"].as< vector<float> >();
+        }
 
-        if (every_spring.size()!=inter_spring.size()){
-            cerr << "error: size not equal!" << endl;
+        if ((every_spring.size()!=inter_spring.size()) || (inter_spring.size()!=base_spring_stiffness.size()) || (base_spring_stiffness.size()!=spring_stfperunit_list.size())){
+            cerr << "error: spring related size not equal!" << endl;
             exit(0);
         }
 
-        if (vm.count("spring_stiffness")){
-            spring_stiffness    = vm["spring_stiffness"].as<float>();
+        if (vm.count("basic_str")){
+            basic_str       = vm["basic_str"].as<float>();
+        }
+        if (vm.count("base_ball_base_spring_stf")){
+            base_ball_base_spring_stf   = vm["base_ball_base_spring_stf"].as<float>();
         }
         if (vm.count("spring_stfperunit")){
             spring_stfperunit   = vm["spring_stfperunit"].as<float>();
         }
+
         if (vm.count("camera_dist")){
             camera_dist     = vm["camera_dist"].as<float>();
         }
