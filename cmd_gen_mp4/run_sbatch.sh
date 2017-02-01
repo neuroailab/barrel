@@ -5,10 +5,9 @@
 #done
 
 k=500
-#sbatch --job-name=dhmons${k} script_sbatch_monserver.sh ${k} exp4
-#sleep 5
-#for k in $(seq 1 10)
-for k in $(seq 11 20)
+sbatch --job-name=dhmons${k} script_sbatch_monserver.sh ${k} exp4
+sleep 5
+for k in $(seq 1 15)
 do
     sbatch --job-name=dhmonc${k} script_sbatch_monclient.sh 23333 test_db
 done

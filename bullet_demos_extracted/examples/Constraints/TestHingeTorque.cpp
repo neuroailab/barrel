@@ -45,7 +45,7 @@ float basic_str     = 3000;
 float base_ball_base_spring_stf = 3000;
 float spring_stfperunit     = 1000;
 float camera_dist     = 45;
-float time_limit    = 5.0/4;
+float time_limit    = 60.0;
 float initial_str   = 10000;
 float max_str   = 10000;
 float initial_stime = 1.0/8;
@@ -212,7 +212,7 @@ void TestHingeTorque::stepSimulation(float deltaTime){
     curr_torque /= all_size_for_fb;
 
     if ((flag_time==2) && (pass_time > initial_stime)){
-        if ((curr_velo < velo_ban_limit) && (curr_angl < angl_ban_limit) && (curr_force < force_limit) && (curr_torque < torque_limit) && (curr_dispos < dispos_limit)){
+        if (((curr_velo < velo_ban_limit) && (curr_angl < angl_ban_limit) && (curr_force < force_limit) && (curr_torque < torque_limit) && (curr_dispos < dispos_limit)) || (pass_time > time_limit)){
             cout << "Now state:" << curr_velo << " " << curr_angl << " " << curr_force << " " << curr_torque << " " << curr_dispos << endl;
             cout << "Current distance: " << loss_ret << endl;
             cout << "Mini distance: " << min_dis << endl;
