@@ -36,7 +36,6 @@ float linear_damp   = 0.77;
 float ang_damp      = 0.79;
 float time_leap     = 1.0/240.0;
 //int limit_numLink   = const_numLinks + 1;
-float equi_angle    = 0;
 
 vector<int> inter_spring = {5};
 vector<int> every_spring = {1};
@@ -44,7 +43,6 @@ vector<int> every_spring = {1};
 float spring_stiffness = 520;
 float spring_stfperunit     = 1000;
 float camera_dist     = 45;
-float spring_offset   = 0;
 float time_limit    = 5.0/4;
 float initial_str   = 10000;
 float max_str   = 10000;
@@ -56,13 +54,12 @@ float limit_bias    = 0.3;
 float limit_relax   = 1;
 float limit_low     = -2;
 float limit_up      = 0;
-float state_ban_limit   = 1;
 float velo_ban_limit    = 1;
 float angl_ban_limit    = 1;
 float force_limit       = 1;
 float torque_limit      = 1;
+float dispos_limit      = 20;
 
-int hinge_mode          = 1;
 int test_mode           = 0;
 int force_mode          = 0;
 
@@ -73,15 +70,15 @@ struct TestHingeTorque : public CommonRigidBodyBase{
     float pass_time;
     float curr_velo;
     float curr_angl;
-    float curr_state;
     float curr_force;
     float curr_torque;
+    float curr_dispos;
     float loss_ret; // Final return value, the loss function
     float min_dis;
 
     btAlignedObjectArray< btAlignedObjectArray< btRigidBody* > > m_allbones_big_list;
-    btAlignedObjectArray< btAlignedObjectArray< btHingeConstraint* > > m_allhinges_big_list;
     btAlignedObjectArray< btAlignedObjectArray<btJointFeedback*> > m_jointFeedback_big_list;
+    btAlignedObjectArray< btAlignedObjectArray< btVector3 > > m_allcentpos_big_list;
 
     btVector3 base_ball_location;
     btTransform base_ball_trans;
@@ -132,9 +129,9 @@ void TestHingeTorque::stepSimulation(float deltaTime){
 
     curr_velo   = 0; //Linear speed
     curr_angl   = 0; //angle speed
-    curr_state  = 0; //Not used. Hinge's difference from their balance point
     curr_force  = 0; //force applied by springs 
     curr_torque = 0; // torque applied by springs
+    curr_dispos = 0; // position from balance position
 
     static int count = 0;
     int all_size_for_big_list   = 0;
@@ -142,48 +139,15 @@ void TestHingeTorque::stepSimulation(float deltaTime){
 
     for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) {
         btAlignedObjectArray< btRigidBody* > m_allbones;
-        btAlignedObjectArray< btHingeConstraint* > m_allhinges;
         btAlignedObjectArray< btJointFeedback* > m_jointFeedback;
+        btAlignedObjectArray< btVector3 > m_allcentpos;
 
-        m_allhinges.clear();
 
         m_allbones      = m_allbones_big_list[big_list_indx];
         m_jointFeedback = m_jointFeedback_big_list[big_list_indx];
+        m_allcentpos    = m_allcentpos_big_list[big_list_indx];
 
         int all_size    = m_allbones.size();
-
-        if (hinge_mode==1){
-            m_allhinges     = m_allhinges_big_list[big_list_indx];
-            all_size    = m_allhinges.size();
-            for (int i=0;i<all_size;i++){
-                btVector3 tmp_center_pos = m_allbones[i]->getCenterOfMassPosition();
-
-                btTransform tmp_trans = m_allbones[i]->getCenterOfMassTransform();
-                btVector3 tmp_pos = tmp_trans(btVector3(0,0,-z_len_link));
-                btVector3 tmp_direction = tmp_center_pos - tmp_pos;
-                //btVector3 tmp_pos_f = tmp_trans(btVector3(0,y_len_link,0));
-                btVector3 tmp_pos_f = tmp_trans(btVector3(0,-y_len_link,0));
-                btVector3 tmp_point     = tmp_pos_f - tmp_center_pos;
-
-                btScalar tmp_angle_high     = m_allhinges[i]->getHingeAngle() - equi_angle;
-
-                btVector3 tmp_force_now     = tmp_direction*tmp_angle_high*basic_str*(all_size - i)/2;
-                m_allbones[i]->applyForce(tmp_force_now, -tmp_point);
-                //m_allbones[i]->applyForce(tmp_force_now, tmp_point);
-
-                //if (i < all_size -1){
-                if (i < all_size){
-                    btTransform tmp_trans = m_allbones[i+1]->getCenterOfMassTransform();
-                    btVector3 tmp_pos = tmp_trans(btVector3(0,0,z_len_link));
-                    //btVector3 tmp_pos_f = tmp_trans(btVector3(0,-y_len_link,0));
-                    btVector3 tmp_pos_f = tmp_trans(btVector3(0,y_len_link,0));
-                    btVector3 tmp_point     = tmp_pos_f - tmp_center_pos;
-                    m_allbones[i+1]->applyForce(-tmp_force_now, -tmp_point);
-                    //m_allbones[i+1]->applyForce(-tmp_force_now, tmp_point);
-                }
-
-            }
-        }
 
         for (int i=0;i<all_size;i++){
             float curr_speed_norm = m_allbones[i]->getLinearVelocity().norm();
@@ -194,6 +158,10 @@ void TestHingeTorque::stepSimulation(float deltaTime){
             curr_angl   += m_allbones[i]->getAngularVelocity().norm();
             //curr_force  += m_allbones[i]->getTotalForce().norm();
             //curr_torque += m_allbones[i]->getTotalTorque().norm();
+
+            btVector3 curr_pos = m_allbones[i]->getCenterOfMassPosition();
+            curr_pos = curr_pos - m_allcentpos[i];
+            curr_dispos += curr_pos.norm();
         }
 
         for (int i=0;i<m_jointFeedback.size();i++){
@@ -202,10 +170,6 @@ void TestHingeTorque::stepSimulation(float deltaTime){
 
             curr_torque += m_jointFeedback[i]->m_appliedTorqueBodyA.norm();
             curr_torque += m_jointFeedback[i]->m_appliedTorqueBodyB.norm();
-        }
-
-        for (int i=0;i<m_allhinges.size();i++){
-            curr_state  += m_allhinges[i]->getHingeAngle() - limit_up;
         }
 
         all_size_for_big_list   += all_size;
@@ -242,13 +206,12 @@ void TestHingeTorque::stepSimulation(float deltaTime){
     count++;
     curr_velo   /= all_size_for_big_list;
     curr_angl   /= all_size_for_big_list;
-    curr_state  /= all_size_for_big_list;
     curr_force  /= all_size_for_fb;
     curr_torque /= all_size_for_fb;
 
     if ((flag_time==2) && (pass_time > initial_stime)){
-        if ((curr_velo < velo_ban_limit) && (curr_state < state_ban_limit) && (curr_angl < angl_ban_limit) && (curr_force < force_limit) && (curr_torque < torque_limit)){
-            cout << "Now state:" << curr_velo << " " << curr_angl << " " << curr_force << " " << curr_torque << " " << curr_state << endl;
+        if ((curr_velo < velo_ban_limit) && (curr_angl < angl_ban_limit) && (curr_force < force_limit) && (curr_torque < torque_limit) && (curr_dispos < dispos_limit)){
+            cout << "Now state:" << curr_velo << " " << curr_angl << " " << curr_force << " " << curr_torque << " " << curr_dispos << endl;
             cout << "Current distance: " << loss_ret << endl;
             cout << "Mini distance: " << min_dis << endl;
             cout << "Passed time: " << pass_time << endl;
@@ -358,12 +321,14 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num
     btAlignedObjectArray< btVector3 > m_allpre;
     btAlignedObjectArray< btVector3 > m_allnext;
     btAlignedObjectArray<btJointFeedback*> m_jointFeedback;
+    btAlignedObjectArray< btVector3 > m_allcentpos;
     vector<float> m_alldeg;
 
     m_allbones.clear();
     m_allpre.clear();
     m_allnext.clear();
     m_alldeg.clear();
+    m_allcentpos.clear();
 
     btVector3 linkHalfExtents(x_len_link, y_len_link, z_len_link);
     btBoxShape* baseBox = new btBoxShape(linkHalfExtents);
@@ -489,6 +454,7 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num
         }
 
         m_allbones.push_back(base);
+        m_allcentpos.push_back(base->getCenterOfMassPosition());
         m_allpre.push_back(curr_pre);
         m_allnext.push_back(curr_next);
         m_alldeg.push_back(deg_away);
@@ -502,6 +468,7 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num
     //cout << pre_z << endl;
     m_allbones_big_list.push_back(m_allbones);
     m_jointFeedback_big_list.push_back(m_jointFeedback);
+    m_allcentpos_big_list.push_back(m_allcentpos);
 }
 
 
@@ -511,7 +478,7 @@ void TestHingeTorque::initPhysics(){
     loss_ret    = 0;
     min_dis     = 10000;
     m_allbones_big_list.clear();
-    m_allhinges_big_list.clear();
+    m_allcentpos_big_list.clear();
     
     //b3Printf("Config name = %s",m_guiHelper->getconfigname());
     try {
@@ -534,13 +501,11 @@ void TestHingeTorque::initPhysics(){
             ("linear_damp", po::value<float>(), "Control the linear damp ratio")
             ("ang_damp", po::value<float>(), "Control the angle damp ratio")
             ("time_leap", po::value<float>(), "Time unit for simulation")
-            ("equi_angle", po::value<float>(), "Control the angle of balance for hinges")
             ("inter_spring", po::value<vector<int>>()->multitoken(), "Number of units between two strings")
             ("every_spring", po::value<vector<int>>()->multitoken(), "Number of units between one strings")
             ("spring_stiffness", po::value<float>(), "Stiffness of spring")
             ("spring_stfperunit", po::value<float>(), "Stiffness of spring")
             ("camera_dist", po::value<float>(), "Distance of camera")
-            ("spring_offset", po::value<float>(), "String offset for balance state")
             ("time_limit", po::value<float>(), "Time limit for recording")
             ("initial_str", po::value<float>(), "Initial strength of force applied")
             ("max_str", po::value<float>(), "Max strength of force applied, used when force_mode=1")
@@ -552,12 +517,11 @@ void TestHingeTorque::initPhysics(){
             ("limit_relax", po::value<float>(), "Relax of the hinge limit")
             ("limit_low", po::value<float>(), "Lower bound of the hinge limit")
             ("limit_up", po::value<float>(), "Up bound of the hinge limit")
-            ("state_ban_limit", po::value<float>(), "While flag_time is 2, used for angle states of hinges to judge whether stop")
             ("velo_ban_limit", po::value<float>(), "While flag_time is 2, used for linear velocities of rigid bodys to judge whether stop")
             ("angl_ban_limit", po::value<float>(), "While flag_time is 2, used for angular velocities of rigid bodys to judge whether stop")
             ("force_limit", po::value<float>(), "While flag_time is 2, used for forces of rigid bodys to judge whether stop")
             ("torque_limit", po::value<float>(), "While flag_time is 2, used for torques of rigid bodys to judge whether stop")
-            ("hinge_mode", po::value<int>(), "Whether use hinges rather than springs for connections of two units")
+            ("dispos_limit", po::value<float>(), "While flag_time is 2, used for distance to balance states of rigid bodys to judge whether stop")
             ("test_mode", po::value<int>(), "Whether enter test mode for some temp test codes, default is 0")
             ("force_mode", po::value<int>(), "Force mode to apply at the beginning, default is 0")
         ;
@@ -631,10 +595,6 @@ void TestHingeTorque::initPhysics(){
             time_leap       = vm["time_leap"].as<float>();
         }
 
-        if (vm.count("equi_angle")){
-            equi_angle      = vm["equi_angle"].as<float>();
-        }
-
         if (vm.count("inter_spring")){
             inter_spring    = vm["inter_spring"].as< vector<int> >();
         }
@@ -655,9 +615,6 @@ void TestHingeTorque::initPhysics(){
         }
         if (vm.count("camera_dist")){
             camera_dist     = vm["camera_dist"].as<float>();
-        }
-        if (vm.count("spring_offset")){
-            spring_offset   = vm["spring_offset"].as<float>();
         }
         if (vm.count("time_limit")){
             time_limit      = vm["time_limit"].as<float>();
@@ -694,9 +651,6 @@ void TestHingeTorque::initPhysics(){
             limit_up        = vm["limit_up"].as<float>();
         }
 
-        if (vm.count("state_ban_limit")){
-            state_ban_limit = vm["state_ban_limit"].as<float>();
-        }
         if (vm.count("velo_ban_limit")){
             velo_ban_limit  = vm["velo_ban_limit"].as<float>();
         }
@@ -709,9 +663,8 @@ void TestHingeTorque::initPhysics(){
         if (vm.count("torque_limit")){
             torque_limit    = vm["torque_limit"].as<float>();
         }
-
-        if (vm.count("hinge_mode")){
-            hinge_mode      = vm["hinge_mode"].as<int>();
+        if (vm.count("dispos_limit")){
+            dispos_limit    = vm["dispos_limit"].as<float>();
         }
 
         if (vm.count("test_mode")){
@@ -781,163 +734,6 @@ void TestHingeTorque::initPhysics(){
             //addQuaUnits(qua_a_list[big_list_indx], 0, 0, const_numLinks[big_list_indx], tmp_trans*btTransform(btQuaternion( yaw_y_base[big_list_indx], pitch_x_base[big_list_indx], roll_z_base[big_list_indx]),btVector3(x_pos_base[big_list_indx], y_pos_base[big_list_indx], z_pos_base[big_list_indx])));
             addQuaUnits(qua_a_list[big_list_indx], 0, 0, const_numLinks[big_list_indx], tmp_trans*btTransform(qua_mat,btVector3(x_pos_base[big_list_indx], y_pos_base[big_list_indx], z_pos_base[big_list_indx])));
         }
-        /* Not used anymore, maybe delete it later
-        for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) { // create one single whisker 
-
-            btAlignedObjectArray< btRigidBody* > m_allbones;
-            btAlignedObjectArray< btHingeConstraint* > m_allhinges;
-
-            m_allbones.clear();
-            m_allhinges.clear();
-            
-            int numLinks = const_numLinks[big_list_indx];
-            btVector3 basePosition = btVector3( x_pos_base[big_list_indx], y_pos_base[big_list_indx], z_pos_base[big_list_indx]);
-            btTransform baseWorldTrans;
-            baseWorldTrans.setIdentity();
-            baseWorldTrans.setOrigin(basePosition);
-            
-            float baseMass = 0.f;
-            float linkMass = 1.f;
-            
-            // Create the base ball
-            btVector3 basePosition_ball = btVector3(x_pos_base[big_list_indx], y_pos_base[big_list_indx] + y_len_link + radius, z_pos_base[big_list_indx]);
-            btTransform baseWorldTrans_ball;
-            baseWorldTrans_ball.setIdentity();
-            baseWorldTrans_ball.setOrigin(basePosition_ball);
-
-            btRigidBody* base_ball = createRigidBody(baseMass,baseWorldTrans_ball,linkSphere);
-            m_dynamicsWorld->removeRigidBody(base_ball);
-            base_ball->setDamping(0,0);
-            m_dynamicsWorld->addRigidBody(base_ball,collisionFilterGroup,collisionFilterMask);
-            
-            // Create the base box
-            btRigidBody* base = createRigidBody(linkMass,baseWorldTrans,baseBox);
-            m_dynamicsWorld->removeRigidBody(base);
-            base->setDamping(linear_damp,ang_damp);
-            m_dynamicsWorld->addRigidBody(base,collisionFilterGroup,collisionFilterMask);
-
-            // Special spring for base ball and base box unit 
-            btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, -radius, 0));						//par body's COM to cur body's COM offset
-            btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, radius, 0));							//cur body's COM to cur body's PIV offset
-            btGeneric6DofSpring2Constraint* fixed = new btGeneric6DofSpring2Constraint(*base_ball, *base,pivotInA,pivotInB);
-            fixed->setLinearLowerLimit(btVector3(0,0,0));
-            fixed->setLinearUpperLimit(btVector3(0,0,0));
-            fixed->setAngularLowerLimit(btVector3(0,-1,0));
-            fixed->setAngularUpperLimit(btVector3(0,1,0));
-            for (int indx_tmp=3;indx_tmp<6;indx_tmp++){
-                fixed->enableSpring(indx_tmp, true);
-                fixed->setStiffness(indx_tmp, basic_str*numLinks/2);
-            }
-            fixed->setEquilibriumPoint();
-
-            m_dynamicsWorld->addConstraint(fixed,true);
-
-            btRigidBody* prevBody = base;
-            m_allbones.push_back(base);
-
-            cout << "Push base" << endl;
-            
-            for (int i=0;i<numLinks;i++){
-                btTransform linkTrans;
-                linkTrans = baseWorldTrans;
-                
-                linkTrans.setOrigin(basePosition-btVector3(0,linkHalfExtents[1]*2.f*(i+1),0));
-                
-                btCollisionShape* colOb = 0;
-                
-                colOb = linkBox1;
-
-                btRigidBody* linkBody = createRigidBody(linkMass,linkTrans,colOb);
-                m_dynamicsWorld->removeRigidBody(linkBody);
-                linkBody->setDamping(linear_damp,ang_damp);
-                m_dynamicsWorld->addRigidBody(linkBody,collisionFilterGroup,collisionFilterMask);
-
-                m_allbones.push_back(linkBody);
-
-                btTypedConstraint* con = 0;
-                
-                if (1) {
-                    //create a hinge constraint
-                    if (hinge_mode==1){
-                        btVector3 pivotInA(0,-linkHalfExtents[1],0);
-                        btVector3 pivotInB(0,linkHalfExtents[1],0);
-                        btVector3 axisInA(1,0,0);
-                        btVector3 axisInB(1,0,0);
-                        bool useReferenceA = true;
-                        btHingeConstraint* hinge = new btHingeConstraint(*prevBody,*linkBody,
-                            pivotInA,pivotInB,
-                            axisInA,axisInB,useReferenceA);
-                        hinge->setLimit(limit_low, limit_up, limit_softness, limit_bias, limit_relax);
-                        m_allhinges.push_back(hinge);
-                        con = hinge;
-                    } else {
-                        btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, -linkHalfExtents[1], 0));
-                        btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0,  linkHalfExtents[1], 0));
-                        btGeneric6DofSpring2Constraint* fixed = new btGeneric6DofSpring2Constraint(*prevBody, *linkBody,pivotInA,pivotInB);
-                        fixed->setLinearLowerLimit(btVector3(0,0,0));
-                        fixed->setLinearUpperLimit(btVector3(0,0,0));
-                        fixed->setAngularLowerLimit(btVector3( limit_low,0,0));
-                        fixed->setAngularUpperLimit(btVector3(  limit_up,0,0));
-                        for (int indx_tmp=3;indx_tmp<6;indx_tmp++){
-                            fixed->enableSpring(indx_tmp, true);
-                            fixed->setStiffness(indx_tmp, basic_str*(numLinks-i)/2);
-                        }
-                        for (int indx_tmp=0;indx_tmp<6;indx_tmp++){
-                            if (indx_tmp!=3) {
-                                fixed->setEquilibriumPoint(indx_tmp);
-                            } else {
-                                if (limit_low > 0)
-                                    fixed->setEquilibriumPoint(indx_tmp, limit_low);
-                                else if (limit_up < 0)
-                                    fixed->setEquilibriumPoint(indx_tmp, limit_up);
-                                else
-                                    fixed->setEquilibriumPoint(indx_tmp);
-                            }
-                        }
-                        //fixed->setEquilibriumPoint();
-                        con = fixed;
-                    }
-                    
-                    // Create a spring constraint if needed
-                    for (int spring_indx=0;spring_indx < every_spring.size();spring_indx++){
-                        int tmp_every_spring    = every_spring[spring_indx];
-                        int tmp_inter_spring    = inter_spring[spring_indx];
-
-                        if ((i>tmp_every_spring-2) && (i % tmp_inter_spring==0)){
-                            btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, -tmp_every_spring*linkHalfExtents[1]+spring_offset, 0));
-                            btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, tmp_every_spring*linkHalfExtents[1]-spring_offset, 0));
-                            //btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, 0, 0));
-                            //btTransform pivotInB(btQuaternion::getIdentity(),btVector3(0, 0, 0));
-                            btGeneric6DofSpring2Constraint* fixed;
-
-                            fixed = new btGeneric6DofSpring2Constraint(*m_allbones[i-(tmp_every_spring)+1], *linkBody,pivotInA,pivotInB);
-                            //for (int indx_tmp=0;indx_tmp<3;indx_tmp++){
-                            for (int indx_tmp=0;indx_tmp<6;indx_tmp++){
-                                fixed->enableSpring(indx_tmp, true);
-                                fixed->setStiffness(indx_tmp, spring_stiffness);
-                            }
-                            fixed->setEquilibriumPoint();
-                            m_dynamicsWorld->addConstraint(fixed,true);
-                        }
-                    }
-                }
-
-                btAssert(con);
-                if (con){
-                    // btJointFeedback* fb = new btJointFeedback();
-                    // m_jointFeedback.push_back(fb);
-                    // con->setJointFeedback(fb);
-
-                    m_dynamicsWorld->addConstraint(con,true);
-                }
-                prevBody = linkBody;
-
-            }
-            m_allbones_big_list.push_back(m_allbones);
-            m_allhinges_big_list.push_back(m_allhinges);
-            cout << "Push everything" << endl;
-        }
-        */
     }
 	
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);

@@ -180,21 +180,18 @@ config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":
         #"ang_damp":{"value":0.18, "help":"Control the angle damp ratio", "type":"float"},
         "ang_damp":{"value":0.015, "help":"Control the angle damp ratio", "type":"float"},
         "time_leap":{"value":1.0/240.0, "help":"Time unit for simulation", "type":"float"},
-        "equi_angle":{"value":0, "help":"Control the angle of balance for hinges", "type":"float"}, 
         "spring_stiffness":{"value":3964, "help":"Stiffness of spring", "type":"float"}, 
         "spring_stfperunit":{"value":2517, "help":"Stiffness of spring per unit", "type":"float"}, 
         "camera_dist":{"value":40, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
-        "spring_offset":{"value":0, "help":"String offset for balance state", "type":"float"}, 
         "time_limit":{"value":50.0/4, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
         "initial_str":{"value":10000, "help":"Initial strength of force applied", "type":"float"}, 
         "max_str":{"value":10000, "help":"Max strength of force applied", "type":"float"}, 
         "initial_stime":{"value":3.1/8, "help":"Initial time to apply force", "type":"float"}, 
         "angl_ban_limit":{"value":0.5, "help":"While flag_time is 2, used for angular velocities of rigid bodys to judge whether stop", "type":"float"}, 
         "velo_ban_limit":{"value":0.5, "help":"While flag_time is 2, used for linear velocities of rigid bodys to judge whether stop", "type":"float"}, 
-        "state_ban_limit":{"value":0.5, "help":"While flag_time is 2, used for angle states of hinges to judge whether stop", "type":"float"}, 
         "force_limit":{"value":40, "help":"While flag_time is 2, used for force states of hinges to judge whether stop", "type":"float"}, 
         "torque_limit":{"value":120, "help":"While flag_time is 2, used for torque states of hinges to judge whether stop", "type":"float"}, 
-        "hinge_mode":{"value":0, "help":"Whether use hinges rather than springs for connections of two units", "type":"int"},
+        "dispos_limit":{"value":50, "help":"While flag_time is 2, used for distance to balance states of rigid bodys to judge whether stop", "type":"float"}, 
         "test_mode":{"value":0, "help":"Whether enter test mode for some temp test codes, default is 0", "type":"int"},
         #"force_mode":{"value":2, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
         "force_mode":{"value":1, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
@@ -205,7 +202,7 @@ orig_config_dict = copy.deepcopy(config_dict)
 inner_loop = {0: {'force_mode': 0, "initial_str": 30000}, 1: {'force_mode': 1, "initial_str": 10000}, 2: {'force_mode': 2, "initial_str": 10000}, 3: {'force_mode': 2, "initial_str": 8000}}
 
 def get_value(kwargs, pathconfig ="/scratch/users/chengxuz/barrel/barrel_relat_files/configs", pathexe ="/scratch/users/chengxuz/barrel/examples_build/Constraints/App_TestHinge",  
-        coe_curr_dis = 1.0/40.0, coe_min_dis = 1.0, coe_all_time = 20.0, coe_ave_speed = -10):
+        coe_curr_dis = 1.0/40.0, coe_min_dis = 1.0, coe_all_time = 20.0, coe_ave_speed = -2):
 
     for key, value in kwargs.iteritems():
         if key in config_dict:
@@ -269,8 +266,8 @@ def do_hyperopt(eval_num, use_mongo = False, portn = 23333, db_name = "test_db",
     best = fmin(fn=get_value, 
         space=hp.choice('a', [
             {'basic_str': hp.uniform('b_s', 1000, 9000), 
-                'linear_damp':hp.uniform('l_d', 0, 0.9), 'ang_damp':hp.uniform('a_d', 0, 0.9),
-                'spring_stiffness': hp.uniform('s_s', 100, 5000), 'spring_stfperunit':hp.uniform('s_sp', 1000, 9000)},
+             'linear_damp':hp.uniform('l_d', 0, 0.9), 'ang_damp':hp.uniform('a_d', 0, 0.9),
+             'spring_stiffness': hp.uniform('s_s', 100, 5000), 'spring_stfperunit':hp.uniform('s_sp', 1000, 9000)},
             ]),
         algo=my_suggest,
         trials=trials,
