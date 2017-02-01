@@ -10,6 +10,7 @@ import subprocess
 from hyperopt import fmin, tpe, hp, Trials
 from hyperopt.mongoexp import MongoTrials
 import copy
+import json
 
 '''
 The script to run the whisker thing and generate the mp4s through command line
@@ -202,7 +203,7 @@ config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":
         
         "time_leap":{"value":1.0/240.0, "help":"Time unit for simulation", "type":"float"},
         "camera_dist":{"value":40, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
-        "time_limit":{"value":50.0/4, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
+        "time_limit":{"value":60.0, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
         "initial_str":{"value":10000, "help":"Initial strength of force applied", "type":"float"}, 
         "max_str":{"value":10000, "help":"Max strength of force applied", "type":"float"}, 
         "initial_stime":{"value":3.1/8, "help":"Initial time to apply force", "type":"float"}, 
@@ -257,6 +258,7 @@ def get_value(kwargs, pathconfig =default_pathconfig, pathexe =default_pathexe,
     return all_ret_val
 
 
+
 _default_prior_weight = 1.0
 
 # -- suggest best of this many draws on every iteration
@@ -300,6 +302,28 @@ def do_hyperopt(eval_num, use_mongo = False, portn = 23333, db_name = "test_db",
         max_evals=eval_num)
     print best
 
+def recover_from_cfg(config_dict, pathcfg):
+    fin = open(pathcfg, 'r')
+    curr_line = fin.readline()
+    while (not curr_line[0]=='{'):
+        curr_line = fin.readline()
+    curr_line = curr_line.replace("'", '"')
+    curr_line = curr_line.replace('u"', '"')
+    #print(curr_line)
+    config_add = json.loads(curr_line)
+
+    for key, value in config_add.items():
+        if key in config_dict:
+            config_dict[key]['value'] = value
+        elif "$" in key:
+            new_names = key.split("$")
+            new_name = new_names[0]
+            curr_indx = int(new_names[1])
+            config_dict[new_name]['value'][curr_indx - 2] = value
+        #print(key, value)
+
+    return config_dict
+
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='The script to generate the mp4s through command line')
     parser.add_argument('--nproc', default = 4, type = int, action = 'store', help = 'Number of processes')
@@ -310,8 +334,12 @@ if __name__=="__main__":
     parser.add_argument('--mapn', default = 30, type = int, action = 'store', help = 'Number of items in each processes')
     parser.add_argument('--testmode', default = 0, type = int, action = 'store', help = 'Whether run the test command or not')
     parser.add_argument('--innernum', default = -1, type = int, action = 'store', help = 'Number of inner loop')
+    parser.add_argument('--fromcfg', default = None, type = str, action = 'store', help = 'None means no, if the path of file sent, then get config from the file')
 
     args    = parser.parse_args()
+
+    if args.fromcfg is not None:
+        config_dict = recover_from_cfg(config_dict, args.fromcfg)
 
     if args.innernum>=0 and args.innernum in inner_loop:
         inner_loop_orig = copy.deepcopy(inner_loop)
