@@ -216,7 +216,10 @@ void TestHingeTorque::stepSimulation(float deltaTime){
             cout << "Now state:" << curr_velo << " " << curr_angl << " " << curr_force << " " << curr_torque << " " << curr_dispos << endl;
             cout << "Current distance: " << loss_ret << endl;
             cout << "Mini distance: " << min_dis << endl;
-            cout << "Passed time: " << pass_time << endl;
+            if (pass_time <= time_limit) 
+                cout << "Passed time: " << pass_time << endl;
+            else
+                cout << "Passed time: " << pass_time+1000 << endl;
             exit(0);
         }
     }
