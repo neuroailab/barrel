@@ -16,14 +16,18 @@ import json
 import copy
 import argparse
 
+from tfutils.data import TFRecordsDataProvider#, LMDBDataProvider
+
 #os.environ["CUDA_VISIBLE_DEVICES"]="2"
 
 host = os.uname()[1]
 
 DATA_PATH = {}
 if host == 'freud':  # freud
-    DATA_PATH['train'] = '/media/data/one_world_dataset/randomperm.hdf5'
-    DATA_PATH['val'] = '/media/data/one_world_dataset/randomperm_test1.hdf5'
+    #DATA_PATH['train'] = '/media/data/one_world_dataset/randomperm.hdf5'
+    #DATA_PATH['val'] = '/media/data/one_world_dataset/randomperm_test1.hdf5'
+    DATA_PATH['train'] = '/media/data2/one_world_dataset/dataset.tfrecords'
+    DATA_PATH['val'] = '/media/data2/one_world_dataset/dataset8.tfrecords'
 
 elif host.startswith('node') or host == 'openmind7':  # OpenMind
     DATA_PATH['train'] = '/om/user/chengxuz/Data/one_world_dataset/randomperm.hdf5'
@@ -61,10 +65,8 @@ def exponential_decay(global_step,
     return lr
 
 
-class Threedworld(data.HDF5DataProvider):
+class Threedworld(TFRecordsDataProvider):
 
-    #N_TRAIN = 2048000 - 102400
-    #N_VAL = 102400 
     N_TRAIN = 2048000
     N_VAL = 128000
 
@@ -72,6 +74,7 @@ class Threedworld(data.HDF5DataProvider):
                  data_path,
                  group='train',
                  batch_size=1,
+                 n_threads=4,
                  crop_size=None,
                  *args,
                  **kwargs):
@@ -99,60 +102,67 @@ class Threedworld(data.HDF5DataProvider):
         self.group = group
         self.images = 'images'
         self.labels = 'normals'
-        '''
-        if self.group=='train':
-            subslice = range(self.N_TRAIN)
-        else:
-            subslice = range(self.N_TRAIN, self.N_TRAIN + self.N_VAL)
-        '''
+
         super(Threedworld, self).__init__(
             data_path[group],
-            [self.images, self.labels],
+            {self.images: tf.string, self.labels: tf.string},
             batch_size=batch_size,
             postprocess={self.images: self.postproc, self.labels: self.postproc},
-            pad=True,
+            imagelist=[self.images, self.labels],
+            n_threads=n_threads,
             *args, **kwargs)
         if crop_size is None:
-            self.crop_size = 256
+            self.crop_size = 224
         else:
             self.crop_size = crop_size
 
         self.off        = None
         self.now_num    = 0
 
-    def postproc(self, ims, f):
-        norm = ims.astype(np.float32) / 255
+        self.box_ind    = tf.constant(range(self.batch_size))
+
+    def postproc(self, images, dtype, shape):
+
+        norm = tf.div(images, tf.constant(255, dtype=images.dtype))
+        norm = tf.cast(norm, tf.float32)
         if self.group=='train':
-            #print('In train')
+
             if self.now_num==0:
-                off = np.random.randint(0, 256 - self.crop_size, size=2)
+                off = np.zeros(shape = [self.batch_size, 4])
+                off[:, :2] = np.random.randint(0, IMAGE_SIZE - self.crop_size, size=[self.batch_size, 2])
+                off[:, 2:4] = off[:, :2] + self.crop_size
+                off = off*1.0/(IMAGE_SIZE - 1)
                 self.off = off
             else:
                 off = self.off
+
         else:
-            off = int((256 - self.crop_size)/2)
-            off = [off, off]
-        images_batch = norm[:,
-                            off[0]: off[0] + self.crop_size,
-                            off[1]: off[1] + self.crop_size]
+            off = np.zeros(shape = [self.batch_size, 4])
+            off[:, :2] = int((IMAGE_SIZE - self.crop_size)/2)
+            off[:, 2:4] = off[:, :2] + self.crop_size
+            off = off*1.0/(IMAGE_SIZE - 1)
+
+        images_batch = tf.image.crop_and_resize(norm, off, self.box_ind, tf.constant([self.crop_size, self.crop_size]))
         if self.now_num==0:
             self.now_num = 1
         else:
             self.now_num = 0
 
-        return images_batch
+        return [images_batch, images_batch.dtype, images_batch[0].get_shape()]
 
-    def next(self):
-        batch = super(Threedworld, self).next()
-        feed_dict = {'images': np.squeeze(batch[self.images]),
-                     'labels': np.squeeze(batch[self.labels])}
-        return feed_dict
+    def init_threads(self):
+        self.input_ops, self.dtypes, self.shapes = \
+                super(Threedworld, self).init_threads()
+
+        return [self.input_ops, self.dtypes, self.shapes]
+
 
 #BATCH_SIZE = 256
 #BATCH_SIZE = 192
 BATCH_SIZE = 128
 NUM_BATCHES_PER_EPOCH = Threedworld.N_TRAIN // BATCH_SIZE
 IMAGE_SIZE_CROP = 224
+IMAGE_SIZE = 256
 NUM_CHANNELS = 3
 NORM_NUM = (IMAGE_SIZE_CROP**2) * NUM_CHANNELS * BATCH_SIZE
 
@@ -218,7 +228,7 @@ def main(args):
             # 'dbname': 'alexnet-test',
             # 'collname': 'alexnet',
             # 'exp_id': 'trainval0',
-            'port': 22334,
+            'port': args.nport,
             'dbname': 'normalnet-test',
             'collname': 'normalnet',
             #'exp_id': 'trainval0',
@@ -240,20 +250,22 @@ def main(args):
                 'data_path': DATA_PATH,
                 'group': 'train',
                 'crop_size': IMAGE_SIZE_CROP,
-                'batch_size': 1
+                'batch_size': BATCH_SIZE,
+                'n_threads' : 3
             },
             'queue_params': {
-                'queue_type': 'fifo',
+                'queue_type': 'random',
                 'batch_size': BATCH_SIZE,
-                'n_threads': 4,
                 'seed': 0,
+                'capacity': BATCH_SIZE * 20,
+                # 'n_threads' : 4
             },
             'thres_loss': 1000,
             'num_steps': 90 * NUM_BATCHES_PER_EPOCH  # number of steps to train
         },
 
         'loss_params': {
-            'targets': 'labels',
+            'targets': 'normals',
             'agg_func': tf.reduce_mean,
             'loss_per_case_func': loss_ave_l2,
             'loss_per_case_func_params': {}
@@ -277,19 +289,21 @@ def main(args):
             'topn': {
                 'data_params': {
                     'func': Threedworld,
-                    'data_path': DATA_PATH,  # path to image database
+                    'data_path': DATA_PATH,
                     'group': 'val',
-                    'crop_size': IMAGE_SIZE_CROP,  # size after cropping an image
+                    'crop_size': IMAGE_SIZE_CROP,
+                    'batch_size': BATCH_SIZE,
+                    'n_threads' : 3
+                },
+                'queue_params': {
+                    'queue_type': 'random',
+                    'batch_size': BATCH_SIZE,
+                    'seed': 0,
+                    'capacity': BATCH_SIZE * 20,
                 },
                 'targets': {
                     'func': rep_loss,
-                    'target': 'labels',
-                },
-                'queue_params': {
-                    'queue_type': 'fifo',
-                    'batch_size': BATCH_SIZE,
-                    'n_threads': 4,
-                    'seed': 0,
+                    'target': 'normals',
                 },
                 'num_steps': Threedworld.N_VAL // BATCH_SIZE + 1,
                 'agg_func': lambda x: {k:np.mean(v) for k,v in x.items()},
