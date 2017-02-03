@@ -295,7 +295,7 @@ def my_suggest(new_ids, domain, trials, seed,
     return tpe.suggest(new_ids, domain, trials, seed,
             prior_weight, n_startup_jobs, n_EI_candidates, gamma)
 
-def do_hyperopt(eval_num, use_mongo = False, portn = 23333, db_name = "test_db", exp_name = "exp1"):
+def do_hyperopt(eval_num, use_mongo = False, portn = 23333, db_name = "test_db", exp_name = "exp1", num_whis = 1):
 
     if (use_mongo):
         trials = MongoTrials('mongo://localhost:%i/%s/jobs' % (portn, db_name), exp_key=exp_name)
@@ -308,12 +308,22 @@ def do_hyperopt(eval_num, use_mongo = False, portn = 23333, db_name = "test_db",
         space_base_spring_stiffness.append(hp.uniform('base_spring_stiffness$%i' % indx_spring, 0, 20000))
         space_spring_stfperunit_list.append(hp.uniform('spring_stfperunit_list$%i' % indx_spring, 0, 20000))
 
+    space_parameter_each = []
+
+    for indx_unit in xrange(num_whis):
+        curr_space_dict = {'basic_str': hp.uniform('basic_str', 0, 9000), 
+                'base_ball_base_spring_stf': hp.uniform('base_ball_base_spring_stf', 0, 20000), 
+                'spring_stfperunit':hp.uniform('spring_stfperunit', 0, 9000),
+                'linear_damp':hp.uniform('linear_damp', 0, 0.9), 
+                'ang_damp':hp.uniform('ang_damp', 0, 0.9),
+                'base_spring_stiffness': space_base_spring_stiffness, 
+                "spring_stfperunit_list": space_spring_stfperunit_list,
+             }
+        space_parameter_each.append(curr_space_dict)
+
     best = fmin(fn=get_value, 
         space=hp.choice('a', [
-            {'basic_str': hp.uniform('basic_str', 0, 9000), 'base_ball_base_spring_stf': hp.uniform('base_ball_base_spring_stf', 0, 20000), 'spring_stfperunit':hp.uniform('spring_stfperunit', 0, 9000),
-             'linear_damp':hp.uniform('linear_damp', 0, 0.9), 'ang_damp':hp.uniform('ang_damp', 0, 0.9),
-             'base_spring_stiffness': space_base_spring_stiffness, "spring_stfperunit_list": space_spring_stfperunit_list,
-             },
+            {'parameter_each': space_parameter_each},
             ]),
         algo=my_suggest,
         trials=trials,
