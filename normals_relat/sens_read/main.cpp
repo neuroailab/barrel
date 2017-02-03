@@ -50,8 +50,10 @@ int main(int argc, char* argv[])
 			std::free(depthData);
 		}
 
-		const std::string out_name = "test.unkn";
-		sd.saveToFile(out_name);
+		//const std::string out_name = "test.unkn";
+		//sd.saveToFile(out_name);
+		const std::string out_name = "testImages/";
+		//sd.saveToImages();
 		std::cout << std::endl;
 	}
 	catch (const std::exception& e)

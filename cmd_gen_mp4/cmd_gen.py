@@ -30,6 +30,9 @@ host_name = os.uname()[1]
 if host_name.startswith('node') or host_name == 'openmind7':
     default_pathconfig = "/om/user/chengxuz/barrel/configs"
     default_pathexe = "/om/user/chengxuz/barrel/example_build/Constraints/App_TestHinge"
+elif host_name=="kanefsky":
+    default_pathconfig = "/home/chengxuz/barrel/barrel_github/configs"
+    default_pathexe = "/home/chengxuz/barrel/barrel_github/example_build/Constraints/App_TestHinge"
 
 args        = []
 all_items   = []
@@ -40,20 +43,25 @@ y_len_link = 1.04
 
 def make_config(config_dict, config_filename):
     fout        = open(config_filename, 'w')
-    line_tmp    = {"float":"%s=%f\n", "int":"%s=%i\n"}
+    line_tmp    = {"float":"%s=%f\n", "int":"%s=%i\n", "string":"%s=%s\n"}
     line_com    = "#%s\n"
 
     for key_value in config_dict:
         tmp_key     = config_dict[key_value]
         if "help" in tmp_key:
             fout.write(line_com % tmp_key["help"])
-        if not tmp_key["type"]=="list":
+        if not tmp_key["type"]=="list" and not tmp_key["type"]=="list_dict":
             fout.write(line_tmp[tmp_key["type"]] % (key_value, tmp_key["value"]))
-        else:
+        elif tmp_key["type"]=="list":
             #fout.write(line_tmp[tmp_key["type"]] % (key_value, str(tmp_key["value"])[1:-1].replace(',', '') ))
             #fout.write(line_tmp[tmp_key["type"]] % (key_value, str(tmp_key["value"])[1:-1] ))
             for value_list in tmp_key["value"]:
                 fout.write(line_tmp[tmp_key["type_in"]] % (key_value, value_list))
+        elif tmp_key["type"]=="list_dict":
+            for key_d, value_d in enumerate(tmp_key["value"]):
+                new_fname = config_filename[:-4] + "_" + str(key_d) + config_filename[-4:]
+                make_config(value_d, new_fname)
+                fout.write("whisker_config_name=%s\n" % new_fname)
         fout.write("\n")
 
 def my_product(dicts):
@@ -179,6 +187,20 @@ for indx_spring in xrange(2, 30):
     base_spring_stiffness.append(3964)
     spring_stfperunit_list.append(2517)
 
+num_whis = len(array_dict['x'])
+parameter_each = []
+for indx_unit in xrange(num_whis):
+    curr_dict = {
+        "basic_str":{"value":8374, "type":"float"}, 
+        "base_ball_base_spring_stf":{"value":8374, "type":"float"}, 
+        "spring_stfperunit":{"value":2517, "type":"float"}, 
+        "base_spring_stiffness":{"value":base_spring_stiffness, "type":"list", "type_in": "float"}, 
+        "spring_stfperunit_list":{"value":spring_stfperunit_list, "type":"list", "type_in": "float"}, 
+        "linear_damp":{"value":0.66, "help":"Control the linear damp ratio", "type":"float"},
+        "ang_damp":{"value":0.015, "help":"Control the angle damp ratio", "type":"float"},
+    }
+    parameter_each.append(curr_dict)
+
 config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":"float"}, 
         "y_len_link":{"value":y_len_link, "help":"Size y of cubes", "type":"float"},
         "z_len_link":{"value":0.3, "help":"Size z of cubes", "type":"float"}, 
@@ -192,15 +214,9 @@ config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":
         "qua_a_list":{"value":array_dict['qua'], "help":"Quadratic Coefficient", "type":"list", "type_in":"float"},
         "inter_spring":{"value":inter_spring_value, "help":"Number of units between two strings", "type":"list", "type_in": "int"}, 
         "every_spring":{"value":every_spring_value, "help":"Number of units between one strings", "type":"list", "type_in": "int"},
-        
-        "basic_str":{"value":8374, "type":"float"}, 
-        "base_ball_base_spring_stf":{"value":8374, "type":"float"}, 
-        "spring_stfperunit":{"value":2517, "type":"float"}, 
-        "base_spring_stiffness":{"value":base_spring_stiffness, "type":"list", "type_in": "float"}, 
-        "spring_stfperunit_list":{"value":spring_stfperunit_list, "type":"list", "type_in": "float"}, 
-        "linear_damp":{"value":0.66, "help":"Control the linear damp ratio", "type":"float"},
-        "ang_damp":{"value":0.015, "help":"Control the angle damp ratio", "type":"float"},
-        
+
+        "parameter_each": {"value":parameter_each, "type": "list_dict"},
+
         "time_leap":{"value":1.0/240.0, "help":"Time unit for simulation", "type":"float"},
         "camera_dist":{"value":40, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
         "time_limit":{"value":60.0, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
@@ -215,8 +231,8 @@ config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":
         "test_mode":{"value":0, "help":"Whether enter test mode for some temp test codes, default is 0", "type":"int"},
         #"force_mode":{"value":2, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
         "force_mode":{"value":1, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
-        #"flag_time":{"value":2, "help":"Whether open time limit", "type":"int"}}
-        "flag_time":{"value":0, "help":"Whether open time limit", "type":"int"}}
+        "flag_time":{"value":2, "help":"Whether open time limit", "type":"int"}}
+        #"flag_time":{"value":0, "help":"Whether open time limit", "type":"int"}}
 
 orig_config_dict = copy.deepcopy(config_dict)
 
