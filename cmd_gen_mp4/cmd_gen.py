@@ -190,9 +190,9 @@ config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":
         "pitch_x_base":{"value":array_dict['pitch'], "help":"Pitch of base", "type":"list", "type_in":"float"},
         "roll_z_base":{"value":array_dict['roll'], "help":"Roll of base", "type":"list", "type_in":"float"},
         "qua_a_list":{"value":array_dict['qua'], "help":"Quadratic Coefficient", "type":"list", "type_in":"float"},
-        
         "inter_spring":{"value":inter_spring_value, "help":"Number of units between two strings", "type":"list", "type_in": "int"}, 
         "every_spring":{"value":every_spring_value, "help":"Number of units between one strings", "type":"list", "type_in": "int"},
+        
         "basic_str":{"value":8374, "type":"float"}, 
         "base_ball_base_spring_stf":{"value":8374, "type":"float"}, 
         "spring_stfperunit":{"value":2517, "type":"float"}, 
@@ -215,7 +215,8 @@ config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":
         "test_mode":{"value":0, "help":"Whether enter test mode for some temp test codes, default is 0", "type":"int"},
         #"force_mode":{"value":2, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
         "force_mode":{"value":1, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
-        "flag_time":{"value":2, "help":"Whether open time limit", "type":"int"}}
+        #"flag_time":{"value":2, "help":"Whether open time limit", "type":"int"}}
+        "flag_time":{"value":0, "help":"Whether open time limit", "type":"int"}}
 
 orig_config_dict = copy.deepcopy(config_dict)
 

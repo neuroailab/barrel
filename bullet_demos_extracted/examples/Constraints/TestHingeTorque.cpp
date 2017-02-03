@@ -6,6 +6,7 @@
 #include <fstream>
 #include <vector>
 #include <cmath>
+#include <string>
 
 namespace po = boost::program_options;
 using namespace std;
@@ -24,6 +25,8 @@ vector<float> qua_a_list    = {-1};
 vector<float> yaw_y_base    = {0.5};
 vector<float> pitch_x_base  = {0};
 vector<float> roll_z_base   = {0};
+vector<int> inter_spring = {5};
+vector<int> every_spring = {1};
 
 const float SMALL_NUM = 1e-6;
 
@@ -31,19 +34,19 @@ float x_len_link    = 0.53;
 float y_len_link    = 2.08;
 float z_len_link    = 0.3;
 float radius        = 1;
-float linear_damp   = 0.77;
-float ang_damp      = 0.79;
 float time_leap     = 1.0/240.0;
-//int limit_numLink   = const_numLinks + 1;
+vector<string> whisker_config_name = {"test.cfg"};
 
-vector<int> inter_spring = {5};
-vector<int> every_spring = {1};
+/*
 vector<float> base_spring_stiffness = {520};
 vector<float> spring_stfperunit_list = {1000};
-
 float basic_str     = 3000;
 float base_ball_base_spring_stf = 3000;
 float spring_stfperunit     = 1000;
+float linear_damp   = 0.77;
+float ang_damp      = 0.79;
+*/
+
 float camera_dist     = 45;
 float time_limit    = 60.0;
 float initial_str   = 10000;
@@ -82,6 +85,14 @@ struct TestHingeTorque : public CommonRigidBodyBase{
     btAlignedObjectArray< btAlignedObjectArray<btJointFeedback*> > m_jointFeedback_big_list;
     btAlignedObjectArray< btAlignedObjectArray< btVector3 > > m_allcentpos_big_list;
 
+    vector< vector<float> > m_base_spring_stiffness;
+    vector< vector<float> > m_spring_stfperunit_list;
+    vector< float > m_basic_str;
+    vector< float > m_base_ball_base_spring_stf;
+    vector< float > m_spring_stfperunit;
+    vector< float > m_linear_damp;
+    vector< float > m_ang_damp;
+
     btVector3 base_ball_location;
     btTransform base_ball_trans;
 
@@ -93,7 +104,7 @@ struct TestHingeTorque : public CommonRigidBodyBase{
     void addQuaUnits(float qua_a, float qua_b, float qua_c, int num_units, 
             btTransform base_transform);
     btJointFeedback* addFeedbackForSpring(btGeneric6DofSpring2Constraint* con);
-
+    void loadParametersEveryWhisker(string curr_file_name, po::options_description desc_each);
 	
 	virtual void resetCamera(){
         //float dist = 5;
@@ -311,11 +322,20 @@ btJointFeedback* TestHingeTorque::addFeedbackForSpring(btGeneric6DofSpring2Const
     return fb;
 }
 
-void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num_units, 
+void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int indx_units, 
         btTransform base_transform = btTransform(btQuaternion::getIdentity(),btVector3(0, 0, 0))){
     float pre_z     = 0;
     float pre_y     = getValueQua(qua_a, qua_b, qua_c, pre_z);
     float pre_deg   = 0;
+    int num_units   = const_numLinks[indx_units];
+
+    vector<float> base_spring_stiffness = m_base_spring_stiffness[indx_units];
+    vector<float> spring_stfperunit_list = m_spring_stfperunit_list[indx_units];
+    float basic_str     = m_basic_str[indx_units];
+    float base_ball_base_spring_stf = m_base_ball_base_spring_stf[indx_units];
+    float spring_stfperunit     = m_spring_stfperunit[indx_units];
+    float linear_damp   = m_linear_damp[indx_units];
+    float ang_damp      = m_ang_damp[indx_units];
 
     btRigidBody* pre_unit = 0;
         
@@ -481,6 +501,68 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int num
     m_allcentpos_big_list.push_back(m_allcentpos);
 }
 
+void TestHingeTorque::loadParametersEveryWhisker(string curr_file_name, po::options_description desc_each){
+    vector<float> base_spring_stiffness = {520};
+    vector<float> spring_stfperunit_list = {1000};
+    float basic_str     = 3000;
+    float base_ball_base_spring_stf = 3000;
+    float spring_stfperunit     = 1000;
+    float linear_damp   = 0.77;
+    float ang_damp      = 0.79;
+
+    po::variables_map vm;
+    
+    try {
+        ifstream ifs(curr_file_name);
+        po::store(po::parse_config_file(ifs, desc_each), vm);
+        po::notify(vm);
+
+        if (vm.count("linear_damp")){
+            linear_damp     = vm["linear_damp"].as<float>();
+        }
+        if (vm.count("ang_damp")){
+            ang_damp        = vm["ang_damp"].as<float>();
+        }
+
+        if (vm.count("base_spring_stiffness")){
+            base_spring_stiffness   = vm["base_spring_stiffness"].as< vector<float> >();
+        }
+        if (vm.count("spring_stfperunit_list")){
+            spring_stfperunit_list   = vm["spring_stfperunit_list"].as< vector<float> >();
+        }
+
+        if ((inter_spring.size()!=base_spring_stiffness.size()) || (base_spring_stiffness.size()!=spring_stfperunit_list.size())){
+            cerr << "error: spring related size not equal!" << endl;
+            exit(0);
+        }
+
+        if (vm.count("basic_str")){
+            basic_str       = vm["basic_str"].as<float>();
+        }
+        if (vm.count("base_ball_base_spring_stf")){
+            base_ball_base_spring_stf   = vm["base_ball_base_spring_stf"].as<float>();
+        }
+        if (vm.count("spring_stfperunit")){
+            spring_stfperunit   = vm["spring_stfperunit"].as<float>();
+        }
+
+    }
+    catch(exception& e) {
+        cerr << "error: " << e.what() << "\n";
+    }
+    catch(...) {
+        cerr << "Exception of unknown type!\n";
+    }
+
+    m_base_spring_stiffness.push_back(base_spring_stiffness);
+    m_spring_stfperunit_list.push_back(spring_stfperunit_list);
+    m_basic_str.push_back(basic_str);
+    m_base_ball_base_spring_stf.push_back(base_ball_base_spring_stf);
+    m_spring_stfperunit.push_back(spring_stfperunit);
+    m_linear_damp.push_back(linear_damp);
+    m_ang_damp.push_back(ang_damp);
+
+}
 
 void TestHingeTorque::initPhysics(){
 	int upAxis = 1;
@@ -489,60 +571,67 @@ void TestHingeTorque::initPhysics(){
     min_dis     = 10000;
     m_allbones_big_list.clear();
     m_allcentpos_big_list.clear();
+
+    po::options_description desc("Allowed options");
+    desc.add_options()
+        ("help", "produce help message")
+        ("x_pos_base", po::value<vector<float>>()->multitoken(), "Position x of base")
+        ("y_pos_base", po::value<vector<float>>()->multitoken(), "Position y of base")
+        ("z_pos_base", po::value<vector<float>>()->multitoken(), "Position z of base")
+        ("const_numLinks", po::value<vector<int>>()->multitoken(), "Number of units")
+        ("qua_a_list", po::value<vector<float>>()->multitoken(), "Quadratic Coefficient")
+        ("yaw_y_base", po::value<vector<float>>()->multitoken(), "Parameter yaw for btQuaternion")
+        ("pitch_x_base", po::value<vector<float>>()->multitoken(), "Parameter pitch for btQuaternion")
+        ("roll_z_base", po::value<vector<float>>()->multitoken(), "Parameter roll for btQuaternion")
+        ("x_len_link", po::value<float>(), "Size x of cubes")
+        ("y_len_link", po::value<float>(), "Size y of cubes")
+        ("z_len_link", po::value<float>(), "Size z of cubes")
+        ("radius", po::value<float>(), "Size of the ball at top")
+        ("time_leap", po::value<float>(), "Time unit for simulation")
+        ("inter_spring", po::value<vector<int>>()->multitoken(), "Number of units between two strings")
+        ("every_spring", po::value<vector<int>>()->multitoken(), "Number of units between one strings")
+
+        ("whisker_config_name", po::value<vector<string>>()->multitoken(), "Name of config files for each whisker")
+
+        ("camera_dist", po::value<float>(), "Distance of camera")
+        ("time_limit", po::value<float>(), "Time limit for recording")
+        ("initial_str", po::value<float>(), "Initial strength of force applied")
+        ("max_str", po::value<float>(), "Max strength of force applied, used when force_mode=1")
+        ("initial_stime", po::value<float>(), "Initial time to apply force")
+        ("initial_poi", po::value<int>(), "Unit to apply the force")
+        ("flag_time", po::value<int>(), "Whether open time limit")
+        ("limit_softness", po::value<float>(), "Softness of the hinge limit")
+        ("limit_bias", po::value<float>(), "Bias of the hinge limit")
+        ("limit_relax", po::value<float>(), "Relax of the hinge limit")
+        ("limit_low", po::value<float>(), "Lower bound of the hinge limit")
+        ("limit_up", po::value<float>(), "Up bound of the hinge limit")
+        ("velo_ban_limit", po::value<float>(), "While flag_time is 2, used for linear velocities of rigid bodys to judge whether stop")
+        ("angl_ban_limit", po::value<float>(), "While flag_time is 2, used for angular velocities of rigid bodys to judge whether stop")
+        ("force_limit", po::value<float>(), "While flag_time is 2, used for forces of rigid bodys to judge whether stop")
+        ("torque_limit", po::value<float>(), "While flag_time is 2, used for torques of rigid bodys to judge whether stop")
+        ("dispos_limit", po::value<float>(), "While flag_time is 2, used for distance to balance states of rigid bodys to judge whether stop")
+        ("test_mode", po::value<int>(), "Whether enter test mode for some temp test codes, default is 0")
+        ("force_mode", po::value<int>(), "Force mode to apply at the beginning, default is 0")
+    ;
+
+    po::options_description desc_each("Allowed options for each whisker");
+    desc_each.add_options()
+        ("linear_damp", po::value<float>(), "Control the linear damp ratio")
+        ("ang_damp", po::value<float>(), "Control the angle damp ratio")
+        ("basic_str", po::value<float>(), "Minimal strength of hinge's recover force")
+        ("base_ball_base_spring_stf", po::value<float>(), "Base stiffness of spring for spring between base ball and first unit")
+        ("spring_stfperunit", po::value<float>(), "Coefficient of stiffness of spring for index of units, only applied to springs between adjacent units")
+        ("base_spring_stiffness", po::value<vector<float>>(), "Base stiffness of spring, only applied to springs between distant units")
+        ("spring_stfperunit_list", po::value<vector<float>>(), "Coefficient of stiffness of spring for index of units, only applied to springs between distant units")
+    ;
+    /*
+    */
+
+    po::variables_map vm;
     
     //b3Printf("Config name = %s",m_guiHelper->getconfigname());
     try {
-        po::options_description desc("Allowed options");
-        desc.add_options()
-            ("help", "produce help message")
-            ("x_pos_base", po::value<vector<float>>()->multitoken(), "Position x of base")
-            ("y_pos_base", po::value<vector<float>>()->multitoken(), "Position y of base")
-            ("z_pos_base", po::value<vector<float>>()->multitoken(), "Position z of base")
-            ("const_numLinks", po::value<vector<int>>()->multitoken(), "Number of units")
-            ("qua_a_list", po::value<vector<float>>()->multitoken(), "Quadratic Coefficient")
-            ("yaw_y_base", po::value<vector<float>>()->multitoken(), "Parameter yaw for btQuaternion")
-            ("pitch_x_base", po::value<vector<float>>()->multitoken(), "Parameter pitch for btQuaternion")
-            ("roll_z_base", po::value<vector<float>>()->multitoken(), "Parameter roll for btQuaternion")
-            ("x_len_link", po::value<float>(), "Size x of cubes")
-            ("y_len_link", po::value<float>(), "Size y of cubes")
-            ("z_len_link", po::value<float>(), "Size z of cubes")
-            ("radius", po::value<float>(), "Size of the ball at top")
-            ("basic_str", po::value<float>(), "Minimal strength of hinge's recover force")
-            ("linear_damp", po::value<float>(), "Control the linear damp ratio")
-            ("ang_damp", po::value<float>(), "Control the angle damp ratio")
-            ("time_leap", po::value<float>(), "Time unit for simulation")
-            ("inter_spring", po::value<vector<int>>()->multitoken(), "Number of units between two strings")
-            ("every_spring", po::value<vector<int>>()->multitoken(), "Number of units between one strings")
-            ("base_spring_stiffness", po::value<vector<float>>(), "Base stiffness of spring, only applied to springs between distant units")
-            ("spring_stfperunit_list", po::value<vector<float>>(), "Coefficient of stiffness of spring for index of units, only applied to springs between distant units")
-            ("base_ball_base_spring_stf", po::value<float>(), "Base stiffness of spring for spring between base ball and first unit")
-            ("spring_stfperunit", po::value<float>(), "Coefficient of stiffness of spring for index of units, only applied to springs between adjacent units")
-            ("camera_dist", po::value<float>(), "Distance of camera")
-            ("time_limit", po::value<float>(), "Time limit for recording")
-            ("initial_str", po::value<float>(), "Initial strength of force applied")
-            ("max_str", po::value<float>(), "Max strength of force applied, used when force_mode=1")
-            ("initial_stime", po::value<float>(), "Initial time to apply force")
-            ("initial_poi", po::value<int>(), "Unit to apply the force")
-            ("flag_time", po::value<int>(), "Whether open time limit")
-            ("limit_softness", po::value<float>(), "Softness of the hinge limit")
-            ("limit_bias", po::value<float>(), "Bias of the hinge limit")
-            ("limit_relax", po::value<float>(), "Relax of the hinge limit")
-            ("limit_low", po::value<float>(), "Lower bound of the hinge limit")
-            ("limit_up", po::value<float>(), "Up bound of the hinge limit")
-            ("velo_ban_limit", po::value<float>(), "While flag_time is 2, used for linear velocities of rigid bodys to judge whether stop")
-            ("angl_ban_limit", po::value<float>(), "While flag_time is 2, used for angular velocities of rigid bodys to judge whether stop")
-            ("force_limit", po::value<float>(), "While flag_time is 2, used for forces of rigid bodys to judge whether stop")
-            ("torque_limit", po::value<float>(), "While flag_time is 2, used for torques of rigid bodys to judge whether stop")
-            ("dispos_limit", po::value<float>(), "While flag_time is 2, used for distance to balance states of rigid bodys to judge whether stop")
-            ("test_mode", po::value<int>(), "Whether enter test mode for some temp test codes, default is 0")
-            ("force_mode", po::value<int>(), "Force mode to apply at the beginning, default is 0")
-        ;
-
-        po::variables_map vm;
-        //cout << "Enter -1" << endl;
         const char* file_name = m_guiHelper->getconfigname();
-        //cout << "Enter 0" << endl;
-        //const char* file_name = "/Users/chengxuz/barrel/bullet/barrel_github/cmd_gen_mp4/test.cfg";
         ifstream ifs(file_name);
         po::store(po::parse_config_file(ifs, desc), vm);
         po::notify(vm);    
@@ -571,9 +660,11 @@ void TestHingeTorque::initPhysics(){
         if (vm.count("roll_z_base")){
             roll_z_base     = vm["roll_z_base"].as< vector<float> >();
         }
+        if (vm.count("whisker_config_name")){
+            whisker_config_name      = vm["whisker_config_name"].as< vector<string> >();
+        }
 
-        //limit_numLink = const_numLinks + 1;
-        if ((x_pos_base.size()!=y_pos_base.size()) || (y_pos_base.size()!=z_pos_base.size()) || (x_pos_base.size()!=const_numLinks.size()) || (x_pos_base.size()!=qua_a_list.size())){
+        if ((x_pos_base.size()!=y_pos_base.size()) || (y_pos_base.size()!=z_pos_base.size()) || (x_pos_base.size()!=const_numLinks.size()) || (x_pos_base.size()!=qua_a_list.size()) || (x_pos_base.size()!=whisker_config_name.size())){
             cerr << "error: size not equal for (xyz,num)!" << endl;
             exit(0);
         }
@@ -591,14 +682,6 @@ void TestHingeTorque::initPhysics(){
             radius          = vm["radius"].as<float>();
         }
 
-
-        if (vm.count("linear_damp")){
-            linear_damp     = vm["linear_damp"].as<float>();
-        }
-        if (vm.count("ang_damp")){
-            ang_damp        = vm["ang_damp"].as<float>();
-        }
-
         if (vm.count("time_leap")){
             time_leap       = vm["time_leap"].as<float>();
         }
@@ -609,26 +692,10 @@ void TestHingeTorque::initPhysics(){
         if (vm.count("every_spring")){
             every_spring    = vm["every_spring"].as< vector<int> >();
         }
-        if (vm.count("base_spring_stiffness")){
-            base_spring_stiffness   = vm["base_spring_stiffness"].as< vector<float> >();
-        }
-        if (vm.count("spring_stfperunit_list")){
-            spring_stfperunit_list   = vm["spring_stfperunit_list"].as< vector<float> >();
-        }
 
-        if ((every_spring.size()!=inter_spring.size()) || (inter_spring.size()!=base_spring_stiffness.size()) || (base_spring_stiffness.size()!=spring_stfperunit_list.size())){
+        if ((every_spring.size()!=inter_spring.size())){
             cerr << "error: spring related size not equal!" << endl;
             exit(0);
-        }
-
-        if (vm.count("basic_str")){
-            basic_str       = vm["basic_str"].as<float>();
-        }
-        if (vm.count("base_ball_base_spring_stf")){
-            base_ball_base_spring_stf   = vm["base_ball_base_spring_stf"].as<float>();
-        }
-        if (vm.count("spring_stfperunit")){
-            spring_stfperunit   = vm["spring_stfperunit"].as<float>();
         }
 
         if (vm.count("camera_dist")){
@@ -693,13 +760,16 @@ void TestHingeTorque::initPhysics(){
             force_mode      = vm["force_mode"].as<int>();
         }
 
-
     }
     catch(exception& e) {
         cerr << "error: " << e.what() << "\n";
     }
     catch(...) {
         cerr << "Exception of unknown type!\n";
+    }
+
+    for (int indx_unit=0;indx_unit<whisker_config_name.size();indx_unit++){
+        loadParametersEveryWhisker(whisker_config_name[indx_unit], desc_each);
     }
     
 	m_guiHelper->setUpAxis(upAxis);
@@ -750,7 +820,7 @@ void TestHingeTorque::initPhysics(){
             //btMatrix3x3 qua_mat(xx, xy, xz, yx, yy, yz, zx, zy, zz);
             btMatrix3x3 qua_mat(zz, zy, zx, yz, yy, yx, xz, xy, xx);
             //addQuaUnits(qua_a_list[big_list_indx], 0, 0, const_numLinks[big_list_indx], tmp_trans*btTransform(btQuaternion( yaw_y_base[big_list_indx], pitch_x_base[big_list_indx], roll_z_base[big_list_indx]),btVector3(x_pos_base[big_list_indx], y_pos_base[big_list_indx], z_pos_base[big_list_indx])));
-            addQuaUnits(qua_a_list[big_list_indx], 0, 0, const_numLinks[big_list_indx], tmp_trans*btTransform(qua_mat,btVector3(x_pos_base[big_list_indx], y_pos_base[big_list_indx], z_pos_base[big_list_indx])));
+            addQuaUnits(qua_a_list[big_list_indx], 0, 0, big_list_indx, tmp_trans*btTransform(qua_mat,btVector3(x_pos_base[big_list_indx], y_pos_base[big_list_indx], z_pos_base[big_list_indx])));
         }
     }
 	
