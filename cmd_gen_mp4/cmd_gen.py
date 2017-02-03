@@ -114,7 +114,7 @@ def run_it(ind):
 
         os.system(cmd_str)
 
-def build_array(num_whskr):
+def build_array(num_whskr, indx_sta = 0):
     x_pos_base      = []
     y_pos_base      = []
     z_pos_base      = []
@@ -138,7 +138,7 @@ def build_array(num_whskr):
 
     S   = get_wholeS()
 
-    for indx_w in xrange(num_whskr):
+    for indx_w in xrange(indx_sta, indx_sta + num_whskr):
         x_pos_base.append(S.C_baseZ[indx_w])
         y_pos_base.append(S.C_baseY[indx_w])
         z_pos_base.append(S.C_baseX[indx_w])
@@ -295,7 +295,35 @@ def my_suggest(new_ids, domain, trials, seed,
     return tpe.suggest(new_ids, domain, trials, seed,
             prior_weight, n_startup_jobs, n_EI_candidates, gamma)
 
-def do_hyperopt(eval_num, use_mongo = False, portn = 23333, db_name = "test_db", exp_name = "exp1", num_whis = 1):
+def do_hyperopt(eval_num, use_mongo = False, portn = 23333, db_name = "test_db", exp_name = "exp1", num_whis = 1, indx_sta = 0):
+
+    global config_dict
+
+    array_dict      = build_array(num_whis, indx_sta)
+
+    num_whis = len(array_dict['x'])
+    parameter_each = []
+    for indx_unit in xrange(num_whis):
+        curr_dict = {
+            "basic_str":{"value":8374, "type":"float"}, 
+            "base_ball_base_spring_stf":{"value":8374, "type":"float"}, 
+            "spring_stfperunit":{"value":2517, "type":"float"}, 
+            "base_spring_stiffness":{"value":base_spring_stiffness, "type":"list", "type_in": "float"}, 
+            "spring_stfperunit_list":{"value":spring_stfperunit_list, "type":"list", "type_in": "float"}, 
+            "linear_damp":{"value":0.66, "help":"Control the linear damp ratio", "type":"float"},
+            "ang_damp":{"value":0.015, "help":"Control the angle damp ratio", "type":"float"},
+        }
+        parameter_each.append(curr_dict)
+
+    config_dict["x_pos_base"]["value"] = array_dict['x']
+    config_dict["y_pos_base"]["value"] = array_dict['y']
+    config_dict["z_pos_base"]["value"] = array_dict['z']
+    config_dict["const_numLinks"]["value"] = array_dict['c']
+    config_dict["yaw_y_base"]["value"] = array_dict['yaw']
+    config_dict["pitch_x_base"]["value"] = array_dict['pitch']
+    config_dict["roll_z_base"]["value"] = array_dict['roll']
+    config_dict["qua_a_list"]["value"] = array_dict['qua']
+    config_dict["parameter_each"]["value"] = parameter_each
 
     if (use_mongo):
         trials = MongoTrials('mongo://localhost:%i/%s/jobs' % (portn, db_name), exp_key=exp_name)
@@ -311,13 +339,14 @@ def do_hyperopt(eval_num, use_mongo = False, portn = 23333, db_name = "test_db",
     space_parameter_each = []
 
     for indx_unit in xrange(num_whis):
-        curr_space_dict = {'basic_str': hp.uniform('basic_str', 0, 9000), 
-                'base_ball_base_spring_stf': hp.uniform('base_ball_base_spring_stf', 0, 20000), 
-                'spring_stfperunit':hp.uniform('spring_stfperunit', 0, 9000),
-                'linear_damp':hp.uniform('linear_damp', 0, 0.9), 
-                'ang_damp':hp.uniform('ang_damp', 0, 0.9),
-                'base_spring_stiffness': space_base_spring_stiffness, 
-                "spring_stfperunit_list": space_spring_stfperunit_list,
+        curr_space_dict = {
+                "basic_str":{"value":hp.uniform('basic_str', 0, 9000), "type":"float"}, 
+                "base_ball_base_spring_stf":{"value":hp.uniform('base_ball_base_spring_stf', 0, 20000), "type":"float"}, 
+                "spring_stfperunit":{"value":hp.uniform('spring_stfperunit', 0, 9000), "type":"float"}, 
+                "base_spring_stiffness":{"value":space_base_spring_stiffness, "type":"list", "type_in": "float"}, 
+                "spring_stfperunit_list":{"value":space_spring_stfperunit_list, "type":"list", "type_in": "float"}, 
+                "linear_damp":{"value":hp.uniform('linear_damp', 0, 0.9), "help":"Control the linear damp ratio", "type":"float"},
+                "ang_damp":{"value":hp.uniform('ang_damp', 0, 0.9), "help":"Control the angle damp ratio", "type":"float"},
              }
         space_parameter_each.append(curr_space_dict)
 
