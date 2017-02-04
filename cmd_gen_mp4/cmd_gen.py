@@ -231,9 +231,10 @@ config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":
         "dispos_limit":{"value":50, "help":"While flag_time is 2, used for distance to balance states of rigid bodys to judge whether stop", "type":"float"}, 
         "test_mode":{"value":0, "help":"Whether enter test mode for some temp test codes, default is 0", "type":"int"},
         #"force_mode":{"value":2, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
-        "force_mode":{"value":1, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
-        "flag_time":{"value":2, "help":"Whether open time limit", "type":"int"}}
-        #"flag_time":{"value":0, "help":"Whether open time limit", "type":"int"}}
+        #"force_mode":{"value":1, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
+        "force_mode":{"value":-1, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
+        #"flag_time":{"value":2, "help":"Whether open time limit", "type":"int"}}
+        "flag_time":{"value":0, "help":"Whether open time limit", "type":"int"}}
 
 orig_config_dict = copy.deepcopy(config_dict)
 
@@ -276,7 +277,6 @@ def get_value(kwargs, pathconfig =default_pathconfig, pathexe =default_pathexe,
     return all_ret_val
 
 
-
 _default_prior_weight = 1.0
 
 # -- suggest best of this many draws on every iteration
@@ -296,13 +296,7 @@ def my_suggest(new_ids, domain, trials, seed,
     return tpe.suggest(new_ids, domain, trials, seed,
             prior_weight, n_startup_jobs, n_EI_candidates, gamma)
 
-def do_hyperopt(eval_num, use_mongo = False, portn = 23333, db_name = "test_db", exp_name = "exp1", num_whis = 1, indx_sta = 0):
-
-    global config_dict
-
-    print("indx_sta:%i" % indx_sta)
-    sys.stdout.flush()
-
+def re_get_unitparams(config_dict, num_whis = 1, indx_sta = 0):
     array_dict      = build_array(num_whis, indx_sta)
 
     num_whis = len(array_dict['x'])
@@ -328,6 +322,17 @@ def do_hyperopt(eval_num, use_mongo = False, portn = 23333, db_name = "test_db",
     config_dict["roll_z_base"]["value"] = array_dict['roll']
     config_dict["qua_a_list"]["value"] = array_dict['qua']
     config_dict["parameter_each"]["value"] = parameter_each
+
+    return config_dict
+
+def do_hyperopt(eval_num, use_mongo = False, portn = 23333, db_name = "test_db", exp_name = "exp1", num_whis = 1, indx_sta = 0):
+
+    global config_dict
+
+    print("indx_sta:%i" % indx_sta)
+    sys.stdout.flush()
+
+    config_dict = re_get_unitparams(config_dict, num_whis, indx_sta)
 
     if (use_mongo):
         trials = MongoTrials('mongo://localhost:%i/%s/jobs' % (portn, db_name), exp_key=exp_name)
@@ -402,17 +407,32 @@ if __name__=="__main__":
     parser.add_argument('--testmode', default = 0, type = int, action = 'store', help = 'Whether run the test command or not')
     parser.add_argument('--innernum', default = -1, type = int, action = 'store', help = 'Number of inner loop')
     parser.add_argument('--fromcfg', default = None, type = str, action = 'store', help = 'None means no, if the path of file sent, then get config from the file')
+    #parser.add_argument('--fromcfglist', default = 0, type = int, action = 'store', help = 'If 1, then load each whisker parameter')
+    parser.add_argument('--indxsta', default = 0, type = int, action = 'store', help = 'Start index of whisker needed')
+    parser.add_argument('--indxend', default = 1, type = int, action = 'store', help = 'End index of whisker needed')
 
     args    = parser.parse_args()
 
+    global config_dict
+
+    config_dict = re_get_unitparams(config_dict, args.indxend - args.indxsta, args.indxsta)
+
     if args.fromcfg is not None:
-        config_dict = recover_from_cfg(config_dict, args.fromcfg)
+
+        config_dict.pop("parameter_each")
+        whisker_config_name     = []
+        for curr_indx in xrange(args.indxsta, args.indxend):
+            whisker_config_name.append("%s%i.cfg" % (args.fromcfg, curr_indx))
+        config_dict["whisker_config_name"] = {"value":whisker_config_name, "type":"list", "type_in": "string"}
 
     if args.innernum>=0 and args.innernum in inner_loop:
         inner_loop_orig = copy.deepcopy(inner_loop)
         for key in inner_loop_orig:
             if not key==args.innernum:
                 inner_loop.pop(key)
+
+    if args.innernum==-1:
+        inner_loop = {0: {'force_mode': -1}}
 
     if args.testmode==0:
         para_search     = {"basic_str":{"range":[1000, 3000, 5000, 7000], "short":"ba"}, 
