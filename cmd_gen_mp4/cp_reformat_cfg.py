@@ -9,7 +9,7 @@ if __name__=="__main__":
     parser.add_argument('--outsuffix', default = ".out", type = str, action = 'store', help = 'Suffix of output files')
     parser.add_argument('--indxsta', default = 6220401, type = int, action = 'store', help = 'Index of starting job id')
     parser.add_argument('--indxend', default = 6220496, type = int, action = 'store', help = 'Index of ending job id')
-    parser.add_argument('--dirconfigs', default = "/om/user/chengxuz/slurm_out_all", type = str, action = 'store', help = 'Path to slurm output folder')
+    parser.add_argument('--dirconfigs', default = "/om/user/chengxuz/barrel/barrel/cmd_gen_mp4/opt_results", type = str, action = 'store', help = 'Path to slurm output folder')
 
     args    = parser.parse_args()
 
@@ -35,7 +35,13 @@ if __name__=="__main__":
         if os.path.isfile(tmp_path):
             print tmp_path,
             unit_indx, _tmp_dict = cmd_gen.recover_from_cfg(tmp_dict, tmp_path)
-            print unit_indx, _tmp_dict is None
+            none_flag = _tmp_dict is None
+            print unit_indx, none_flag
+            if none_flag or unit_indx==-1:
+                continue
+
+            cfg_filename = os.path.join(args.dirconfigs, "para_%i.cfg" % unit_indx)
+            cmd_gen.make_config(_tmp_dict, cfg_filename)
             num_cfg = num_cfg + 1
    
     print(num_cfg)
