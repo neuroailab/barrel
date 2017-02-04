@@ -20,3 +20,7 @@ Makefile
 *.pkl
 *ipynb*
 *logfile.txt
+*.pk
+*.png
+*.jpg
+*.patch
