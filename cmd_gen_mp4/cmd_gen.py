@@ -11,6 +11,7 @@ from hyperopt import fmin, tpe, hp, Trials
 from hyperopt.mongoexp import MongoTrials
 import copy
 import json
+import sys
 
 '''
 The script to run the whisker thing and generate the mp4s through command line
@@ -299,6 +300,9 @@ def do_hyperopt(eval_num, use_mongo = False, portn = 23333, db_name = "test_db",
 
     global config_dict
 
+    print("indx_sta:%i" % indx_sta)
+    sys.stdout.flush()
+
     array_dict      = build_array(num_whis, indx_sta)
 
     num_whis = len(array_dict['x'])
@@ -362,8 +366,14 @@ def do_hyperopt(eval_num, use_mongo = False, portn = 23333, db_name = "test_db",
 def recover_from_cfg(config_dict, pathcfg):
     fin = open(pathcfg, 'r')
     curr_line = fin.readline()
-    while (not curr_line[0]=='{'):
+    unit_indx = -1
+    while (len(curr_line)>0) and (not curr_line[0]=='{'):
+        if curr_line.startswith('indx_sta'):
+            unit_indx = int(curr_line.split(':')[1])
+
         curr_line = fin.readline()
+    if len(curr_line)==0:
+        return unit_indx, None
     curr_line = curr_line.replace("'", '"')
     curr_line = curr_line.replace('u"', '"')
     #print(curr_line)
@@ -379,7 +389,7 @@ def recover_from_cfg(config_dict, pathcfg):
             config_dict[new_name]['value'][curr_indx - 2] = value
         #print(key, value)
 
-    return config_dict
+    return unit_indx, config_dict
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='The script to generate the mp4s through command line')
