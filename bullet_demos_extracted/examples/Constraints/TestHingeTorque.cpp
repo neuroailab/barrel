@@ -533,6 +533,7 @@ void TestHingeTorque::loadParametersEveryWhisker(string curr_file_name, po::opti
 
         if ((inter_spring.size()!=base_spring_stiffness.size()) || (base_spring_stiffness.size()!=spring_stfperunit_list.size())){
             cerr << "error: spring related size not equal!" << endl;
+            cerr << inter_spring.size() << " " << base_spring_stiffness.size() << " " << spring_stfperunit_list.size() << endl;
             exit(0);
         }
 
@@ -548,7 +549,7 @@ void TestHingeTorque::loadParametersEveryWhisker(string curr_file_name, po::opti
 
     }
     catch(exception& e) {
-        cerr << "error: " << e.what() << "\n";
+        cerr << "error: " << e.what() << "adfadfadfadf\n";
     }
     catch(...) {
         cerr << "Exception of unknown type!\n";
@@ -762,7 +763,7 @@ void TestHingeTorque::initPhysics(){
 
     }
     catch(exception& e) {
-        cerr << "error: " << e.what() << "\n";
+        cerr << "error: " << e.what() << "123123123\n";
     }
     catch(...) {
         cerr << "Exception of unknown type!\n";

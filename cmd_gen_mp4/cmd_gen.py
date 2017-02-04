@@ -11,6 +11,7 @@ from hyperopt import fmin, tpe, hp, Trials
 from hyperopt.mongoexp import MongoTrials
 import copy
 import json
+import sys
 
 '''
 The script to run the whisker thing and generate the mp4s through command line
@@ -114,7 +115,7 @@ def run_it(ind):
 
         os.system(cmd_str)
 
-def build_array(num_whskr):
+def build_array(num_whskr, indx_sta = 0):
     x_pos_base      = []
     y_pos_base      = []
     z_pos_base      = []
@@ -138,7 +139,7 @@ def build_array(num_whskr):
 
     S   = get_wholeS()
 
-    for indx_w in xrange(num_whskr):
+    for indx_w in xrange(indx_sta, indx_sta + num_whskr):
         x_pos_base.append(S.C_baseZ[indx_w])
         y_pos_base.append(S.C_baseY[indx_w])
         z_pos_base.append(S.C_baseX[indx_w])
@@ -230,9 +231,10 @@ config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":
         "dispos_limit":{"value":50, "help":"While flag_time is 2, used for distance to balance states of rigid bodys to judge whether stop", "type":"float"}, 
         "test_mode":{"value":0, "help":"Whether enter test mode for some temp test codes, default is 0", "type":"int"},
         #"force_mode":{"value":2, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
-        "force_mode":{"value":1, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
-        "flag_time":{"value":2, "help":"Whether open time limit", "type":"int"}}
-        #"flag_time":{"value":0, "help":"Whether open time limit", "type":"int"}}
+        #"force_mode":{"value":1, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
+        "force_mode":{"value":-1, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
+        #"flag_time":{"value":2, "help":"Whether open time limit", "type":"int"}}
+        "flag_time":{"value":0, "help":"Whether open time limit", "type":"int"}}
 
 orig_config_dict = copy.deepcopy(config_dict)
 
@@ -275,7 +277,6 @@ def get_value(kwargs, pathconfig =default_pathconfig, pathexe =default_pathexe,
     return all_ret_val
 
 
-
 _default_prior_weight = 1.0
 
 # -- suggest best of this many draws on every iteration
@@ -295,7 +296,43 @@ def my_suggest(new_ids, domain, trials, seed,
     return tpe.suggest(new_ids, domain, trials, seed,
             prior_weight, n_startup_jobs, n_EI_candidates, gamma)
 
-def do_hyperopt(eval_num, use_mongo = False, portn = 23333, db_name = "test_db", exp_name = "exp1", num_whis = 1):
+def re_get_unitparams(config_dict, num_whis = 1, indx_sta = 0):
+    array_dict      = build_array(num_whis, indx_sta)
+
+    num_whis = len(array_dict['x'])
+    parameter_each = []
+    for indx_unit in xrange(num_whis):
+        curr_dict = {
+            "basic_str":{"value":8374, "type":"float"}, 
+            "base_ball_base_spring_stf":{"value":8374, "type":"float"}, 
+            "spring_stfperunit":{"value":2517, "type":"float"}, 
+            "base_spring_stiffness":{"value":base_spring_stiffness, "type":"list", "type_in": "float"}, 
+            "spring_stfperunit_list":{"value":spring_stfperunit_list, "type":"list", "type_in": "float"}, 
+            "linear_damp":{"value":0.66, "help":"Control the linear damp ratio", "type":"float"},
+            "ang_damp":{"value":0.015, "help":"Control the angle damp ratio", "type":"float"},
+        }
+        parameter_each.append(curr_dict)
+
+    config_dict["x_pos_base"]["value"] = array_dict['x']
+    config_dict["y_pos_base"]["value"] = array_dict['y']
+    config_dict["z_pos_base"]["value"] = array_dict['z']
+    config_dict["const_numLinks"]["value"] = array_dict['c']
+    config_dict["yaw_y_base"]["value"] = array_dict['yaw']
+    config_dict["pitch_x_base"]["value"] = array_dict['pitch']
+    config_dict["roll_z_base"]["value"] = array_dict['roll']
+    config_dict["qua_a_list"]["value"] = array_dict['qua']
+    config_dict["parameter_each"]["value"] = parameter_each
+
+    return config_dict
+
+def do_hyperopt(eval_num, use_mongo = False, portn = 23333, db_name = "test_db", exp_name = "exp1", num_whis = 1, indx_sta = 0):
+
+    global config_dict
+
+    print("indx_sta:%i" % indx_sta)
+    sys.stdout.flush()
+
+    config_dict = re_get_unitparams(config_dict, num_whis, indx_sta)
 
     if (use_mongo):
         trials = MongoTrials('mongo://localhost:%i/%s/jobs' % (portn, db_name), exp_key=exp_name)
@@ -311,13 +348,14 @@ def do_hyperopt(eval_num, use_mongo = False, portn = 23333, db_name = "test_db",
     space_parameter_each = []
 
     for indx_unit in xrange(num_whis):
-        curr_space_dict = {'basic_str': hp.uniform('basic_str', 0, 9000), 
-                'base_ball_base_spring_stf': hp.uniform('base_ball_base_spring_stf', 0, 20000), 
-                'spring_stfperunit':hp.uniform('spring_stfperunit', 0, 9000),
-                'linear_damp':hp.uniform('linear_damp', 0, 0.9), 
-                'ang_damp':hp.uniform('ang_damp', 0, 0.9),
-                'base_spring_stiffness': space_base_spring_stiffness, 
-                "spring_stfperunit_list": space_spring_stfperunit_list,
+        curr_space_dict = {
+                "basic_str":{"value":hp.uniform('basic_str', 0, 9000), "type":"float"}, 
+                "base_ball_base_spring_stf":{"value":hp.uniform('base_ball_base_spring_stf', 0, 20000), "type":"float"}, 
+                "spring_stfperunit":{"value":hp.uniform('spring_stfperunit', 0, 9000), "type":"float"}, 
+                "base_spring_stiffness":{"value":space_base_spring_stiffness, "type":"list", "type_in": "float"}, 
+                "spring_stfperunit_list":{"value":space_spring_stfperunit_list, "type":"list", "type_in": "float"}, 
+                "linear_damp":{"value":hp.uniform('linear_damp', 0, 0.9), "help":"Control the linear damp ratio", "type":"float"},
+                "ang_damp":{"value":hp.uniform('ang_damp', 0, 0.9), "help":"Control the angle damp ratio", "type":"float"},
              }
         space_parameter_each.append(curr_space_dict)
 
@@ -333,8 +371,14 @@ def do_hyperopt(eval_num, use_mongo = False, portn = 23333, db_name = "test_db",
 def recover_from_cfg(config_dict, pathcfg):
     fin = open(pathcfg, 'r')
     curr_line = fin.readline()
-    while (not curr_line[0]=='{'):
+    unit_indx = -1
+    while (len(curr_line)>0) and (not curr_line[0]=='{'):
+        if curr_line.startswith('indx_sta'):
+            unit_indx = int(curr_line.split(':')[1])
+
         curr_line = fin.readline()
+    if len(curr_line)==0:
+        return unit_indx, None
     curr_line = curr_line.replace("'", '"')
     curr_line = curr_line.replace('u"', '"')
     #print(curr_line)
@@ -350,7 +394,7 @@ def recover_from_cfg(config_dict, pathcfg):
             config_dict[new_name]['value'][curr_indx - 2] = value
         #print(key, value)
 
-    return config_dict
+    return unit_indx, config_dict
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description='The script to generate the mp4s through command line')
@@ -363,17 +407,32 @@ if __name__=="__main__":
     parser.add_argument('--testmode', default = 0, type = int, action = 'store', help = 'Whether run the test command or not')
     parser.add_argument('--innernum', default = -1, type = int, action = 'store', help = 'Number of inner loop')
     parser.add_argument('--fromcfg', default = None, type = str, action = 'store', help = 'None means no, if the path of file sent, then get config from the file')
+    #parser.add_argument('--fromcfglist', default = 0, type = int, action = 'store', help = 'If 1, then load each whisker parameter')
+    parser.add_argument('--indxsta', default = 0, type = int, action = 'store', help = 'Start index of whisker needed')
+    parser.add_argument('--indxend', default = 1, type = int, action = 'store', help = 'End index of whisker needed')
 
     args    = parser.parse_args()
 
+    global config_dict
+
+    config_dict = re_get_unitparams(config_dict, args.indxend - args.indxsta, args.indxsta)
+
     if args.fromcfg is not None:
-        config_dict = recover_from_cfg(config_dict, args.fromcfg)
+
+        config_dict.pop("parameter_each")
+        whisker_config_name     = []
+        for curr_indx in xrange(args.indxsta, args.indxend):
+            whisker_config_name.append("%s%i.cfg" % (args.fromcfg, curr_indx))
+        config_dict["whisker_config_name"] = {"value":whisker_config_name, "type":"list", "type_in": "string"}
 
     if args.innernum>=0 and args.innernum in inner_loop:
         inner_loop_orig = copy.deepcopy(inner_loop)
         for key in inner_loop_orig:
             if not key==args.innernum:
                 inner_loop.pop(key)
+
+    if args.innernum==-1:
+        inner_loop = {0: {'force_mode': -1}}
 
     if args.testmode==0:
         para_search     = {"basic_str":{"range":[1000, 3000, 5000, 7000], "short":"ba"}, 
