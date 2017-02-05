@@ -149,6 +149,8 @@ class machine(Machine, NYUDepthModelDefs):
                 new_shape = (nimgs,) + tuple(tmp_shape[1:])
                 depths = np.zeros(new_shape, dtype=np.float32)
                 if num_output==2:
+                    tmp_shape = batch_normals.shape
+                    new_shape = (nimgs,) + tuple(tmp_shape[1:])
                     normals = np.zeros(new_shape, dtype=np.float32)
 
             depths[b:b+n] = batch_depths[:n]
