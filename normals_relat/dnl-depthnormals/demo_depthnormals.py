@@ -10,8 +10,8 @@ from utils import depth_montage, normals_montage
 def main():
     # location of depth module, config and parameters
         
-    #model_name = 'depthnormals_nyud_alexnet'
-    model_name = 'depthnormals_nyud_vgg'
+    model_name = 'depthnormals_nyud_alexnet'
+    #model_name = 'depthnormals_nyud_vgg'
 
     module_fn = 'models/iccv15/%s.py' % model_name
     config_fn = 'models/iccv15/%s.conf' % model_name
@@ -26,8 +26,12 @@ def main():
 
     # build depth inference function and run
     rgb_imgs = np.asarray(rgb).reshape((1, 240, 320, 3))
-    (pred_depths, pred_normals) = machine.infer_depth_and_normals(rgb_imgs)
+    #(pred_depths, pred_normals) = machine.infer_depth_and_normals(rgb_imgs)
+    (pred_depths, pred_normals) = machine.infer_some_layer_depth_and_normals(rgb_imgs)
 
+    import pdb
+    pdb.set_trace()
+    '''
     # save prediction
     depth_img_np = depth_montage(pred_depths)
     #import pdb
@@ -38,6 +42,7 @@ def main():
     normals_img_np = normals_montage(pred_normals)
     normals_img = Image.fromarray((255*normals_img_np).astype(np.uint8))
     normals_img.save('demo_normals_prediction.png')
+    '''
 
 
 if __name__ == '__main__':
