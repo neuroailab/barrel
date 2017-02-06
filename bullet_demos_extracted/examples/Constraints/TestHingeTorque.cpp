@@ -1,4 +1,5 @@
 #include "TestHingeTorque.h"
+#include "../ExtendedTutorials/RigidBodyFromObj.h"
 #include <boost/program_options.hpp>
 
 #include <iostream>
@@ -7,6 +8,13 @@
 #include <vector>
 #include <cmath>
 #include <string>
+
+#include "btBulletDynamicsCommon.h"
+#include "LinearMath/btVector3.h"
+#include "LinearMath/btAlignedObjectArray.h" 
+#include "../Importers/ImportObjDemo/LoadMeshFromObj.h"
+#include "../OpenGLWindow/GLInstanceGraphicsShape.h"
+
 
 namespace po = boost::program_options;
 using namespace std;
@@ -375,7 +383,8 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int ind
 
         m_dynamicsWorld->removeRigidBody(base);
         base->setDamping(linear_damp,ang_damp);
-        m_dynamicsWorld->addRigidBody(base,collisionFilterGroup,collisionFilterMask);
+        //m_dynamicsWorld->addRigidBody(base,collisionFilterGroup,collisionFilterMask);
+        m_dynamicsWorld->addRigidBody(base);
 
         if (pre_unit){
             btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, y_len_link, 0));						//par body's COM to cur body's COM offset
@@ -421,7 +430,8 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int ind
             btRigidBody* base_ball = createRigidBody(baseMass,baseWorldTrans_ball,linkSphere);
             m_dynamicsWorld->removeRigidBody(base_ball);
             base_ball->setDamping(0,0);
-            m_dynamicsWorld->addRigidBody(base_ball,collisionFilterGroup,collisionFilterMask);
+            //m_dynamicsWorld->addRigidBody(base_ball,collisionFilterGroup,collisionFilterMask);
+            m_dynamicsWorld->addRigidBody(base_ball);
 
             base_ball_location = base_ball->getCenterOfMassPosition();
             base_ball_trans = base_ball->getCenterOfMassTransform();
@@ -801,8 +811,82 @@ void TestHingeTorque::initPhysics(){
         //btVector3 test_v = findLineInter(btVector3(0,0,0), btVector3(0,1,0), btVector3(0,3,-1), btVector3(0,4,-2));
         //cout << test_v[1] << " " << test_v[2] << endl;
         //addQuaUnits(-1, 0, 0, 4, btTransform(btQuaternion::getIdentity(),btVector3(x_pos_base[0], y_pos_base[0], z_pos_base[0])));
-        addQuaUnits(qua_a_list[0], 0, 0, const_numLinks[0], btTransform(btQuaternion( yaw_y_base[0], pitch_x_base[0], roll_z_base[0]),btVector3(x_pos_base[0], y_pos_base[0], z_pos_base[0])));
+        //addQuaUnits(qua_a_list[0], 0, 0, const_numLinks[0], btTransform(btQuaternion( yaw_y_base[0], pitch_x_base[0], roll_z_base[0]),btVector3(x_pos_base[0], y_pos_base[0], z_pos_base[0])));
         //addQuaUnits(-1, 0, y_pos_base[0], 4, btTransform(btQuaternion::getIdentity(),btVector3(0, 7, 0)));
+
+        for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) { // create one single whisker 
+            //addQuaUnits(qua_a_list[big_list_indx], 0, 0, const_numLinks[big_list_indx], btTransform(btQuaternion( yaw_y_base[big_list_indx], pitch_x_base[big_list_indx], roll_z_base[big_list_indx]),btVector3(x_pos_base[big_list_indx], y_pos_base[big_list_indx], z_pos_base[big_list_indx])));
+            float yaw_now = yaw_y_base[big_list_indx];
+            float pitch_now = pitch_x_base[big_list_indx];
+            float roll_now = roll_z_base[big_list_indx];
+            //btTransform tmp_trans(btQuaternion(0,0,-3.1415926/4), btVector3(0,0,0));
+            btTransform tmp_trans(btQuaternion(0,0,0), btVector3(0,0,0));
+            float c_x = cos(pitch_now), s_x = sin(pitch_now);
+            float c_y = cos(yaw_now), s_y = sin(yaw_now);
+            float c_z = cos(roll_now), s_z = sin(roll_now);
+            float xx = c_y*c_z, xy = c_z*s_x*s_y - c_x*s_z, xz = s_x*s_z + c_x*c_z*s_y;
+            float yx = c_y*s_z, yy = c_x*c_z + s_x*s_y*s_z, yz = c_x*s_y*s_z - c_z*s_x;
+            float zx = -s_y, zy = c_y*s_x, zz = c_x*c_y;
+            //btMatrix3x3 qua_mat(xx, xy, xz, yx, yy, yz, zx, zy, zz);
+            btMatrix3x3 qua_mat(zz, zy, zx, yz, yy, yx, xz, xy, xx);
+            //addQuaUnits(qua_a_list[big_list_indx], 0, 0, const_numLinks[big_list_indx], tmp_trans*btTransform(btQuaternion( yaw_y_base[big_list_indx], pitch_x_base[big_list_indx], roll_z_base[big_list_indx]),btVector3(x_pos_base[big_list_indx], y_pos_base[big_list_indx], z_pos_base[big_list_indx])));
+            addQuaUnits(qua_a_list[big_list_indx], 0, 0, big_list_indx, tmp_trans*btTransform(qua_mat,btVector3(x_pos_base[big_list_indx], y_pos_base[big_list_indx], z_pos_base[big_list_indx])));
+        }
+        //load our obj mesh
+
+        const char* fileName = "/Users/chengxuz/barrel/bullet/bullet3/data/teddy.obj";//sphere8.obj";//sponza_closed.obj";//sphere8.obj";
+        
+        GLInstanceGraphicsShape* glmesh = LoadMeshFromObj(fileName, "");
+        printf("[INFO] Obj loaded: Extracted %d verticed from obj file [%s]\n", glmesh->m_numvertices, fileName);
+
+        const GLInstanceVertex& v = glmesh->m_vertices->at(0);
+        btConvexHullShape* shape = new btConvexHullShape((const btScalar*)(&(v.xyzw[0])), glmesh->m_numvertices, sizeof(GLInstanceVertex));
+
+        //float scaling[4] = {0.1,0.1,0.1,1};
+        float scaling[4] = {0.5,0.5,0.5,1};
+
+        btVector3 localScaling(scaling[0],scaling[1],scaling[2]);
+        shape->setLocalScaling(localScaling);
+
+        shape->optimizeConvexHull();
+        shape->initializePolyhedralFeatures();    
+        
+
+        //if (m_options & ComputePolyhedralFeatures)
+        {
+        //    shape->initializePolyhedralFeatures();    
+        }
+        
+            
+        
+        
+        //shape->setMargin(0.001);
+        //m_collisionShapes.push_back(shape);
+
+        btTransform startTransform;
+        startTransform.setIdentity();
+
+        btScalar	mass(1.f);
+        bool isDynamic = (mass != 0.f);
+        btVector3 localInertia(0,0,0);
+        if (isDynamic)
+            shape->calculateLocalInertia(mass,localInertia);
+
+        float color[4] = {1,1,1,1};
+        float orn[4] = {0,0,0,1};
+        float pos[4] = {0,3,0,0};
+        btVector3 position(pos[0],pos[1],pos[2]);
+        startTransform.setOrigin(position);
+        btRigidBody* body = createRigidBody(mass,startTransform,shape);
+
+		int shapeId = m_guiHelper->registerGraphicsShape(&glmesh->m_vertices->at(0).xyzw[0], 
+																		glmesh->m_numvertices, 
+																		&glmesh->m_indices->at(0), 
+																		glmesh->m_numIndices,
+																		B3_GL_TRIANGLES, -1);
+		shape->setUserIndex(shapeId);
+		int renderInstance = m_guiHelper->registerGraphicsInstance(shapeId,pos,orn,color,scaling);
+		body->setUserIndex(renderInstance);
 
     } else {
         for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) { // create one single whisker 
