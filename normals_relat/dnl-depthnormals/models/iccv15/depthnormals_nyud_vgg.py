@@ -43,6 +43,127 @@ class machine(Machine, NYUDepthModelDefs):
         self.define_meta()
         Machine.__init__(self, conf)
 
+    def infer_some_layer_depth_and_normals(self, images, which_layer="1.1"):
+        '''
+            Infers depth and normals maps of some layer for a list of 240 x 320 images.
+            images is a nimgs x 240 x 320 x 3 numpy uint8 array.
+            returns depths and normals corresponding to the center box
+            in the original rgb image.
+        '''
+        images = images.transpose((0,3,1,2))
+        (nimgs, nc, nh, nw) = images.shape
+        assert (nc, nh, nw) == (3,) + self.orig_input_size
+
+        (input_h, input_w) = self.input_size
+        #(output_h, output_w) = self.output_size
+
+        bsize = self.bsize
+        b = 0
+
+        # theano function for inference
+        v = self.vars
+
+        num_output = 1
+        if which_layer=="1.1":
+            #pred_depths = self.inverse_depth_transform(self.scale3.depths.pred_mean)
+            #pred_normals = self.scale3.normals.pred_mean
+            pred_out = self.scale1.f_1_mean
+        elif which_layer=="1.2":
+            pred_out = self.scale1.f_2_mean
+        elif which_layer=="1.3":
+            pred_out = self.scale1.f_2_mean_up
+        elif which_layer=="2.1":
+            pred_out = self.scale2.p_1_mean
+        elif which_layer=="2.2":
+            num_output = 2
+            pred_depths = self.scale2.depths.z_s2_2_mean
+            pred_normals = self.scale2.normals.z_s2_2_mean
+        elif which_layer=="2.3":
+            num_output = 2
+            pred_depths = self.scale2.depths.z_s2_3_mean
+            pred_normals = self.scale2.normals.z_s2_3_mean
+        elif which_layer=="2.4":
+            num_output = 2
+            pred_depths = self.scale2.depths.z_s2_4_mean
+            pred_normals = self.scale2.normals.z_s2_4_mean
+        elif which_layer=="2.5":
+            num_output = 2
+            pred_depths = self.scale2.depths.z_s2_5_mean
+            pred_normals = self.scale2.normals.z_s2_5_mean
+        elif which_layer=="2.6":
+            num_output = 2
+            pred_depths = self.scale2.depths.pred_mean
+            pred_normals = self.scale2.normals.pred_mean
+        elif which_layer=="3.1":
+            pred_out = self.scale3.p_1_mean
+        elif which_layer=="3.2":
+            num_output = 2
+            pred_depths = self.scale3.depths.z_s3_2_mean
+            pred_normals = self.scale3.normals.z_s3_2_mean
+        elif which_layer=="3.3":
+            num_output = 2
+            pred_depths = self.scale3.depths.z_s3_3_mean
+            pred_normals = self.scale3.normals.z_s3_3_mean
+        elif which_layer=="3.4":
+            num_output = 2
+            pred_depths = self.scale3.depths.z_s3_4_mean
+            pred_normals = self.scale3.normals.z_s3_4_mean
+        elif which_layer=="3.5":
+            num_output = 2
+            pred_depths = self.scale3.depths.pred_mean
+            pred_normals = self.scale3.normals.pred_mean
+
+        if num_output==2:
+            infer_f = theano.function([v.images], (pred_depths, pred_normals))
+        else:
+            infer_f = theano.function([v.images], pred_out)
+
+        flag_first = 1
+
+        # crop region (from random translations in training)
+        dh = nh - input_h
+        dw = nw - input_w
+        (i0, i1) = (dh/2, nh - dh/2)
+        (j0, j1) = (dw/2, nw - dw/2)
+
+        # infer depth for images in batches
+        b = 0
+        while b < nimgs:
+            print("Curr img indx:%i" % b)
+            batch = images[b:b+bsize]
+            n = len(batch)
+            if n < bsize:
+                batch = zero_pad_batch(batch, bsize)
+
+            # crop to network input size
+            batch = batch[:, :, i0:i1, j0:j1]
+
+            # infer depth with nnet
+            if num_output==2:
+                (batch_depths, batch_normals) = infer_f(batch)
+            else:
+                batch_depths = infer_f(batch)
+            if flag_first==1:
+                flag_first = 0
+                tmp_shape = batch_depths.shape
+                new_shape = (nimgs,) + tuple(tmp_shape[1:])
+                depths = np.zeros(new_shape, dtype=np.float32)
+                if num_output==2:
+                    tmp_shape = batch_normals.shape
+                    new_shape = (nimgs,) + tuple(tmp_shape[1:])
+                    normals = np.zeros(new_shape, dtype=np.float32)
+
+            depths[b:b+n] = batch_depths[:n]
+            if num_output==2:
+                normals[b:b+n] = batch_normals[:n]
+            
+            b += n
+
+        if num_output==2:
+            return (depths, normals)
+        else:
+            return (depths, None)
+
     def infer_depth_and_normals(self, images):
         '''
         Infers depth and normals maps for a list of 320x240 images.

@@ -4,8 +4,11 @@ import numpy as np
 from scipy import misc
 import dldata.stimulus_sets.hvm as nd; reload(nd)
 
+from PIL import Image
+
 import argparse
 import net
+from utils import depth_montage, normals_montage
 import pdb
 
 import h5py
@@ -16,6 +19,7 @@ def main():
     parser.add_argument('--layer', default = "1.1", type = str, action = 'store', help = 'which layer to extract')
     parser.add_argument('--savedir', default = "/mnt/data/chengxuz/barrel/hvm_responses", type = str, action = 'store', help = 'where to store the file')
     parser.add_argument('--saveprefix', default = "hvm_layer_", type = str, action = 'store', help = 'Prefix of saving file')
+    parser.add_argument('--testmode', default = 0, type = int, action = 'store', help = 'default is 0, 1 means generating images for index 0')
 
     args    = parser.parse_args()
 
@@ -41,7 +45,8 @@ def main():
     want_out_h = 320
     num_channel = 3
 
-    #num_imgs = 128
+    if args.testmode==1:
+        num_imgs = 1
     big_img_array = np.zeros([num_imgs, want_out_w, want_out_h, num_channel])
 
     for indx_img in xrange(num_imgs):
@@ -59,33 +64,47 @@ def main():
         big_img_array[indx_img, :, :, 2] = now_img
 
     big_img_array   = big_img_array.astype(np.float32)
-    pred_depths, pred_normals = machine.infer_some_layer_depth_and_normals(big_img_array, args.layer)
 
-    #pdb.set_trace()
-    if pred_normals is None:
-        save_filename = os.path.join(args.savedir, "%s%s.hdf5" % (args.saveprefix, args.layer))
-        fin = h5py.File(save_filename, 'a')
-        if 'data' in fin:
-            del fin['data']
-        dset = fin.create_dataset('data', pred_depths.shape, dtype=pred_depths.dtype)
-        dset[...] = pred_depths
-        fin.close()
+    if args.testmode==0:
+        pred_depths, pred_normals = machine.infer_some_layer_depth_and_normals(big_img_array, args.layer)
+        #pdb.set_trace()
+        if pred_normals is None:
+            save_filename = os.path.join(args.savedir, "%s%s.hdf5" % (args.saveprefix, args.layer))
+            fin = h5py.File(save_filename, 'a')
+            if 'data' in fin:
+                del fin['data']
+            dset = fin.create_dataset('data', pred_depths.shape, dtype=pred_depths.dtype)
+            dset[...] = pred_depths
+            fin.close()
+        else:
+            save_filename = os.path.join(args.savedir, "%s%s_depths.hdf5" % (args.saveprefix, args.layer))
+            fin = h5py.File(save_filename, 'a')
+            if 'data' in fin:
+                del fin['data']
+            dset = fin.create_dataset('data', pred_depths.shape, dtype=pred_depths.dtype)
+            dset[...] = pred_depths
+            fin.close()
+
+            save_filename = os.path.join(args.savedir, "%s%s_normals.hdf5" % (args.saveprefix, args.layer))
+            fin = h5py.File(save_filename, 'a')
+            if 'data' in fin:
+                del fin['data']
+            dset = fin.create_dataset('data', pred_normals.shape, dtype=pred_normals.dtype)
+            dset[...] = pred_normals
+            fin.close()
     else:
-        save_filename = os.path.join(args.savedir, "%s%s_depths.hdf5" % (args.saveprefix, args.layer))
-        fin = h5py.File(save_filename, 'a')
-        if 'data' in fin:
-            del fin['data']
-        dset = fin.create_dataset('data', pred_depths.shape, dtype=pred_depths.dtype)
-        dset[...] = pred_depths
-        fin.close()
+        (pred_depths, pred_normals) = machine.infer_depth_and_normals(big_img_array)
+        # save prediction
+        depth_img_np = depth_montage(pred_depths)
+        depth_img = Image.fromarray((255*depth_img_np).astype(np.uint8))
+        depth_img.save('demo_depth_prediction_hvm.png')
 
-        save_filename = os.path.join(args.savedir, "%s%s_normals.hdf5" % (args.saveprefix, args.layer))
-        fin = h5py.File(save_filename, 'a')
-        if 'data' in fin:
-            del fin['data']
-        dset = fin.create_dataset('data', pred_normals.shape, dtype=pred_normals.dtype)
-        dset[...] = pred_normals
-        fin.close()
+        normals_img_np = normals_montage(pred_normals)
+        normals_img = Image.fromarray((255*normals_img_np).astype(np.uint8))
+        normals_img.save('demo_normals_prediction_hvm.png')
+
+        original_img = Image.fromarray(big_img_array.astype(np.uint8))
+        original_img.save('hvm_test_image.png')
 
     pass
 

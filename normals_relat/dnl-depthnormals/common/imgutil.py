@@ -125,6 +125,9 @@ def montage(imgs, layout=None, fill=0, border=0):
 
     mw = w * ncols + bw * (ncols-1)
     mh = h * nrows + bh * (nrows-1)
+    #print(mw, mh)
+    mw = int(mw)
+    mh = int(mh)
     assert mh * mw >= w*h*nimgs, 'layout not big enough to for images'
     M = np.zeros((mh, mw, c))
     M += fill
