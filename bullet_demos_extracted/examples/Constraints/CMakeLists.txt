@@ -9,16 +9,24 @@ LINK_LIBRARIES(
     ${BULLET_ROOT}/lib/libBullet3Common.${DYLIB_SUFFIX} 
 )
 
+SET (OBJSOURCES
+        ../Importers/ImportObjDemo/LoadMeshFromObj.cpp
+        ../Importers/ImportObjDemo/Wavefront2GLInstanceGraphicsShape.cpp
+        ../ThirdPartyLibs/Wavefront/tiny_obj_loader.cpp
+    )
+
 IF (WIN32)
     ADD_EXECUTABLE(App_TestHinge
 		TestHingeTorque.cpp
 		main.cpp
 		${BULLET_PHYSICS_SOURCE_DIR}/build3/bullet.rc
+        ${OBJSOURCES}
 	)
 ELSE()
     ADD_EXECUTABLE(App_TestHinge
 		TestHingeTorque.cpp
 		main.cpp
+        ${OBJSOURCES}
 	)
 ENDIF()
 
