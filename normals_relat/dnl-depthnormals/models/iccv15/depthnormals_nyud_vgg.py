@@ -95,7 +95,10 @@ class machine(Machine, NYUDepthModelDefs):
             pred_depths = self.scale2.depths.pred_mean
             pred_normals = self.scale2.normals.pred_mean
         elif which_layer=="3.1":
-            pred_out = self.scale3.p_1_mean
+            #pred_out = self.scale3.p_1_mean
+            num_output = 2
+            pred_depths = self.scale3.p_1_depths_mean
+            pred_normals = self.scale3.p_1_normals_mean
         elif which_layer=="3.2":
             num_output = 2
             pred_depths = self.scale3.depths.z_s3_2_mean
