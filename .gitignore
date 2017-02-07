@@ -23,5 +23,6 @@ Makefile
 *.pk
 *.png
 *.jpg
+*.jpeg
 *.patch
 *0_Bullet3Demo.txt

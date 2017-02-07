@@ -20,6 +20,7 @@ def main():
     parser.add_argument('--savedir', default = "/mnt/data/chengxuz/barrel/hvm_responses", type = str, action = 'store', help = 'where to store the file')
     parser.add_argument('--saveprefix', default = "hvm_layer_", type = str, action = 'store', help = 'Prefix of saving file')
     parser.add_argument('--testmode', default = 0, type = int, action = 'store', help = 'default is 0, 1 means generating images for index 0')
+    parser.add_argument('--resizemethod', default = 0, type = int, action = 'store', help = 'default is 0, doing the resize, otherwise, just pad with zeros')
 
     args    = parser.parse_args()
 
@@ -30,7 +31,8 @@ def main():
 
     module_fn = 'models/iccv15/%s.py' % model_name
     config_fn = 'models/iccv15/%s.conf' % model_name
-    params_dir = 'weights/%s' % model_name
+    #params_dir = 'weights/%s' % model_name
+    params_dir = 'weights/iccv15/%s' % model_name
 
     # load depth network
     machine = net.create_machine(module_fn, config_fn, params_dir)
@@ -46,7 +48,9 @@ def main():
     num_channel = 3
 
     if args.testmode==1:
-        num_imgs = 1
+        #num_imgs = 1
+        #num_imgs = 50
+        num_imgs = 5760
     big_img_array = np.zeros([num_imgs, want_out_w, want_out_h, num_channel])
 
     for indx_img in xrange(num_imgs):
@@ -55,14 +59,20 @@ def main():
 
         now_img = np.asarray(imgs[indx_img])
 
-        now_img = misc.imresize(now_img, [want_out_w, want_out_h])
-        #print(now_img.shape)
-        now_img = now_img * 255
-        now_img = now_img.astype(np.uint8)
-        big_img_array[indx_img, :, :, 0] = now_img
-        big_img_array[indx_img, :, :, 1] = now_img
-        big_img_array[indx_img, :, :, 2] = now_img
+        if args.resizemethod==0:
+            #print(now_img.shape)
+            now_img = now_img * 255
+            now_img = now_img.astype(np.uint8)
+            now_img = misc.imresize(now_img, [want_out_w, want_out_h])
+            big_img_array[indx_img, :, :, 0] = now_img
+            big_img_array[indx_img, :, :, 1] = now_img
+            big_img_array[indx_img, :, :, 2] = now_img
+        else:
+            print("Not implemented yet!")
+            exit()
+            pass
 
+    #big_img_array   = 255 - big_img_array # needed to make the images right
     big_img_array   = big_img_array.astype(np.float32)
 
     if args.testmode==0:
@@ -94,17 +104,22 @@ def main():
             fin.close()
     else:
         (pred_depths, pred_normals) = machine.infer_depth_and_normals(big_img_array)
-        # save prediction
-        depth_img_np = depth_montage(pred_depths)
-        depth_img = Image.fromarray((255*depth_img_np).astype(np.uint8))
-        depth_img.save('demo_depth_prediction_hvm.png')
+        for img_indx in xrange(num_imgs):
+            depth_tmp = pred_depths[img_indx, :, :].reshape([1, 109, 147])
+            normal_tmp = pred_normals[img_indx, :, :, :].reshape([1,3, 109, 147])
+            depth_img_np = depth_montage(depth_tmp)
+            normals_img_np = normals_montage(normal_tmp)
 
-        normals_img_np = normals_montage(pred_normals)
-        normals_img = Image.fromarray((255*normals_img_np).astype(np.uint8))
-        normals_img.save('demo_normals_prediction_hvm.png')
+            #print(depth_img_np.shape)
+            # save prediction
+            depth_img = Image.fromarray((255*depth_img_np).astype(np.uint8))
+            depth_img.save('hvm_response_depth/depth_prediction_hvm_%i.png' % img_indx)
 
-        original_img = Image.fromarray(big_img_array.astype(np.uint8))
-        original_img.save('hvm_test_image.png')
+            normals_img = Image.fromarray((255*normals_img_np).astype(np.uint8))
+            normals_img.save('hvm_response_normals/normals_prediction_hvm_%i.png' % img_indx)
+
+            original_img = Image.fromarray(big_img_array[img_indx].astype(np.uint8))
+            original_img.save('hvm_orig/hvm_test_image_%i.png' % img_indx)
 
     pass
 
