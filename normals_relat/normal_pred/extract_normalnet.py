@@ -20,146 +20,10 @@ import json
 import copy
 import argparse
 
-#os.environ["CUDA_VISIBLE_DEVICES"]="2"
-
-host = os.uname()[1]
-
-DATA_PATH = {}
-if host == 'freud':  # freud
-    DATA_PATH['train'] = '/media/data/one_world_dataset/randomperm.hdf5'
-    DATA_PATH['val'] = '/media/data/one_world_dataset/randomperm_test1.hdf5'
-
-elif host.startswith('node') or host == 'openmind7':  # OpenMind
-    DATA_PATH['train'] = '/om/user/chengxuz/Data/one_world_dataset/randomperm.hdf5'
-    DATA_PATH['val'] = '/om/user/chengxuz/Data/one_world_dataset/randomperm_test1.hdf5'
-else:
-    print("Not supported yet!")
-    exit()
+import train_normalnet_hdf5
+import train_normalnet
 
 
-
-def online_agg(agg_res, res, step):
-    if agg_res is None:
-        agg_res = {k:[] for k in res}
-    for k,v in res.items():
-        agg_res[k].append(np.mean(v))
-    return agg_res
-
-
-def exponential_decay(global_step,
-                      learning_rate=.01,
-                      decay_factor=.95,
-                      decay_steps=1,
-                      ):
-    # Decay the learning rate exponentially based on the number of steps.
-    if decay_factor is None:
-        lr = learning_rate  # just a constant.
-    else:
-        # Calculate the learning rate schedule.
-        lr = tf.train.exponential_decay(
-            learning_rate,  # Base learning rate.
-            global_step,  # Current index into the dataset.
-            decay_steps,  # Decay step
-            decay_factor,  # Decay rate.
-            staircase=True)
-    return lr
-
-
-class Threedworld(data.HDF5DataProvider):
-
-    #N_TRAIN = 2048000 - 102400
-    #N_VAL = 102400 
-    N_TRAIN = 2048000
-    N_VAL = 128000
-    #N_VAL = 256
-
-    def __init__(self,
-                 data_path,
-                 group='train',
-                 batch_size=1,
-                 crop_size=None,
-                 *args,
-                 **kwargs):
-        """
-        A specific reader for Threedworld generated dataset stored as a HDF5 file
-
-        Args:
-            - data_path
-                path to raw hdf5 data
-        Kwargs:
-            - group (str, default: 'train')
-                Which subset of the dataset you want: train, val.
-                The latter contains 50k images from the train set,
-                so that you can directly compare performance on the validation set
-                to the performance on the train set to track overfitting.
-            - batch_size (int, default: 1)
-                Number of images to return when `next` is called. By default set
-                to 1 since it is expected to be used with queues where reading one
-                image at a time is ok.
-            - crop_size (int or None, default: None)
-                For center crop (crop_size x crop_size). If None, no cropping will occur.
-            - *args, **kwargs
-                Extra arguments for HDF5DataProvider
-        """
-        self.group = group
-        self.images = 'images'
-        self.labels = 'normals'
-        '''
-        if self.group=='train':
-            subslice = range(self.N_TRAIN)
-        else:
-            subslice = range(self.N_TRAIN, self.N_TRAIN + self.N_VAL)
-        '''
-        super(Threedworld, self).__init__(
-            data_path[group],
-            [self.images, self.labels],
-            batch_size=batch_size,
-            postprocess={self.images: self.postproc, self.labels: self.postproc},
-            pad=True,
-            *args, **kwargs)
-        if crop_size is None:
-            self.crop_size = 256
-        else:
-            self.crop_size = crop_size
-
-        self.off        = None
-        self.now_num    = 0
-
-    def postproc(self, ims, f):
-        norm = ims.astype(np.float32) / 255
-        if self.group=='train':
-            #print('In train')
-            if self.now_num==0:
-                off = np.random.randint(0, 256 - self.crop_size, size=2)
-                self.off = off
-            else:
-                off = self.off
-        else:
-            off = int((256 - self.crop_size)/2)
-            off = [off, off]
-        images_batch = norm[:,
-                            off[0]: off[0] + self.crop_size,
-                            off[1]: off[1] + self.crop_size]
-        if self.now_num==0:
-            self.now_num = 1
-        else:
-            self.now_num = 0
-
-        return images_batch
-
-    def next(self):
-        batch = super(Threedworld, self).next()
-        feed_dict = {'images': np.squeeze(batch[self.images]),
-                     'labels': np.squeeze(batch[self.labels])}
-        return feed_dict
-
-#BATCH_SIZE = 256
-#BATCH_SIZE = 192
-BATCH_SIZE = 128
-NUM_BATCHES_PER_EPOCH = Threedworld.N_TRAIN // BATCH_SIZE
-IMAGE_SIZE_CROP = 224
-NUM_CHANNELS = 3
-NORM_NUM = (IMAGE_SIZE_CROP**2) * NUM_CHANNELS * BATCH_SIZE
 
 def loss_ave_l2(output, labels):
     loss = tf.nn.l2_loss(output - labels) / NORM_NUM
@@ -215,6 +79,22 @@ def get_extraction_target(inputs, outputs, to_extract, **loss_params):
     targets['loss'] = utils.get_loss(inputs, outputs, **loss_params)
     return targets
 
+def get_current_predicted_future_action(inputs, outputs, num_to_save = 1, **loss_params):
+
+    images = inputs['images'][:num_to_save]
+    images = tf.cast(images, tf.uint8)
+
+    normals = inputs['normals'][:num_to_save]
+    normals = tf.cast(normals, tf.uint8)
+
+    loss_params['loss_per_case_func'] = loss_ave_l2
+    loss_params['loss_per_case_func_params'] = {}
+    loss = utils.get_loss(inputs, outputs, **loss_params)
+
+    retval = {'images' : images, 'normals' : normals, \
+              'val_loss': loss}
+    return retval
+
 
 def main(args):
     #cfg_initial = postprocess_config(json.load(open(cfgfile)))
@@ -224,17 +104,39 @@ def main(args):
     exp_id  = args.expId
     cache_dir = os.path.join(args.cacheDirPrefix, '.tfutils', 'localhost:'+ str(args.nport), 'normalnet-test', 'normalnet', exp_id)
 
-    """
-    This is a test illustrating how to perform feature extraction using
-    tfutils.base.test_from_params.
-    The basic idea is to specify a validation target that is simply the actual output of
-    the model at some layer. (See the "get_extraction_target" function above as well.)
-    This test assumes that test_train has run first.
+    host = os.uname()[1]
+    DATA_PATH = {}
+    if args.hdf5ortfc==0:
+        Threedworld = train_normalnet_hdf5.Threedworld
 
-    After the test is run, the results of the feature extraction are saved in the Grid
-    File System associated with the mongo database, with one file per batch of feature
-    results.  See how the features are accessed by reading the test code below.
-    """
+        if host == 'freud':  # freud
+            DATA_PATH['train'] = '/media/data/one_world_dataset/randomperm.hdf5'
+            DATA_PATH['val'] = '/media/data/one_world_dataset/randomperm_test1.hdf5'
+
+        elif host.startswith('node') or host == 'openmind7':  # OpenMind
+            DATA_PATH['train'] = '/om/user/chengxuz/Data/one_world_dataset/randomperm.hdf5'
+            DATA_PATH['val'] = '/om/user/chengxuz/Data/one_world_dataset/randomperm_test1.hdf5'
+    else:
+        Threedworld = train_normalnet.Threedworld
+
+        if host == 'freud':  # freud
+            #DATA_PATH['train'] = '/media/data/one_world_dataset/randomperm.hdf5'
+            #DATA_PATH['val'] = '/media/data/one_world_dataset/randomperm_test1.hdf5'
+            DATA_PATH['train'] = '/media/data2/one_world_dataset/dataset.tfrecords'
+            DATA_PATH['val'] = '/media/data2/one_world_dataset/dataset8.tfrecords'
+
+        elif host.startswith('node') or host == 'openmind7':  # OpenMind
+            #DATA_PATH['train'] = '/om/user/chengxuz/Data/one_world_dataset/randomperm.hdf5'
+            #DATA_PATH['val'] = '/om/user/chengxuz/Data/one_world_dataset/randomperm_test1.hdf5'
+            DATA_PATH['train'] = '/om/user/chengxuz/Data/one_world_dataset/dataset.tfrecords'
+            DATA_PATH['val'] = '/om/user/chengxuz/Data/one_world_dataset/dataset8.tfrecords'
+
+    BATCH_SIZE = 128
+    NUM_BATCHES_PER_EPOCH = Threedworld.N_TRAIN // BATCH_SIZE
+    IMAGE_SIZE_CROP = 224
+    NUM_CHANNELS = 3
+    NORM_NUM = (IMAGE_SIZE_CROP**2) * NUM_CHANNELS * BATCH_SIZE
+
     # set up parameters
     params = {}
     params['model_params'] = {
@@ -243,32 +145,44 @@ def main(args):
             'cfg_initial': cfg_initial
             }
     params['load_params'] = {'host': 'localhost',
-                             'port': 22334,
+                             'port': args.nport,
                              'dbname': 'normalnet-test',
                              'collname': 'normalnet',
-                             'do_restore': False,
+                             'do_restore': True,
                              'exp_id': exp_id}
     #params['save_params'] = {'exp_id': 'validation1',
     params['save_params'] = {'exp_id': 'validation1',
                              'save_intermediate_freq': 1,
                              'save_to_gfs': ['features']}
 
+    '''
     targdict = {'func': get_extraction_target,
                 'to_extract': {'features': 'validation/valid1/dec7/conv:0'},
                 }
+    '''
+    targdict = {'func': get_current_predicted_future_action,
+                'targets' : [],
+                'num_to_save' : 10
+                }
     targdict.update(base.DEFAULT_LOSS_PARAMS)
-    params['validation_params'] = {'valid1': {'data_params': {'func': Threedworld,
-                                                              'data_path': DATA_PATH,
-                                                              'batch_size': 100,
-                                                              'crop_size': IMAGE_SIZE_CROP,
-                                                              'group': 'val'},
-                                              'queue_params': {'queue_type': 'fifo',
-                                                               'batch_size': 100,
-                                                               'n_threads': 4},
-                                                               #'n_threads': 1},
-                                              'targets': targdict,
-                                              'num_steps': 8,
-                                              'online_agg_func': utils.reduce_mean_dict}}
+    params['validation_params'] = {'valid1': {
+            'data_params': {
+                'func': Threedworld,
+                'data_path': DATA_PATH,
+                'group': 'train',
+                'crop_size': IMAGE_SIZE_CROP,
+                'batch_size': BATCH_SIZE,
+                'n_threads' : 1
+            },
+            'queue_params': {
+                'queue_type': 'random',
+                'batch_size': BATCH_SIZE,
+                'seed': 0,
+                'capacity': BATCH_SIZE*20,
+            },
+            'targets': targdict,
+            'num_steps': 8,
+            'online_agg_func': utils.reduce_mean_dict}}
     '''
     params['loss_params'] = {
             'targets': 'labels',
@@ -282,9 +196,9 @@ def main(args):
 
     # check that things are as expected.
     conn = pm.MongoClient(host='localhost',
-                          port=22334)
+                          port=args.nport)
     coll = conn['normalnet-test']['normalnet'+'.files']
-    #assert coll.find({'exp_id': 'validation1'}).count() == 11
+
     print(coll.find({'exp_id': 'validation1'}).count())
 
     # ... load the containing the final "aggregate" result after all features have been extracted
@@ -327,7 +241,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', default = 0, type = int, action = 'store', help = 'Random seed for model')
     parser.add_argument('--gpu', default = -1, type = int, action = 'store', help = 'Index of gpu, currently only one gpu is allowed')
     parser.add_argument('--cacheDirPrefix', default = "/home/chengxuz", type = str, action = 'store', help = 'Prefix of cache directory')
-    parser.add_argument('--hdf5ortfc', default = 0, type = int, action = 'store', help = 'default is 0, 0 for hdf5, 1 for tfrecords')
+    parser.add_argument('--hdf5ortfc', default = 1, type = int, action = 'store', help = 'default is 0, 0 for hdf5, 1 for tfrecords')
 
     args    = parser.parse_args()
 
