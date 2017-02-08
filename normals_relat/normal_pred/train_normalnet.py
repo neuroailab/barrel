@@ -30,8 +30,10 @@ if host == 'freud':  # freud
     DATA_PATH['val'] = '/media/data2/one_world_dataset/dataset8.tfrecords'
 
 elif host.startswith('node') or host == 'openmind7':  # OpenMind
-    DATA_PATH['train'] = '/om/user/chengxuz/Data/one_world_dataset/randomperm.hdf5'
-    DATA_PATH['val'] = '/om/user/chengxuz/Data/one_world_dataset/randomperm_test1.hdf5'
+    #DATA_PATH['train'] = '/om/user/chengxuz/Data/one_world_dataset/randomperm.hdf5'
+    #DATA_PATH['val'] = '/om/user/chengxuz/Data/one_world_dataset/randomperm_test1.hdf5'
+    DATA_PATH['train'] = '/om/user/chengxuz/Data/one_world_dataset/dataset.tfrecords'
+    DATA_PATH['val'] = '/om/user/chengxuz/Data/one_world_dataset/dataset8.tfrecords'
 else:
     print("Not supported yet!")
     exit()
