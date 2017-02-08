@@ -327,6 +327,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', default = 0, type = int, action = 'store', help = 'Random seed for model')
     parser.add_argument('--gpu', default = -1, type = int, action = 'store', help = 'Index of gpu, currently only one gpu is allowed')
     parser.add_argument('--cacheDirPrefix', default = "/home/chengxuz", type = str, action = 'store', help = 'Prefix of cache directory')
+    parser.add_argument('--hdf5ortfc', default = 0, type = int, action = 'store', help = 'default is 0, 0 for hdf5, 1 for tfrecords')
 
     args    = parser.parse_args()
 
