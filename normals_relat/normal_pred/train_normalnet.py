@@ -109,8 +109,8 @@ class Threedworld(TFRecordsDataProvider):
             data_path[group],
             {self.images: tf.string, self.labels: tf.string},
             batch_size=batch_size,
-            #postprocess={self.images: self.postproc, self.labels: self.postproc},
-            postprocess={self.images: self.postproc_resize, self.labels: self.postproc_resize},
+            postprocess={self.images: self.postproc, self.labels: self.postproc},
+            #postprocess={self.images: self.postproc_resize, self.labels: self.postproc_resize},
             imagelist=[self.images, self.labels],
             n_threads=n_threads,
             *args, **kwargs)
