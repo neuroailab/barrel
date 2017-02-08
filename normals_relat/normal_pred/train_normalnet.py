@@ -125,7 +125,8 @@ class Threedworld(TFRecordsDataProvider):
         self.box_ind    = tf.constant(range(self.batch_size))
 
     def postproc_resize(self, images, dtype, shape):
-        norm = tf.div(images, tf.constant(255, dtype=images.dtype))
+        norm = tf.cast(images, tf.float32)
+        norm = tf.div(norm, tf.constant(255, dtype=tf.float32))
         norm = tf.cast(norm, tf.float32)
 
         images_batch = tf.image.resize_images(norm, tf.constant([self.crop_size, self.crop_size]))
@@ -134,11 +135,12 @@ class Threedworld(TFRecordsDataProvider):
 
     def postproc(self, images, dtype, shape):
 
-        norm = tf.div(images, tf.constant(255, dtype=images.dtype))
+        norm = tf.cast(images, tf.float32)
+        norm = tf.div(norm, tf.constant(255, dtype=tf.float32))
         norm = tf.cast(norm, tf.float32)
+
         if self.group=='train':
 
-            '''
             if self.now_num==0:
                 off = np.zeros(shape = [self.batch_size, 4])
                 off[:, :2] = np.random.randint(0, IMAGE_SIZE - self.crop_size, size=[self.batch_size, 2])
@@ -147,11 +149,13 @@ class Threedworld(TFRecordsDataProvider):
                 self.off = off
             else:
                 off = self.off
+
             '''
             off = np.zeros(shape = [self.batch_size, 4])
             off[:, :2] = int((IMAGE_SIZE - self.crop_size)/2)
             off[:, 2:4] = off[:, :2] + self.crop_size
             off = off*1.0/(IMAGE_SIZE - 1)
+            '''
 
         else:
             off = np.zeros(shape = [self.batch_size, 4])
@@ -307,6 +311,31 @@ def main(args):
             'momentum': .9
         },
         'log_device_placement': False,  # if variable placement has to be logged
+        'validation_params': {
+            'topn': {
+                'data_params': {
+                    'func': Threedworld,
+                    'data_path': DATA_PATH,
+                    'group': 'val',
+                    'crop_size': IMAGE_SIZE_CROP,
+                    'batch_size': BATCH_SIZE,
+                    'n_threads' : n_threads
+                },
+                'queue_params': {
+                    'queue_type': 'fifo',
+                    'batch_size': BATCH_SIZE,
+                    'seed': 0,
+                    'capacity': BATCH_SIZE*10,
+                },
+                'targets': {
+                    'func': rep_loss,
+                    'target': 'normals',
+                },
+                'num_steps': Threedworld.N_VAL // BATCH_SIZE + 1,
+                'agg_func': lambda x: {k:np.mean(v) for k,v in x.items()},
+                'online_agg_func': online_agg
+            },
+        },
     }
     #base.get_params()
     base.train_from_params(**params)
@@ -326,31 +355,3 @@ if __name__ == '__main__':
 
     main(args)
 
-''' 
-        'validation_params': {
-            'topn': {
-                'data_params': {
-                    'func': Threedworld,
-                    'data_path': DATA_PATH,
-                    'group': 'val',
-                    'crop_size': IMAGE_SIZE_CROP,
-                    'batch_size': BATCH_SIZE,
-                    'n_threads' : n_threads
-                },
-                'queue_params': {
-                    'queue_type': 'random',
-                    'batch_size': BATCH_SIZE,
-                    'seed': 0,
-                    'capacity': queue_capa,
-                },
-                'targets': {
-                    'func': rep_loss,
-                    'target': 'normals',
-                },
-                'num_steps': Threedworld.N_VAL // BATCH_SIZE + 1,
-                'agg_func': lambda x: {k:np.mean(v) for k,v in x.items()},
-                'online_agg_func': online_agg
-            },
-        },
-
-'''

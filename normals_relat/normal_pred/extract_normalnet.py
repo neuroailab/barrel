@@ -23,7 +23,7 @@ import argparse
 import train_normalnet_hdf5
 import train_normalnet
 
-
+import pdb
 
 def loss_ave_l2(output, labels):
     loss = tf.nn.l2_loss(output - labels) / NORM_NUM
@@ -82,13 +82,15 @@ def get_extraction_target(inputs, outputs, to_extract, **loss_params):
 def get_current_predicted_future_action(inputs, outputs, num_to_save = 1, **loss_params):
 
     images = inputs['images'][:num_to_save]
-    images = tf.cast(images, tf.uint8)
+    #images = tf.cast(images, tf.uint8)
 
     normals = inputs['normals'][:num_to_save]
-    normals = tf.cast(normals, tf.uint8)
+    #normals = tf.cast(normals, tf.uint8)
 
     loss_params['loss_per_case_func'] = loss_ave_l2
     loss_params['loss_per_case_func_params'] = {}
+    loss_params['targets'] = 'normals'
+    #print(loss_params)
     loss = utils.get_loss(inputs, outputs, **loss_params)
 
     retval = {'images' : images, 'normals' : normals, \
@@ -97,6 +99,7 @@ def get_current_predicted_future_action(inputs, outputs, num_to_save = 1, **loss
 
 
 def main(args):
+    global NORM_NUM
     #cfg_initial = postprocess_config(json.load(open(cfgfile)))
     if args.gpu>-1:
         os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
@@ -153,7 +156,9 @@ def main(args):
     #params['save_params'] = {'exp_id': 'validation1',
     params['save_params'] = {'exp_id': 'validation1',
                              'save_intermediate_freq': 1,
-                             'save_to_gfs': ['features']}
+                             #'save_to_gfs': ['images', 'normals', 'val_loss'],
+                             'save_to_gfs': ['images'],
+                             'cache_dir': cache_dir,}
 
     '''
     targdict = {'func': get_extraction_target,
@@ -162,7 +167,7 @@ def main(args):
     '''
     targdict = {'func': get_current_predicted_future_action,
                 'targets' : [],
-                'num_to_save' : 10
+                'num_to_save' : 3
                 }
     targdict.update(base.DEFAULT_LOSS_PARAMS)
     params['validation_params'] = {'valid1': {
@@ -175,7 +180,7 @@ def main(args):
                 'n_threads' : 1
             },
             'queue_params': {
-                'queue_type': 'random',
+                'queue_type': 'fifo',
                 'batch_size': BATCH_SIZE,
                 'seed': 0,
                 'capacity': BATCH_SIZE*20,
@@ -183,13 +188,6 @@ def main(args):
             'targets': targdict,
             'num_steps': 8,
             'online_agg_func': utils.reduce_mean_dict}}
-    '''
-    params['loss_params'] = {
-            'targets': 'labels',
-            'agg_func': tf.reduce_mean,
-            'loss_per_case_func': loss_ave_l2
-        }
-    '''
 
     # actually run the feature extraction
     base.test_from_params(**params)
@@ -223,6 +221,8 @@ def main(args):
     fh = fs.get_last_version(fn)
     saved_data = cPickle.loads(fh.read())
     fh.close()
+    pdb.set_trace()
+
     features = saved_data['validation_results']['valid1']['features']
     print(features.shape)
     #cPickle.dump(saved_data, open('save_features.pkl', 'wb'))
