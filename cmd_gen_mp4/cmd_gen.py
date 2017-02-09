@@ -219,7 +219,9 @@ config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":
         "parameter_each": {"value":parameter_each, "type": "list_dict"},
 
         "time_leap":{"value":1.0/240.0, "help":"Time unit for simulation", "type":"float"},
-        "camera_dist":{"value":40, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
+        "camera_dist":{"value":80, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
+        "camera_yaw":{"value":183, "type":"float"}, 
+        "camera_pitch":{"value":83, "type":"float"}, 
         "time_limit":{"value":60.0, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
         "initial_str":{"value":10000, "help":"Initial strength of force applied", "type":"float"}, 
         "max_str":{"value":10000, "help":"Max strength of force applied", "type":"float"}, 

@@ -55,7 +55,10 @@ float linear_damp   = 0.77;
 float ang_damp      = 0.79;
 */
 
-float camera_dist     = 45;
+float camera_dist       = 45;
+float camera_yaw        = 21;
+float camera_pitch      = 270;
+
 float time_limit    = 60.0;
 float initial_str   = 10000;
 float max_str   = 10000;
@@ -78,6 +81,13 @@ int force_mode          = 0;
 
 float percision         = 0.001;
 
+int add_objs            = 0;
+vector<string> obj_filename = {"/Users/chengxuz/barrel/bullet/bullet3/data/teddy.obj"};
+vector<float> obj_scaling_list = {0.5,0.5,0.5,1};
+vector<float> obj_pos_list = {-20,20,-30,0};
+vector<float> obj_orn_list = {0,0,0,1};
+vector<float> obj_speed_list = {0,-5,0};
+
 struct TestHingeTorque : public CommonRigidBodyBase{
     bool m_once;
     float pass_time;
@@ -92,6 +102,7 @@ struct TestHingeTorque : public CommonRigidBodyBase{
     btAlignedObjectArray< btAlignedObjectArray< btRigidBody* > > m_allbones_big_list;
     btAlignedObjectArray< btAlignedObjectArray<btJointFeedback*> > m_jointFeedback_big_list;
     btAlignedObjectArray< btAlignedObjectArray< btVector3 > > m_allcentpos_big_list;
+    btAlignedObjectArray< btRigidBody* > m_allobjs;
 
     vector< vector<float> > m_base_spring_stiffness;
     vector< vector<float> > m_spring_stfperunit_list;
@@ -113,13 +124,14 @@ struct TestHingeTorque : public CommonRigidBodyBase{
             btTransform base_transform);
     btJointFeedback* addFeedbackForSpring(btGeneric6DofSpring2Constraint* con);
     void loadParametersEveryWhisker(string curr_file_name, po::options_description desc_each);
+    btRigidBody* addObjasRigidBody(string fileName, float scaling[4], float orn[4], float pos[4] );
 	
 	virtual void resetCamera(){
         //float dist = 5;
         float dist = camera_dist;
         //float dist = 15;
-        float pitch = 270;
-        float yaw = 21;
+        float pitch = camera_pitch;
+        float yaw = camera_yaw;
         //float targetPos[3]={-1.34,3.4,-0.44};
         float targetPos[3]={-1.34,5.4,-0.44};
         m_guiHelper->resetCamera(dist,pitch,yaw,targetPos[0],targetPos[1],targetPos[2]);
@@ -229,6 +241,12 @@ void TestHingeTorque::stepSimulation(float deltaTime){
     curr_angl   /= all_size_for_big_list;
     curr_force  /= all_size_for_fb;
     curr_torque /= all_size_for_fb;
+
+    for (int indx_obj=0;indx_obj < m_allobjs.size();indx_obj++){
+        btRigidBody* curr_body = m_allobjs[indx_obj];
+        curr_body->setLinearVelocity(btVector3(0,-5,0));
+        curr_body->setAngularVelocity(btVector3(0,0,0));
+    }
 
     if ((flag_time==2) && (pass_time > initial_stime)){
         if (((curr_velo < velo_ban_limit) && (curr_angl < angl_ban_limit) && (curr_force < force_limit) && (curr_torque < torque_limit) && (curr_dispos < dispos_limit)) || (pass_time > time_limit)){
@@ -387,8 +405,8 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int ind
         //m_dynamicsWorld->addRigidBody(base);
 
         if (pre_unit){
-            for (float x_land_pos=-x_len_link;x_land_pos < x_len_link*1.1;x_land_pos+=x_len_link)
-            {
+            for (float x_land_pos=-x_len_link;x_land_pos < x_len_link*1.1;x_land_pos+=x_len_link){
+
                 btTransform pivotInA(btQuaternion::getIdentity(),btVector3(x_land_pos, y_len_link, 0));						//par body's COM to cur body's COM offset
                 btTransform pivotInB(btQuaternion::getIdentity(),btVector3(x_land_pos, -y_len_link, 0));							//cur body's COM to cur body's PIV offset
                 btGeneric6DofSpring2Constraint* fixed = new btGeneric6DofSpring2Constraint(*pre_unit, *base, pivotInA, pivotInB);
@@ -581,6 +599,50 @@ void TestHingeTorque::loadParametersEveryWhisker(string curr_file_name, po::opti
 
 }
 
+btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
+    float scaling[4], float orn[4], float pos[4] ){
+
+    GLInstanceGraphicsShape* glmesh = LoadMeshFromObj(fileName.c_str(), "");
+    printf("[INFO] Obj loaded: Extracted %d verticed from obj file [%s]\n", glmesh->m_numvertices, fileName.c_str());
+
+    const GLInstanceVertex& v = glmesh->m_vertices->at(0);
+    btConvexHullShape* shape = new btConvexHullShape((const btScalar*)(&(v.xyzw[0])), glmesh->m_numvertices, sizeof(GLInstanceVertex));
+
+    btVector3 localScaling(scaling[0],scaling[1],scaling[2]);
+    shape->setLocalScaling(localScaling);
+
+    shape->optimizeConvexHull();
+    shape->initializePolyhedralFeatures();    
+
+    //shape->setMargin(0.001);
+
+    btTransform startTransform;
+    startTransform.setIdentity();
+
+    btScalar	mass(1.f);
+    bool isDynamic = (mass != 0.f);
+    btVector3 localInertia(0,0,0);
+    if (isDynamic)
+        shape->calculateLocalInertia(mass,localInertia);
+
+    float color[4] = {1,1,1,1};
+
+    btVector3 position(pos[0],pos[1],pos[2]);
+    startTransform.setOrigin(position);
+    btRigidBody* body = createRigidBody(mass,startTransform,shape);
+
+    int shapeId = m_guiHelper->registerGraphicsShape(&glmesh->m_vertices->at(0).xyzw[0], 
+                                                                    glmesh->m_numvertices, 
+                                                                    &glmesh->m_indices->at(0), 
+                                                                    glmesh->m_numIndices,
+                                                                    B3_GL_TRIANGLES, -1);
+    shape->setUserIndex(shapeId);
+    int renderInstance = m_guiHelper->registerGraphicsInstance(shapeId,pos,orn,color,scaling);
+    body->setUserIndex(renderInstance);
+
+    return body;
+}
+
 void TestHingeTorque::initPhysics(){
 	int upAxis = 1;
     pass_time   = 0;
@@ -588,6 +650,7 @@ void TestHingeTorque::initPhysics(){
     min_dis     = 10000;
     m_allbones_big_list.clear();
     m_allcentpos_big_list.clear();
+    m_allobjs.clear();
 
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -611,6 +674,16 @@ void TestHingeTorque::initPhysics(){
         ("whisker_config_name", po::value<vector<string>>()->multitoken(), "Name of config files for each whisker")
 
         ("camera_dist", po::value<float>(), "Distance of camera")
+        ("camera_yaw", po::value<float>(), "Distance of camera")
+        ("camera_pitch", po::value<float>(), "Distance of camera")
+
+        ("add_objs", po::value<int>(), "Whether to add objects, default is 0, not adding, 1 for adding")
+        ("obj_filename", po::value<vector<string>>()->multitoken(), "Name of .obj files for each objects")
+        ("obj_scaling_list", po::value<vector<float>>()->multitoken(), "Object scaling list")
+        ("obj_pos_list", po::value<vector<float>>()->multitoken(), "Object position list")
+        ("obj_orn_list", po::value<vector<float>>()->multitoken(), "Object orientation list")
+        ("obj_speed_list", po::value<vector<float>>()->multitoken(), "Object speed list")
+
         ("time_limit", po::value<float>(), "Time limit for recording")
         ("initial_str", po::value<float>(), "Initial strength of force applied")
         ("max_str", po::value<float>(), "Max strength of force applied, used when force_mode=1")
@@ -718,6 +791,32 @@ void TestHingeTorque::initPhysics(){
         if (vm.count("camera_dist")){
             camera_dist     = vm["camera_dist"].as<float>();
         }
+        if (vm.count("camera_yaw")){
+            camera_yaw     = vm["camera_yaw"].as<float>();
+        }
+        if (vm.count("camera_pitch")){
+            camera_pitch     = vm["camera_pitch"].as<float>();
+        }
+
+        if (vm.count("add_objs")){
+            add_objs        = vm["add_objs"].as<int>();
+        }
+        if (vm.count("obj_filename")){
+            obj_filename    = vm["obj_filename"].as< vector<string> >();
+        }
+        if (vm.count("obj_scaling_list")){
+            obj_scaling_list    = vm["obj_scaling_list"].as< vector<float> >();
+        }
+        if (vm.count("obj_pos_list")){
+            obj_pos_list    = vm["obj_pos_list"].as< vector<float> >();
+        }
+        if (vm.count("obj_orn_list")){
+            obj_orn_list    = vm["obj_orn_list"].as< vector<float> >();
+        }
+        if (vm.count("obj_speed_list")){
+            obj_speed_list    = vm["obj_speed_list"].as< vector<float> >();
+        }
+
         if (vm.count("time_limit")){
             time_limit      = vm["time_limit"].as<float>();
         }
@@ -839,61 +938,13 @@ void TestHingeTorque::initPhysics(){
             addQuaUnits(qua_a_list[big_list_indx], 0, 0, big_list_indx, tmp_trans*btTransform(qua_mat,btVector3(x_pos_base[big_list_indx], y_pos_base[big_list_indx], z_pos_base[big_list_indx])));
         }
         //load our obj mesh
-
-        const char* fileName = "/Users/chengxuz/barrel/bullet/bullet3/data/teddy.obj";//sphere8.obj";//sponza_closed.obj";//sphere8.obj";
-        
-        GLInstanceGraphicsShape* glmesh = LoadMeshFromObj(fileName, "");
-        printf("[INFO] Obj loaded: Extracted %d verticed from obj file [%s]\n", glmesh->m_numvertices, fileName);
-
-        const GLInstanceVertex& v = glmesh->m_vertices->at(0);
-        btConvexHullShape* shape = new btConvexHullShape((const btScalar*)(&(v.xyzw[0])), glmesh->m_numvertices, sizeof(GLInstanceVertex));
-
-        //float scaling[4] = {0.1,0.1,0.1,1};
+        //
+        string fileName = "/Users/chengxuz/barrel/bullet/bullet3/data/teddy.obj";
         float scaling[4] = {0.5,0.5,0.5,1};
-
-        btVector3 localScaling(scaling[0],scaling[1],scaling[2]);
-        shape->setLocalScaling(localScaling);
-
-        shape->optimizeConvexHull();
-        shape->initializePolyhedralFeatures();    
-        
-
-        //if (m_options & ComputePolyhedralFeatures)
-        {
-        //    shape->initializePolyhedralFeatures();    
-        }
-        
-            
-        
-        
-        //shape->setMargin(0.001);
-        //m_collisionShapes.push_back(shape);
-
-        btTransform startTransform;
-        startTransform.setIdentity();
-
-        btScalar	mass(1.f);
-        bool isDynamic = (mass != 0.f);
-        btVector3 localInertia(0,0,0);
-        if (isDynamic)
-            shape->calculateLocalInertia(mass,localInertia);
-
-        float color[4] = {1,1,1,1};
         float orn[4] = {0,0,0,1};
-        //float pos[4] = {0,3,0,0};
-        float pos[4] = {20,3,0,0};
-        btVector3 position(pos[0],pos[1],pos[2]);
-        startTransform.setOrigin(position);
-        btRigidBody* body = createRigidBody(mass,startTransform,shape);
+        float pos[4] = {-20,20,-30,0};
 
-		int shapeId = m_guiHelper->registerGraphicsShape(&glmesh->m_vertices->at(0).xyzw[0], 
-																		glmesh->m_numvertices, 
-																		&glmesh->m_indices->at(0), 
-																		glmesh->m_numIndices,
-																		B3_GL_TRIANGLES, -1);
-		shape->setUserIndex(shapeId);
-		int renderInstance = m_guiHelper->registerGraphicsInstance(shapeId,pos,orn,color,scaling);
-		body->setUserIndex(renderInstance);
+        m_allobjs.push_back(addObjasRigidBody(fileName, scaling, orn, pos));
 
     } else {
         for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) { // create one single whisker 
@@ -913,6 +964,23 @@ void TestHingeTorque::initPhysics(){
             btMatrix3x3 qua_mat(zz, zy, zx, yz, yy, yx, xz, xy, xx);
             //addQuaUnits(qua_a_list[big_list_indx], 0, 0, const_numLinks[big_list_indx], tmp_trans*btTransform(btQuaternion( yaw_y_base[big_list_indx], pitch_x_base[big_list_indx], roll_z_base[big_list_indx]),btVector3(x_pos_base[big_list_indx], y_pos_base[big_list_indx], z_pos_base[big_list_indx])));
             addQuaUnits(qua_a_list[big_list_indx], 0, 0, big_list_indx, tmp_trans*btTransform(qua_mat,btVector3(x_pos_base[big_list_indx], y_pos_base[big_list_indx], z_pos_base[big_list_indx])));
+        }
+
+        if (add_objs==1){
+            for (int indx_obj=0;indx_obj<obj_filename.size();indx_obj++){
+                string fileName = obj_filename[indx_obj];
+
+                float scaling[4] = {obj_scaling_list[indx_obj*4], obj_scaling_list[indx_obj*4+1], 
+                    obj_scaling_list[indx_obj*4+2], obj_scaling_list[indx_obj*4+3]};
+
+                float orn[4] = {obj_orn_list[indx_obj*4], obj_orn_list[indx_obj*4+1], 
+                    obj_orn_list[indx_obj*4+2], obj_orn_list[indx_obj*4+3]};
+
+                float pos[4] = {obj_pos_list[indx_obj*4], obj_pos_list[indx_obj*4+1], 
+                    obj_pos_list[indx_obj*4+2], obj_pos_list[indx_obj*4+3]};
+
+                m_allobjs.push_back(addObjasRigidBody(fileName, scaling, orn, pos));
+            }
         }
     }
 	
