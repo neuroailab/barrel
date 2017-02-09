@@ -507,7 +507,7 @@ if __name__=="__main__":
     else:
         now_config_fn   = "test.cfg"
 
-        print(make_hash(config_dict))
+        #print(make_hash(config_dict))
         for key, value in inner_loop.iteritems():
             for key_i, value_i in value.iteritems():
                 if key_i in config_dict:
