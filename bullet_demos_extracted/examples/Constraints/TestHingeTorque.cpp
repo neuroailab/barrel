@@ -87,6 +87,7 @@ vector<float> obj_scaling_list = {0.5,0.5,0.5,1};
 vector<float> obj_pos_list = {-20,20,-30,0};
 vector<float> obj_orn_list = {0,0,0,1};
 vector<float> obj_speed_list = {0,-5,0};
+vector<float> obj_mass_list = {100};
 
 struct TestHingeTorque : public CommonRigidBodyBase{
     bool m_once;
@@ -124,7 +125,7 @@ struct TestHingeTorque : public CommonRigidBodyBase{
             btTransform base_transform);
     btJointFeedback* addFeedbackForSpring(btGeneric6DofSpring2Constraint* con);
     void loadParametersEveryWhisker(string curr_file_name, po::options_description desc_each);
-    btRigidBody* addObjasRigidBody(string fileName, float scaling[4], float orn[4], float pos[4] );
+    btRigidBody* addObjasRigidBody(string fileName, float scaling[4], float orn[4], float pos[4] , float mass_want);
 	
 	virtual void resetCamera(){
         //float dist = 5;
@@ -600,7 +601,7 @@ void TestHingeTorque::loadParametersEveryWhisker(string curr_file_name, po::opti
 }
 
 btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
-    float scaling[4], float orn[4], float pos[4] ){
+    float scaling[4], float orn[4], float pos[4], float mass_want ){
 
     GLInstanceGraphicsShape* glmesh = LoadMeshFromObj(fileName.c_str(), "");
     printf("[INFO] Obj loaded: Extracted %d verticed from obj file [%s]\n", glmesh->m_numvertices, fileName.c_str());
@@ -619,7 +620,7 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
     btTransform startTransform;
     startTransform.setIdentity();
 
-    btScalar	mass(1.f);
+    btScalar	mass(mass_want);
     bool isDynamic = (mass != 0.f);
     btVector3 localInertia(0,0,0);
     if (isDynamic)
@@ -683,6 +684,7 @@ void TestHingeTorque::initPhysics(){
         ("obj_pos_list", po::value<vector<float>>()->multitoken(), "Object position list")
         ("obj_orn_list", po::value<vector<float>>()->multitoken(), "Object orientation list")
         ("obj_speed_list", po::value<vector<float>>()->multitoken(), "Object speed list")
+        ("obj_mass_list", po::value<vector<float>>()->multitoken(), "Object mass list")
 
         ("time_limit", po::value<float>(), "Time limit for recording")
         ("initial_str", po::value<float>(), "Initial strength of force applied")
@@ -816,6 +818,16 @@ void TestHingeTorque::initPhysics(){
         if (vm.count("obj_speed_list")){
             obj_speed_list    = vm["obj_speed_list"].as< vector<float> >();
         }
+        if (vm.count("obj_mass_list")){
+            obj_mass_list     = vm["obj_mass_list"].as< vector<float> >();
+        }
+
+        if ((add_objs==1) and ((obj_scaling_list.size()!=4*obj_filename.size()) || (obj_speed_list.size()!=3*obj_filename.size())
+                   || (obj_pos_list.size()!=obj_orn_list.size()) || (obj_orn_list.size()!=obj_scaling_list.size()) || 
+                   (obj_filename.size()!=obj_mass_list.size()) )){
+            cerr << "error: obj related size not equal!" << endl;
+            exit(0);
+        }
 
         if (vm.count("time_limit")){
             time_limit      = vm["time_limit"].as<float>();
@@ -944,7 +956,7 @@ void TestHingeTorque::initPhysics(){
         float orn[4] = {0,0,0,1};
         float pos[4] = {-20,20,-30,0};
 
-        m_allobjs.push_back(addObjasRigidBody(fileName, scaling, orn, pos));
+        m_allobjs.push_back(addObjasRigidBody(fileName, scaling, orn, pos, 100));
 
     } else {
         for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) { // create one single whisker 
@@ -979,7 +991,9 @@ void TestHingeTorque::initPhysics(){
                 float pos[4] = {obj_pos_list[indx_obj*4], obj_pos_list[indx_obj*4+1], 
                     obj_pos_list[indx_obj*4+2], obj_pos_list[indx_obj*4+3]};
 
-                m_allobjs.push_back(addObjasRigidBody(fileName, scaling, orn, pos));
+                float mass_want = obj_mass_list[indx_obj];
+
+                m_allobjs.push_back(addObjasRigidBody(fileName, scaling, orn, pos, mass_want));
             }
         }
     }
