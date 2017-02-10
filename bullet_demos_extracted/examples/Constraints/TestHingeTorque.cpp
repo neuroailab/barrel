@@ -88,6 +88,7 @@ vector<float> obj_pos_list = {-20,20,-30,0};
 vector<float> obj_orn_list = {0,0,0,1};
 vector<float> obj_speed_list = {0,-5,0};
 vector<float> obj_mass_list = {100};
+vector<float> control_len = {-1};
 
 struct TestHingeTorque : public CommonRigidBodyBase{
     bool m_once;
@@ -125,7 +126,7 @@ struct TestHingeTorque : public CommonRigidBodyBase{
             btTransform base_transform);
     btJointFeedback* addFeedbackForSpring(btGeneric6DofSpring2Constraint* con);
     void loadParametersEveryWhisker(string curr_file_name, po::options_description desc_each);
-    btRigidBody* addObjasRigidBody(string fileName, float scaling[4], float orn[4], float pos[4] , float mass_want);
+    btRigidBody* addObjasRigidBody(string fileName, float scaling[4], float orn[4], float pos[4] , float mass_want, float control_len_now );
 	
 	virtual void resetCamera(){
         //float dist = 5;
@@ -245,7 +246,7 @@ void TestHingeTorque::stepSimulation(float deltaTime){
 
     for (int indx_obj=0;indx_obj < m_allobjs.size();indx_obj++){
         btRigidBody* curr_body = m_allobjs[indx_obj];
-        curr_body->setLinearVelocity(btVector3(0,-5,0));
+        curr_body->setLinearVelocity(btVector3(obj_speed_list[3*indx_obj],obj_speed_list[3*indx_obj+1],obj_speed_list[3*indx_obj+2]));
         curr_body->setAngularVelocity(btVector3(0,0,0));
     }
 
@@ -261,6 +262,12 @@ void TestHingeTorque::stepSimulation(float deltaTime){
             exit(0);
         }
     }
+
+    /*
+    if (count %10==0){
+        cout << "Now state:" << curr_velo << " " << curr_angl << " " << curr_force << " " << curr_torque << " " << curr_dispos << ". Now time:" << pass_time << endl;
+    }
+    */
 
 }
 
@@ -601,13 +608,32 @@ void TestHingeTorque::loadParametersEveryWhisker(string curr_file_name, po::opti
 }
 
 btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
-    float scaling[4], float orn[4], float pos[4], float mass_want ){
+    float scaling[4], float orn[4], float pos[4], float mass_want, float control_len_now ){
 
     GLInstanceGraphicsShape* glmesh = LoadMeshFromObj(fileName.c_str(), "");
     printf("[INFO] Obj loaded: Extracted %d verticed from obj file [%s]\n", glmesh->m_numvertices, fileName.c_str());
 
     const GLInstanceVertex& v = glmesh->m_vertices->at(0);
     btConvexHullShape* shape = new btConvexHullShape((const btScalar*)(&(v.xyzw[0])), glmesh->m_numvertices, sizeof(GLInstanceVertex));
+
+    if (control_len_now!=-1){
+        btVector3* all_point_list = shape->getUnscaledPoints();
+        int num_point = shape->getNumPoints();
+        float max_distance = 0;
+        for (int indx_point=0;indx_point<num_point;indx_point++){
+            for (int indx_point_in=indx_point+1;indx_point_in<num_point;indx_point_in++){
+                btVector3 curr_dif = all_point_list[indx_point] - all_point_list[indx_point_in];
+                float curr_dis = curr_dif.norm();
+                if (curr_dis>max_distance) max_distance = curr_dis;
+            }
+        }
+
+        float desire_scale = control_len_now/max_distance;
+        scaling[0] = desire_scale;
+        scaling[1] = desire_scale;
+        scaling[2] = desire_scale;
+
+    }
 
     btVector3 localScaling(scaling[0],scaling[1],scaling[2]);
     shape->setLocalScaling(localScaling);
@@ -685,6 +711,7 @@ void TestHingeTorque::initPhysics(){
         ("obj_orn_list", po::value<vector<float>>()->multitoken(), "Object orientation list")
         ("obj_speed_list", po::value<vector<float>>()->multitoken(), "Object speed list")
         ("obj_mass_list", po::value<vector<float>>()->multitoken(), "Object mass list")
+        ("control_len", po::value<vector<float>>()->multitoken(), "Object list of whether to control the maximal length")
 
         ("time_limit", po::value<float>(), "Time limit for recording")
         ("initial_str", po::value<float>(), "Initial strength of force applied")
@@ -821,10 +848,13 @@ void TestHingeTorque::initPhysics(){
         if (vm.count("obj_mass_list")){
             obj_mass_list     = vm["obj_mass_list"].as< vector<float> >();
         }
+        if (vm.count("control_len")){
+            control_len         = vm["control_len"].as< vector<float> >();
+        }
 
         if ((add_objs==1) and ((obj_scaling_list.size()!=4*obj_filename.size()) || (obj_speed_list.size()!=3*obj_filename.size())
                    || (obj_pos_list.size()!=obj_orn_list.size()) || (obj_orn_list.size()!=obj_scaling_list.size()) || 
-                   (obj_filename.size()!=obj_mass_list.size()) )){
+                   (obj_filename.size()!=obj_mass_list.size()) || (obj_filename.size()!=control_len.size()))){
             cerr << "error: obj related size not equal!" << endl;
             exit(0);
         }
@@ -956,7 +986,7 @@ void TestHingeTorque::initPhysics(){
         float orn[4] = {0,0,0,1};
         float pos[4] = {-20,20,-30,0};
 
-        m_allobjs.push_back(addObjasRigidBody(fileName, scaling, orn, pos, 100));
+        m_allobjs.push_back(addObjasRigidBody(fileName, scaling, orn, pos, 100, -1));
 
     } else {
         for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) { // create one single whisker 
@@ -993,7 +1023,9 @@ void TestHingeTorque::initPhysics(){
 
                 float mass_want = obj_mass_list[indx_obj];
 
-                m_allobjs.push_back(addObjasRigidBody(fileName, scaling, orn, pos, mass_want));
+                float control_len_now = control_len[indx_obj];
+
+                m_allobjs.push_back(addObjasRigidBody(fileName, scaling, orn, pos, mass_want, control_len_now));
             }
         }
     }
