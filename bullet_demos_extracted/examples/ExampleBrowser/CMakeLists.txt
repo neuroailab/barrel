@@ -342,8 +342,9 @@ ADD_EXECUTABLE(App_ExampleBrowser
 		${BulletExampleBrowser_SRCS} 
 )
 
-target_link_libraries(App_ExampleBrowser ${BULLET_LIBRARIES})
+TARGET_LINK_LIBRARIES(App_ExampleBrowser ${BULLET_LIBRARIES})
 TARGET_LINK_LIBRARIES(App_ExampleBrowser ${Boost_LIBRARIES} )
+TARGET_LINK_LIBRARIES(App_ExampleBrowser ${HDF5_SELF_LIBRARY} )
 
 FILE( MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/data" )
 

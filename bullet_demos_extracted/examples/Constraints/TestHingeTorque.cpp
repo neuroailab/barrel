@@ -22,6 +22,11 @@ using namespace std;
 #include "../CommonInterfaces/CommonRigidBodyBase.h"
 #include "../CommonInterfaces/CommonParameterInterface.h"
 
+#include "H5Cpp.h"
+
+H5std_string FILE_NAME( "Select.h5" );
+H5std_string DATASET_NAME( "Matrix" );
+
 short collisionFilterGroup = short(btBroadphaseProxy::CharacterFilter);
 short collisionFilterMask = short(btBroadphaseProxy::AllFilter ^ (btBroadphaseProxy::CharacterFilter));
 
@@ -987,6 +992,65 @@ void TestHingeTorque::initPhysics(){
         float pos[4] = {-20,20,-30,0};
 
         m_allobjs.push_back(addObjasRigidBody(fileName, scaling, orn, pos, 100, -1));
+        H5::H5File* file = new H5::H5File( FILE_NAME, H5F_ACC_TRUNC );
+        float fillvalue = 0;   /* Fill value for the dataset */
+        H5::DSetCreatPropList plist;
+        plist.setFillValue(H5::PredType::NATIVE_FLOAT, &fillvalue);
+
+        hsize_t fdim[] = {8, 12}; // dim sizes of ds (on disk)
+        H5::DataSpace fspace( 2, fdim );
+
+        H5::DataSet* dataset = new H5::DataSet(file->createDataSet(
+            DATASET_NAME, H5::PredType::NATIVE_FLOAT, fspace, plist));
+
+        hsize_t start[2]; // Start of hyperslab
+        hsize_t stride[2]; // Stride of hyperslab
+        hsize_t count[2];  // Block count
+        hsize_t block[2];  // Block sizes
+        start[0]  = 0; start[1]  = 1;
+        stride[0] = 4; stride[1] = 3;
+        count[0]  = 2; count[1]  = 4;
+        block[0]  = 3; block[1]  = 2;
+        fspace.selectHyperslab( H5S_SELECT_SET, count, start, stride, block);
+        /*
+         * Create dataspace for the first dataset.
+         */
+        hsize_t dim1[] = {2, 25};  /* Dimension size of the first dataset
+                                           (in memory) */
+        H5::DataSpace mspace1( 2, dim1 );
+        /*
+         * Select hyperslab.
+         * We will use 48 elements of the vector buffer starting at the
+         * second element.  Selected elements are 1 2 3 . . . 48
+         */
+        start[1]  = 0;
+        stride[0] = 1; stride[1] = 1;
+        count[0]  = 2; count[1] = 24;
+        block[0]  = 1; block[1] = 1;
+        mspace1.selectHyperslab( H5S_SELECT_SET, count, start, stride, block);
+        /*
+         * Write selection from the vector buffer to the dataset in the file.
+         *
+         * File dataset should look like this:
+         *                    0  1  2  0  3  4  0  5  6  0  7  8
+         *                    0  9 10  0 11 12  0 13 14  0 15 16
+         *                    0 17 18  0 19 20  0 21 22  0 23 24
+         *                    0  0  0  0  0  0  0  0  0  0  0  0
+         *                    0 25 26  0 27 28  0 29 30  0 31 32
+         *                    0 33 34  0 35 36  0 37 38  0 39 40
+         *                    0 41 42  0 43 44  0 45 46  0 47 48
+         *                    0  0  0  0  0  0  0  0  0  0  0  0
+         */
+        int    vector[2][25]; // vector buffer for dset
+        /*
+         * Buffer initialization.
+         */
+        for (int i = 0; i < 2; i++)
+            for (int j=0; j < 25; j++)
+                vector[i][j] = i*100 + j;
+        dataset->write( vector, H5::PredType::NATIVE_INT, mspace1, fspace );
+        delete dataset;
+        delete file;
 
     } else {
         for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) { // create one single whisker 

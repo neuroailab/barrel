@@ -26,3 +26,5 @@ Makefile
 *.jpeg
 *.patch
 *0_Bullet3Demo.txt
+*.h5
+*.hdf5
