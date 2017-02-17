@@ -24,9 +24,6 @@ using namespace std;
 
 #include "H5Cpp.h"
 
-H5std_string FILE_NAME( "Select.h5" );
-H5std_string DATASET_NAME( "Matrix" );
-
 short collisionFilterGroup = short(btBroadphaseProxy::CharacterFilter);
 short collisionFilterMask = short(btBroadphaseProxy::AllFilter ^ (btBroadphaseProxy::CharacterFilter));
 
@@ -49,16 +46,6 @@ float z_len_link    = 0.3;
 float radius        = 1;
 float time_leap     = 1.0/240.0;
 vector<string> whisker_config_name = {"test.cfg"};
-
-/*
-vector<float> base_spring_stiffness = {520};
-vector<float> spring_stfperunit_list = {1000};
-float basic_str     = 3000;
-float base_ball_base_spring_stf = 3000;
-float spring_stfperunit     = 1000;
-float linear_damp   = 0.77;
-float ang_damp      = 0.79;
-*/
 
 float camera_dist       = 45;
 float camera_yaw        = 21;
@@ -95,6 +82,11 @@ vector<float> obj_speed_list = {0,-5,0};
 vector<float> obj_mass_list = {100};
 vector<float> control_len = {-1};
 
+int do_save             = 0;
+H5std_string FILE_NAME( "Select.h5" );
+int num_unit_to_save    = 3;
+int sample_rate         = 24;
+
 struct TestHingeTorque : public CommonRigidBodyBase{
     bool m_once;
     float pass_time;
@@ -110,6 +102,7 @@ struct TestHingeTorque : public CommonRigidBodyBase{
     btAlignedObjectArray< btAlignedObjectArray<btJointFeedback*> > m_jointFeedback_big_list;
     btAlignedObjectArray< btAlignedObjectArray< btVector3 > > m_allcentpos_big_list;
     btAlignedObjectArray< btRigidBody* > m_allobjs;
+    vector< vector<int> > m_spring_strtindx;
 
     vector< vector<float> > m_base_spring_stiffness;
     vector< vector<float> > m_spring_stfperunit_list;
@@ -118,6 +111,9 @@ struct TestHingeTorque : public CommonRigidBodyBase{
     vector< float > m_spring_stfperunit;
     vector< float > m_linear_damp;
     vector< float > m_ang_damp;
+
+    vector< vector< vector< vector<float> > > > all_force_data;
+    vector< vector< vector< vector<float> > > > all_torque_data;
 
     btVector3 base_ball_location;
     btTransform base_ball_trans;
@@ -132,6 +128,7 @@ struct TestHingeTorque : public CommonRigidBodyBase{
     btJointFeedback* addFeedbackForSpring(btGeneric6DofSpring2Constraint* con);
     void loadParametersEveryWhisker(string curr_file_name, po::options_description desc_each);
     btRigidBody* addObjasRigidBody(string fileName, float scaling[4], float orn[4], float pos[4] , float mass_want, float control_len_now );
+    void save_all_data();
 	
 	virtual void resetCamera(){
         //float dist = 5;
@@ -144,6 +141,69 @@ struct TestHingeTorque : public CommonRigidBodyBase{
         m_guiHelper->resetCamera(dist,pitch,yaw,targetPos[0],targetPos[1],targetPos[2]);
 	}
 };
+
+void save_oned_array(H5::H5File* file, vector<float> array_to_save, string dataset_name, H5::DSetCreatPropList plist){
+    int size_array = array_to_save.size();
+    float* all_data_in_array = new float[size_array];
+    for (int i=0;i<size_array;i++)
+        all_data_in_array[i] = array_to_save[i];
+
+    hsize_t fdim[] = {(hsize_t) size_array};
+
+    H5::DataSet* dataset = new H5::DataSet(file->createDataSet(
+        dataset_name, H5::PredType::NATIVE_FLOAT, H5::DataSpace(1, fdim), plist));
+
+    dataset->write( all_data_in_array, H5::PredType::NATIVE_FLOAT);
+
+    delete dataset;
+    delete [] all_data_in_array;
+}
+
+void TestHingeTorque::save_all_data(){
+
+    H5::H5File* file = new H5::H5File( FILE_NAME, H5F_ACC_TRUNC );
+    float fillvalue = 0;  
+    H5::DSetCreatPropList plist;
+    plist.setFillValue(H5::PredType::NATIVE_FLOAT, &fillvalue);
+
+    hsize_t fdim[] = {all_force_data.size(), const_numLinks.size(), (hsize_t) num_unit_to_save, 3}; // dim sizes of ds (on disk)
+    H5::DataSpace fspace( 4, fdim );
+
+    string dataset_name = "Data_force";
+    float* all_data_in_array;
+    int whole_len = all_force_data.size()*const_numLinks.size()*num_unit_to_save*3;
+    all_data_in_array = new float[whole_len];
+
+    for (int data_source=0;data_source<2;data_source++){
+        if (data_source==1)
+            dataset_name = "Data_torque";
+        H5::DataSet* dataset = new H5::DataSet(file->createDataSet(
+            dataset_name, H5::PredType::NATIVE_FLOAT, fspace, plist));
+
+        int now_indx = 0;
+        for (int i=0;i<fdim[0];i++)
+            for (int j=0;j<fdim[1];j++)
+                for (int k=0;k<fdim[2];k++)
+                    for (int l=0;l<fdim[3];l++){
+                        if (data_source==0)
+                            all_data_in_array[now_indx] = all_force_data[i][j][k][l];
+                        else
+                            all_data_in_array[now_indx] = all_torque_data[i][j][k][l];
+                        now_indx++;
+                    }
+
+        dataset->write( all_data_in_array, H5::PredType::NATIVE_FLOAT);
+        delete dataset;
+    }
+    delete [] all_data_in_array;
+
+    save_oned_array(file, obj_scaling_list, "scale", plist);
+    save_oned_array(file, obj_pos_list, "position", plist);
+    save_oned_array(file, obj_orn_list, "orn", plist);
+    save_oned_array(file, obj_speed_list, "speed", plist);
+    delete file;
+
+}
 
 TestHingeTorque::TestHingeTorque(struct GUIHelperInterface* helper)
 :CommonRigidBodyBase(helper),
@@ -163,6 +223,7 @@ void TestHingeTorque::stepSimulation(float deltaTime){
     pass_time   = pass_time + time_leap;
     if (flag_time==1){
         if (pass_time > time_limit){
+            save_all_data();
             exit(0);
         }
     }
@@ -176,40 +237,70 @@ void TestHingeTorque::stepSimulation(float deltaTime){
     static int count = 0;
     int all_size_for_big_list   = 0;
     int all_size_for_fb         = 0;
+    int num_all_saved_springs   = 0;
+
+    vector< vector< vector<float> > > m_curr_force_data;
+    vector< vector< vector<float> > > m_curr_torque_data;
 
     for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) {
         btAlignedObjectArray< btRigidBody* > m_allbones;
         btAlignedObjectArray< btJointFeedback* > m_jointFeedback;
         btAlignedObjectArray< btVector3 > m_allcentpos;
+        vector< int > spring_strtindx;
+        //btAlignedObjectArray< btVector3 > curr_force_data;
+        //btAlignedObjectArray< btVector3 > curr_torque_data;
+        vector< vector<float> > curr_force_data;curr_force_data.clear();
+        vector< vector<float> > curr_torque_data;curr_torque_data.clear();
 
+        for (int i=0;i<num_unit_to_save;i++)
+            curr_force_data.push_back(vector<float>({0, 0, 0}));
+        for (int i=0;i<num_unit_to_save;i++)
+            curr_torque_data.push_back(vector<float>({0, 0, 0}));
 
         m_allbones      = m_allbones_big_list[big_list_indx];
         m_jointFeedback = m_jointFeedback_big_list[big_list_indx];
         m_allcentpos    = m_allcentpos_big_list[big_list_indx];
+        spring_strtindx = m_spring_strtindx[big_list_indx];
 
         int all_size    = m_allbones.size();
 
-        for (int i=0;i<all_size;i++){
-            float curr_speed_norm = m_allbones[i]->getLinearVelocity().norm();
-            if ((pass_time >= initial_stime)){
-                loss_ret += curr_speed_norm*time_leap;
-            }
-            curr_velo   += curr_speed_norm;
-            curr_angl   += m_allbones[i]->getAngularVelocity().norm();
-            //curr_force  += m_allbones[i]->getTotalForce().norm();
-            //curr_torque += m_allbones[i]->getTotalTorque().norm();
+        if (flag_time==2){
+            for (int i=0;i<all_size;i++){
+                float curr_speed_norm = m_allbones[i]->getLinearVelocity().norm();
+                if ((pass_time >= initial_stime)){
+                    loss_ret += curr_speed_norm*time_leap;
+                }
+                curr_velo   += curr_speed_norm;
+                curr_angl   += m_allbones[i]->getAngularVelocity().norm();
 
-            btVector3 curr_pos = m_allbones[i]->getCenterOfMassPosition();
-            curr_pos = curr_pos - m_allcentpos[i];
-            curr_dispos += curr_pos.norm();
+                btVector3 curr_pos = m_allbones[i]->getCenterOfMassPosition();
+                curr_pos = curr_pos - m_allcentpos[i];
+                curr_dispos += curr_pos.norm();
+            }
+
+            for (int i=0;i<m_jointFeedback.size();i++){
+                curr_force  += m_jointFeedback[i]->m_appliedForceBodyA.norm();
+                curr_force  += m_jointFeedback[i]->m_appliedForceBodyB.norm();
+
+                curr_torque += m_jointFeedback[i]->m_appliedTorqueBodyA.norm();
+                curr_torque += m_jointFeedback[i]->m_appliedTorqueBodyB.norm();
+            }
         }
 
-        for (int i=0;i<m_jointFeedback.size();i++){
-            curr_force  += m_jointFeedback[i]->m_appliedForceBodyA.norm();
-            curr_force  += m_jointFeedback[i]->m_appliedForceBodyB.norm();
+        if ((count % sample_rate==0) && (do_save!=0)){
+            for (int i=0;i<spring_strtindx.size();i++){
+                if (spring_strtindx[i]<num_unit_to_save){
+                    num_all_saved_springs++;
+                    btVector3 tmp_vec = m_jointFeedback[i]->m_appliedForceBodyA;
+                    for (int j=0;j<3;j++)
+                        curr_force_data[spring_strtindx[i]][j] += tmp_vec[j];
 
-            curr_torque += m_jointFeedback[i]->m_appliedTorqueBodyA.norm();
-            curr_torque += m_jointFeedback[i]->m_appliedTorqueBodyB.norm();
+                    tmp_vec     = m_jointFeedback[i]->m_appliedTorqueBodyA;
+                    for (int j=0;j<3;j++)
+                        curr_torque_data[spring_strtindx[i]][j] += tmp_vec[j];
+                }
+            }
+            //cout << curr_force_data.size() << " " << curr_torque_data.size() << endl;
         }
 
         all_size_for_big_list   += all_size;
@@ -242,7 +333,19 @@ void TestHingeTorque::stepSimulation(float deltaTime){
             }
 
         }
+        if ((count % sample_rate==0) && (do_save!=0)){
+            m_curr_force_data.push_back(curr_force_data);
+            m_curr_torque_data.push_back(curr_torque_data);
+            //cout << num_all_saved_springs << endl;
+        }
     }
+
+    if ((count % sample_rate==0) && (do_save!=0)){
+        all_force_data.push_back(m_curr_force_data);
+        all_torque_data.push_back(m_curr_torque_data);
+        //cout << m_curr_force_data[0][1][0] << " " << m_curr_force_data[0][1][1] << " " << m_curr_force_data[0][1][2] << endl;
+    }
+
     count++;
     curr_velo   /= all_size_for_big_list;
     curr_angl   /= all_size_for_big_list;
@@ -355,6 +458,7 @@ btVector3 findLineInter(btVector3 pre_1, btVector3 next_1, btVector3 pre_2, btVe
     return btVector3(0, new_y, new_z);
 }
 
+
 btJointFeedback* TestHingeTorque::addFeedbackForSpring(btGeneric6DofSpring2Constraint* con){
     btJointFeedback* fb = new btJointFeedback();
     con->setJointFeedback(fb);
@@ -386,6 +490,7 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int ind
     btAlignedObjectArray< btVector3 > m_allnext;
     btAlignedObjectArray<btJointFeedback*> m_jointFeedback;
     btAlignedObjectArray< btVector3 > m_allcentpos;
+    vector<int> spring_strtindx;
     vector<float> m_alldeg;
 
     m_allbones.clear();
@@ -442,6 +547,7 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int ind
                 }
 
                 m_jointFeedback.push_back(addFeedbackForSpring(fixed));
+                spring_strtindx.push_back(indx_unit);
 
                 m_dynamicsWorld->addConstraint(fixed,true);
             }
@@ -490,6 +596,7 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int ind
             fixed->setEquilibriumPoint();
 
             m_jointFeedback.push_back(addFeedbackForSpring(fixed));
+            spring_strtindx.push_back(indx_unit);
 
             m_dynamicsWorld->addConstraint(fixed,true);
         }
@@ -526,6 +633,7 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int ind
                 
 
                 m_jointFeedback.push_back(addFeedbackForSpring(fixed));
+                spring_strtindx.push_back(new_indx);
                 m_dynamicsWorld->addConstraint(fixed,true);
             }
         }
@@ -546,6 +654,7 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int ind
     m_allbones_big_list.push_back(m_allbones);
     m_jointFeedback_big_list.push_back(m_jointFeedback);
     m_allcentpos_big_list.push_back(m_allcentpos);
+    m_spring_strtindx.push_back(spring_strtindx);
 }
 
 void TestHingeTorque::loadParametersEveryWhisker(string curr_file_name, po::options_description desc_each){
@@ -596,7 +705,7 @@ void TestHingeTorque::loadParametersEveryWhisker(string curr_file_name, po::opti
 
     }
     catch(exception& e) {
-        cerr << "error: " << e.what() << "adfadfadfadf\n";
+        cerr << "error: " << e.what() << "\n";
     }
     catch(...) {
         cerr << "Exception of unknown type!\n";
@@ -621,8 +730,11 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
     const GLInstanceVertex& v = glmesh->m_vertices->at(0);
     btConvexHullShape* shape = new btConvexHullShape((const btScalar*)(&(v.xyzw[0])), glmesh->m_numvertices, sizeof(GLInstanceVertex));
 
+    btVector3 average_point(0, 0, 0);
+
     if (control_len_now!=-1){
         btVector3* all_point_list = shape->getUnscaledPoints();
+
         int num_point = shape->getNumPoints();
         float max_distance = 0;
         for (int indx_point=0;indx_point<num_point;indx_point++){
@@ -637,7 +749,9 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
         scaling[0] = desire_scale;
         scaling[1] = desire_scale;
         scaling[2] = desire_scale;
-
+        obj_scaling_list[0] = desire_scale;
+        obj_scaling_list[1] = desire_scale;
+        obj_scaling_list[2] = desire_scale;
     }
 
     btVector3 localScaling(scaling[0],scaling[1],scaling[2]);
@@ -647,6 +761,12 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
     shape->initializePolyhedralFeatures();    
 
     //shape->setMargin(0.001);
+    
+    btVector3* all_point_list = shape->getUnscaledPoints();
+    int num_point = shape->getNumPoints();
+    for (int indx_point=0;indx_point<num_point;indx_point++)
+        average_point += all_point_list[indx_point];
+    average_point /= num_point;
 
     btTransform startTransform;
     startTransform.setIdentity();
@@ -662,6 +782,11 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
     btVector3 position(pos[0],pos[1],pos[2]);
     startTransform.setOrigin(position);
     btRigidBody* body = createRigidBody(mass,startTransform,shape);
+    
+    // Test code
+    //btVector3 center_pos = body->getCenterOfMassPosition();
+    //cout << center_pos[0] << " " << center_pos[1] << " " << center_pos[2] << endl;
+    //cout << average_point[0] << " " << average_point[1] << " " << average_point[2] << endl;
 
     int shapeId = m_guiHelper->registerGraphicsShape(&glmesh->m_vertices->at(0).xyzw[0], 
                                                                     glmesh->m_numvertices, 
@@ -683,6 +808,9 @@ void TestHingeTorque::initPhysics(){
     m_allbones_big_list.clear();
     m_allcentpos_big_list.clear();
     m_allobjs.clear();
+    m_spring_strtindx.clear();
+    all_force_data.clear();
+    all_torque_data.clear();
 
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -718,6 +846,11 @@ void TestHingeTorque::initPhysics(){
         ("obj_mass_list", po::value<vector<float>>()->multitoken(), "Object mass list")
         ("control_len", po::value<vector<float>>()->multitoken(), "Object list of whether to control the maximal length")
 
+        ("do_save", po::value<int>(), "Whether to save to hdf5, default is 0, not saving, 1 for saving to hdf5")
+        ("FILE_NAME", po::value<string>(), "The filename for hdf5")
+        ("num_unit_to_save", po::value<int>(), "The responses of string with starting index less than this number will be saved")
+        ("sample_rate", po::value<int>(), "Sampling rate for saving, relative to time_leap")
+
         ("time_limit", po::value<float>(), "Time limit for recording")
         ("initial_str", po::value<float>(), "Initial strength of force applied")
         ("max_str", po::value<float>(), "Max strength of force applied, used when force_mode=1")
@@ -748,8 +881,6 @@ void TestHingeTorque::initPhysics(){
         ("base_spring_stiffness", po::value<vector<float>>(), "Base stiffness of spring, only applied to springs between distant units")
         ("spring_stfperunit_list", po::value<vector<float>>(), "Coefficient of stiffness of spring for index of units, only applied to springs between distant units")
     ;
-    /*
-    */
 
     po::variables_map vm;
     
@@ -862,6 +993,19 @@ void TestHingeTorque::initPhysics(){
                    (obj_filename.size()!=obj_mass_list.size()) || (obj_filename.size()!=control_len.size()))){
             cerr << "error: obj related size not equal!" << endl;
             exit(0);
+        }
+
+        if (vm.count("do_save")){
+            do_save         = vm["do_save"].as<int>();
+        }
+        if (vm.count("FILE_NAME")){
+            FILE_NAME       = vm["FILE_NAME"].as<string>();
+        }
+        if (vm.count("num_unit_to_save")){
+            num_unit_to_save    = vm["num_unit_to_save"].as<int>();
+        }
+        if (vm.count("sample_rate")){
+            sample_rate         = vm["sample_rate"].as<int>();
         }
 
         if (vm.count("time_limit")){
@@ -986,6 +1130,7 @@ void TestHingeTorque::initPhysics(){
         }
         //load our obj mesh
         //
+        /*
         string fileName = "/Users/chengxuz/barrel/bullet/bullet3/data/teddy.obj";
         float scaling[4] = {0.5,0.5,0.5,1};
         float orn[4] = {0,0,0,1};
@@ -993,7 +1138,7 @@ void TestHingeTorque::initPhysics(){
 
         m_allobjs.push_back(addObjasRigidBody(fileName, scaling, orn, pos, 100, -1));
         H5::H5File* file = new H5::H5File( FILE_NAME, H5F_ACC_TRUNC );
-        float fillvalue = 0;   /* Fill value for the dataset */
+        float fillvalue = 0;  
         H5::DSetCreatPropList plist;
         plist.setFillValue(H5::PredType::NATIVE_FLOAT, &fillvalue);
 
@@ -1012,45 +1157,21 @@ void TestHingeTorque::initPhysics(){
         count[0]  = 2; count[1]  = 4;
         block[0]  = 3; block[1]  = 2;
         fspace.selectHyperslab( H5S_SELECT_SET, count, start, stride, block);
-        /*
-         * Create dataspace for the first dataset.
-         */
-        hsize_t dim1[] = {2, 25};  /* Dimension size of the first dataset
-                                           (in memory) */
+        hsize_t dim1[] = {2, 25}; 
         H5::DataSpace mspace1( 2, dim1 );
-        /*
-         * Select hyperslab.
-         * We will use 48 elements of the vector buffer starting at the
-         * second element.  Selected elements are 1 2 3 . . . 48
-         */
         start[1]  = 0;
         stride[0] = 1; stride[1] = 1;
         count[0]  = 2; count[1] = 24;
         block[0]  = 1; block[1] = 1;
         mspace1.selectHyperslab( H5S_SELECT_SET, count, start, stride, block);
-        /*
-         * Write selection from the vector buffer to the dataset in the file.
-         *
-         * File dataset should look like this:
-         *                    0  1  2  0  3  4  0  5  6  0  7  8
-         *                    0  9 10  0 11 12  0 13 14  0 15 16
-         *                    0 17 18  0 19 20  0 21 22  0 23 24
-         *                    0  0  0  0  0  0  0  0  0  0  0  0
-         *                    0 25 26  0 27 28  0 29 30  0 31 32
-         *                    0 33 34  0 35 36  0 37 38  0 39 40
-         *                    0 41 42  0 43 44  0 45 46  0 47 48
-         *                    0  0  0  0  0  0  0  0  0  0  0  0
-         */
         int    vector[2][25]; // vector buffer for dset
-        /*
-         * Buffer initialization.
-         */
         for (int i = 0; i < 2; i++)
             for (int j=0; j < 25; j++)
                 vector[i][j] = i*100 + j;
         dataset->write( vector, H5::PredType::NATIVE_INT, mspace1, fspace );
         delete dataset;
         delete file;
+        */
 
     } else {
         for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) { // create one single whisker 

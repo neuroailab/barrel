@@ -225,20 +225,29 @@ config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":
         "camera_pitch":{"value":83, "type":"float"}, 
 
         "add_objs":{"value":1, "type":"int"},
-        #"obj_filename":{"value":["/Users/chengxuz/barrel/bullet/bullet3/data/teddy.obj"], "type":"list", "type_in":"string"},
+        "obj_filename":{"value":["/Users/chengxuz/barrel/bullet/bullet3/data/teddy.obj"], "type":"list", "type_in":"string"},
+        #"obj_filename":{"value":["/Users/chengxuz/barrel/bullet/bullet3/data/cube.obj"], "type":"list", "type_in":"string"},
+        #"obj_filename":{"value":["/Users/chengxuz/barrel/bullet/bullet3/data/duck.obj"], "type":"list", "type_in":"string"},
         #"obj_scaling_list":{"value":[1,1,1,1], "type":"list", "type_in":"float"},
         #"obj_mass_list":{"value":[100], "type":"list", "type_in":"float"},
-        "obj_filename":{"value":["/Users/chengxuz/barrel/bullet/bullet3/data/sphere8.obj"], "type":"list", "type_in":"string"},
+        #"obj_filename":{"value":["/Users/chengxuz/barrel/bullet/bullet3/data/sphere8.obj"], "type":"list", "type_in":"string"},
         #"obj_filename":{"value":["/Users/chengxuz/barrel/bullet/bullet3/data/cube.obj"], "type":"list", "type_in":"string"},
         "obj_scaling_list":{"value":[30,30,30,1], "type":"list", "type_in":"float"},
         "obj_mass_list":{"value":[100000], "type":"list", "type_in":"float"},
         "obj_pos_list":{"value":[-20,30,-30,0], "type":"list", "type_in":"float"},
-        "obj_orn_list":{"value":[0,0,0,1], "type":"list", "type_in":"float"},
+        #"obj_orn_list":{"value":[0,0,0,1], "type":"list", "type_in":"float"},
+        "obj_orn_list":{"value":[1,1,1,1], "type":"list", "type_in":"float"},
         #"obj_speed_list":{"value":[0,-5,0], "type":"list", "type_in":"float"},
         "obj_speed_list":{"value":[0,-10,0], "type":"list", "type_in":"float"},
         "control_len":{"value":[40], "type":"list", "type_in":"float"},
 
-        "time_limit":{"value":60.0, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
+        "do_save":{"value":1, "type":"int"},
+        "FILE_NAME":{"value":"Select.h5", "type":"string"},
+        "num_unit_to_save":{"value":3, "type":"int"},
+        "sample_rate":{"value":24, "type":"int"},
+
+        #"time_limit":{"value":60.0, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
+        "time_limit":{"value":12.0, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
         "initial_str":{"value":10000, "help":"Initial strength of force applied", "type":"float"}, 
         "max_str":{"value":10000, "help":"Max strength of force applied", "type":"float"}, 
         "initial_stime":{"value":3.1/8, "help":"Initial time to apply force", "type":"float"}, 
@@ -247,13 +256,14 @@ config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":
         "force_limit":{"value":40, "help":"While flag_time is 2, used for force states of hinges to judge whether stop", "type":"float"}, 
         "torque_limit":{"value":120, "help":"While flag_time is 2, used for torque states of hinges to judge whether stop", "type":"float"}, 
         "dispos_limit":{"value":50, "help":"While flag_time is 2, used for distance to balance states of rigid bodys to judge whether stop", "type":"float"}, 
-        "test_mode":{"value":1, "help":"Whether enter test mode for some temp test codes, default is 0", "type":"int"},
+        "test_mode":{"value":0, "help":"Whether enter test mode for some temp test codes, default is 0", "type":"int"},
         #"test_mode":{"value":0, "help":"Whether enter test mode for some temp test codes, default is 0", "type":"int"},
         #"force_mode":{"value":2, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
         #"force_mode":{"value":1, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
         "force_mode":{"value":-1, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
         #"flag_time":{"value":2, "help":"Whether open time limit", "type":"int"}}
-        "flag_time":{"value":0, "help":"Whether open time limit", "type":"int"}}
+        #"flag_time":{"value":0, "help":"Whether open time limit", "type":"int"}}
+        "flag_time":{"value":1, "help":"Whether open time limit", "type":"int"}}
 
 orig_config_dict = copy.deepcopy(config_dict)
 
