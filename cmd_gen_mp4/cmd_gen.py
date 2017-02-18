@@ -236,10 +236,12 @@ config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":
         "obj_mass_list":{"value":[100000], "type":"list", "type_in":"float"},
         "obj_pos_list":{"value":[-20,30,-30,0], "type":"list", "type_in":"float"},
         #"obj_orn_list":{"value":[0,0,0,1], "type":"list", "type_in":"float"},
-        "obj_orn_list":{"value":[1,1,1,1], "type":"list", "type_in":"float"},
+        "obj_orn_list":{"value":[0,0,0,1], "type":"list", "type_in":"float"},
         #"obj_speed_list":{"value":[0,-5,0], "type":"list", "type_in":"float"},
         "obj_speed_list":{"value":[0,-10,0], "type":"list", "type_in":"float"},
         "control_len":{"value":[40], "type":"list", "type_in":"float"},
+        "reset_pos":{"value":1, "type":"int"},
+        #"reset_pos":{"value":2, "type":"int"},
 
         "do_save":{"value":1, "type":"int"},
         "FILE_NAME":{"value":"Select.h5", "type":"string"},

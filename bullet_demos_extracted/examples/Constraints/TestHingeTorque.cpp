@@ -81,6 +81,8 @@ vector<float> obj_orn_list = {0,0,0,1};
 vector<float> obj_speed_list = {0,-5,0};
 vector<float> obj_mass_list = {100};
 vector<float> control_len = {-1};
+int reset_pos           = 1;
+int center_mass_sam_r   = 100;
 
 int do_save             = 0;
 H5std_string FILE_NAME( "Select.h5" );
@@ -117,6 +119,7 @@ struct TestHingeTorque : public CommonRigidBodyBase{
 
     btVector3 base_ball_location;
     btTransform base_ball_trans;
+    btVector3 cent_of_whisker_array;
 
 	TestHingeTorque(struct GUIHelperInterface* helper);
 	virtual ~ TestHingeTorque();
@@ -129,6 +132,7 @@ struct TestHingeTorque : public CommonRigidBodyBase{
     void loadParametersEveryWhisker(string curr_file_name, po::options_description desc_each);
     btRigidBody* addObjasRigidBody(string fileName, float scaling[4], float orn[4], float pos[4] , float mass_want, float control_len_now );
     void save_all_data();
+    void cal_cent_whisker();
 	
 	virtual void resetCamera(){
         //float dist = 5;
@@ -141,6 +145,25 @@ struct TestHingeTorque : public CommonRigidBodyBase{
         m_guiHelper->resetCamera(dist,pitch,yaw,targetPos[0],targetPos[1],targetPos[2]);
 	}
 };
+
+void TestHingeTorque::cal_cent_whisker(){
+    btAlignedObjectArray< btVector3 > curr_centposes;
+    cent_of_whisker_array   = btVector3(0,0,0);
+    int num_units_all = 0;
+    for (int i=0;i<m_allcentpos_big_list.size();i++){
+        curr_centposes      = m_allcentpos_big_list[i];
+        btVector3 curr_centpos;
+        for (int j=0;j<curr_centposes.size();j++){
+            curr_centpos    = curr_centposes[j];
+            cent_of_whisker_array += curr_centpos;
+            num_units_all++;
+        }
+    }
+    cent_of_whisker_array /= num_units_all;
+
+    // Test code
+    cout << cent_of_whisker_array[0] << " " << cent_of_whisker_array[1] << " " << cent_of_whisker_array[2] << endl;
+}
 
 void save_oned_array(H5::H5File* file, vector<float> array_to_save, string dataset_name, H5::DSetCreatPropList plist){
     int size_array = array_to_save.size();
@@ -730,12 +753,13 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
     const GLInstanceVertex& v = glmesh->m_vertices->at(0);
     btConvexHullShape* shape = new btConvexHullShape((const btScalar*)(&(v.xyzw[0])), glmesh->m_numvertices, sizeof(GLInstanceVertex));
 
-    btVector3 average_point(0, 0, 0);
+    //btVector3 average_point(0, 0, 0);
+
+    int num_point = shape->getNumPoints();
 
     if (control_len_now!=-1){
         btVector3* all_point_list = shape->getUnscaledPoints();
 
-        int num_point = shape->getNumPoints();
         float max_distance = 0;
         for (int indx_point=0;indx_point<num_point;indx_point++){
             for (int indx_point_in=indx_point+1;indx_point_in<num_point;indx_point_in++){
@@ -762,11 +786,11 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
 
     //shape->setMargin(0.001);
     
-    btVector3* all_point_list = shape->getUnscaledPoints();
-    int num_point = shape->getNumPoints();
-    for (int indx_point=0;indx_point<num_point;indx_point++)
-        average_point += all_point_list[indx_point];
-    average_point /= num_point;
+    //btVector3* all_point_list = shape->getUnscaledPoints();
+    //int num_point = shape->getNumPoints();
+    //for (int indx_point=0;indx_point<num_point;indx_point++)
+        //average_point += all_point_list[indx_point];
+    //average_point /= num_point;
 
     btTransform startTransform;
     startTransform.setIdentity();
@@ -778,9 +802,72 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
         shape->calculateLocalInertia(mass,localInertia);
 
     float color[4] = {1,1,1,1};
+    startTransform.setOrigin(btVector3(0,0,0));
+    startTransform.setRotation(btQuaternion(orn[0],orn[1],orn[2],orn[3]));
 
     btVector3 position(pos[0],pos[1],pos[2]);
-    startTransform.setOrigin(position);
+
+    if (reset_pos==2){ //Not using!!!
+        btVector3 min_vec, max_vec;
+
+        for (int i=0;i<num_point;i++){
+            btVector3 curr_point = shape->getScaledPoint(i);
+
+            for (int j=0;j<3;j++){
+                if ((i==0) || (curr_point[j] < min_vec[j]))
+                    min_vec[j] = curr_point[j];
+                if ((i==0) || (curr_point[j] > max_vec[j]))
+                    max_vec[j] = curr_point[j];
+            }
+        }
+
+        btVector3 step_vec = (max_vec - min_vec)/sample_rate;
+        btVector3 center_mass_obj(0,0,0);
+
+        cout << "Max vec: " << max_vec[0] << " " << max_vec[1] << " " << max_vec[2] << endl;
+        cout << "Min vec: " << min_vec[0] << " " << min_vec[1] << " " << min_vec[2] << endl;
+
+        int num_dot_in = 0;
+        float toler     = (step_vec[0] + step_vec[1] + step_vec[2])/3;
+        for (float i=min_vec[0];i<max_vec[0];i+=step_vec[0])
+            for (float j=min_vec[1];j<max_vec[1];j+=step_vec[1])
+                for (float k=min_vec[1];k<max_vec[1];k+=step_vec[2])
+                    if (shape->isInside(btVector3(i,j,k), toler)){
+                        num_dot_in++;
+                        center_mass_obj+=btVector3(i,j,k);
+                    }
+        center_mass_obj /= num_dot_in;
+        btTransform tmp_trans;
+        tmp_trans.setIdentity();
+        tmp_trans.setOrigin(-center_mass_obj);
+        startTransform.setOrigin(position);
+        cout << "Center mass: " <<  center_mass_obj[0] << " " << center_mass_obj[1] << " " << center_mass_obj[2] << endl;
+        //startTransform = tmp_trans*startTransform;
+        
+    } else {
+        if (reset_pos==1){
+            //btVector3* all_point_list = shape->getUnscaledPoints();
+
+            btVector3 diff_vec = position - cent_of_whisker_array;
+            float min_value = 0;
+            int min_indx    = 0;
+
+            for (int i=0;i<num_point;i++){
+                btVector3 curr_point = shape->getScaledPoint(i);
+                curr_point = startTransform(curr_point);
+                float curr_value = curr_point.dot(diff_vec);
+                if ((i==0) || (curr_value < min_value)){
+                    min_value   = curr_value;
+                    min_indx    = i;
+                }
+            }
+
+            position        = position - startTransform(shape->getScaledPoint(min_indx));
+        }
+        startTransform.setOrigin(position);
+    }
+
+
     btRigidBody* body = createRigidBody(mass,startTransform,shape);
     
     // Test code
@@ -845,6 +932,7 @@ void TestHingeTorque::initPhysics(){
         ("obj_speed_list", po::value<vector<float>>()->multitoken(), "Object speed list")
         ("obj_mass_list", po::value<vector<float>>()->multitoken(), "Object mass list")
         ("control_len", po::value<vector<float>>()->multitoken(), "Object list of whether to control the maximal length")
+        ("reset_pos", po::value<int>(), "Whether to reset positions according to the center of whisker array, default is 1, resetting, 0 for not resetting")
 
         ("do_save", po::value<int>(), "Whether to save to hdf5, default is 0, not saving, 1 for saving to hdf5")
         ("FILE_NAME", po::value<string>(), "The filename for hdf5")
@@ -987,6 +1075,9 @@ void TestHingeTorque::initPhysics(){
         if (vm.count("control_len")){
             control_len         = vm["control_len"].as< vector<float> >();
         }
+        if (vm.count("reset_pos")){
+            reset_pos           = vm["reset_pos"].as<int>();
+        }
 
         if ((add_objs==1) and ((obj_scaling_list.size()!=4*obj_filename.size()) || (obj_speed_list.size()!=3*obj_filename.size())
                    || (obj_pos_list.size()!=obj_orn_list.size()) || (obj_orn_list.size()!=obj_scaling_list.size()) || 
@@ -1104,12 +1195,6 @@ void TestHingeTorque::initPhysics(){
 
     if (test_mode==1) {
 
-        //btVector3 test_v = findLineInter(btVector3(0,0,0), btVector3(0,1,0), btVector3(0,3,-1), btVector3(0,4,-2));
-        //cout << test_v[1] << " " << test_v[2] << endl;
-        //addQuaUnits(-1, 0, 0, 4, btTransform(btQuaternion::getIdentity(),btVector3(x_pos_base[0], y_pos_base[0], z_pos_base[0])));
-        //addQuaUnits(qua_a_list[0], 0, 0, const_numLinks[0], btTransform(btQuaternion( yaw_y_base[0], pitch_x_base[0], roll_z_base[0]),btVector3(x_pos_base[0], y_pos_base[0], z_pos_base[0])));
-        //addQuaUnits(-1, 0, y_pos_base[0], 4, btTransform(btQuaternion::getIdentity(),btVector3(0, 7, 0)));
-
         for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) { // create one single whisker 
             //addQuaUnits(qua_a_list[big_list_indx], 0, 0, const_numLinks[big_list_indx], btTransform(btQuaternion( yaw_y_base[big_list_indx], pitch_x_base[big_list_indx], roll_z_base[big_list_indx]),btVector3(x_pos_base[big_list_indx], y_pos_base[big_list_indx], z_pos_base[big_list_indx])));
             float yaw_now = yaw_y_base[big_list_indx];
@@ -1128,50 +1213,6 @@ void TestHingeTorque::initPhysics(){
             //addQuaUnits(qua_a_list[big_list_indx], 0, 0, const_numLinks[big_list_indx], tmp_trans*btTransform(btQuaternion( yaw_y_base[big_list_indx], pitch_x_base[big_list_indx], roll_z_base[big_list_indx]),btVector3(x_pos_base[big_list_indx], y_pos_base[big_list_indx], z_pos_base[big_list_indx])));
             addQuaUnits(qua_a_list[big_list_indx], 0, 0, big_list_indx, tmp_trans*btTransform(qua_mat,btVector3(x_pos_base[big_list_indx], y_pos_base[big_list_indx], z_pos_base[big_list_indx])));
         }
-        //load our obj mesh
-        //
-        /*
-        string fileName = "/Users/chengxuz/barrel/bullet/bullet3/data/teddy.obj";
-        float scaling[4] = {0.5,0.5,0.5,1};
-        float orn[4] = {0,0,0,1};
-        float pos[4] = {-20,20,-30,0};
-
-        m_allobjs.push_back(addObjasRigidBody(fileName, scaling, orn, pos, 100, -1));
-        H5::H5File* file = new H5::H5File( FILE_NAME, H5F_ACC_TRUNC );
-        float fillvalue = 0;  
-        H5::DSetCreatPropList plist;
-        plist.setFillValue(H5::PredType::NATIVE_FLOAT, &fillvalue);
-
-        hsize_t fdim[] = {8, 12}; // dim sizes of ds (on disk)
-        H5::DataSpace fspace( 2, fdim );
-
-        H5::DataSet* dataset = new H5::DataSet(file->createDataSet(
-            DATASET_NAME, H5::PredType::NATIVE_FLOAT, fspace, plist));
-
-        hsize_t start[2]; // Start of hyperslab
-        hsize_t stride[2]; // Stride of hyperslab
-        hsize_t count[2];  // Block count
-        hsize_t block[2];  // Block sizes
-        start[0]  = 0; start[1]  = 1;
-        stride[0] = 4; stride[1] = 3;
-        count[0]  = 2; count[1]  = 4;
-        block[0]  = 3; block[1]  = 2;
-        fspace.selectHyperslab( H5S_SELECT_SET, count, start, stride, block);
-        hsize_t dim1[] = {2, 25}; 
-        H5::DataSpace mspace1( 2, dim1 );
-        start[1]  = 0;
-        stride[0] = 1; stride[1] = 1;
-        count[0]  = 2; count[1] = 24;
-        block[0]  = 1; block[1] = 1;
-        mspace1.selectHyperslab( H5S_SELECT_SET, count, start, stride, block);
-        int    vector[2][25]; // vector buffer for dset
-        for (int i = 0; i < 2; i++)
-            for (int j=0; j < 25; j++)
-                vector[i][j] = i*100 + j;
-        dataset->write( vector, H5::PredType::NATIVE_INT, mspace1, fspace );
-        delete dataset;
-        delete file;
-        */
 
     } else {
         for (int big_list_indx=0;big_list_indx < const_numLinks.size(); big_list_indx++) { // create one single whisker 
@@ -1194,6 +1235,7 @@ void TestHingeTorque::initPhysics(){
         }
 
         if (add_objs==1){
+            cal_cent_whisker();
             for (int indx_obj=0;indx_obj<obj_filename.size();indx_obj++){
                 string fileName = obj_filename[indx_obj];
 
