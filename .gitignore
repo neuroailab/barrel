@@ -28,3 +28,4 @@ Makefile
 *0_Bullet3Demo.txt
 *.h5
 *.hdf5
+!cmd_gen_mp4/opt_results/*.cfg

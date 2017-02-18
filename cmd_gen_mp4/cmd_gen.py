@@ -225,7 +225,8 @@ config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":
         "camera_pitch":{"value":83, "type":"float"}, 
 
         "add_objs":{"value":1, "type":"int"},
-        "obj_filename":{"value":["/Users/chengxuz/barrel/bullet/bullet3/data/teddy.obj"], "type":"list", "type_in":"string"},
+        #"obj_filename":{"value":["/Users/chengxuz/barrel/bullet/bullet3/data/teddy.obj"], "type":"list", "type_in":"string"},
+        "obj_filename":{"value":["/home/chengxuz/barrel/bullet3/data/teddy.obj"], "type":"list", "type_in":"string"},
         #"obj_filename":{"value":["/Users/chengxuz/barrel/bullet/bullet3/data/cube.obj"], "type":"list", "type_in":"string"},
         #"obj_filename":{"value":["/Users/chengxuz/barrel/bullet/bullet3/data/duck.obj"], "type":"list", "type_in":"string"},
         #"obj_scaling_list":{"value":[1,1,1,1], "type":"list", "type_in":"float"},
