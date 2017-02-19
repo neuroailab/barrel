@@ -82,6 +82,7 @@ vector<float> obj_speed_list = {0,-5,0};
 vector<float> obj_mass_list = {100};
 vector<float> control_len = {-1};
 int reset_pos           = 1;
+int reset_speed         = 0;
 int center_mass_sam_r   = 100;
 
 int do_save             = 0;
@@ -162,7 +163,7 @@ void TestHingeTorque::cal_cent_whisker(){
     cent_of_whisker_array /= num_units_all;
 
     // Test code
-    cout << cent_of_whisker_array[0] << " " << cent_of_whisker_array[1] << " " << cent_of_whisker_array[2] << endl;
+    // cout << cent_of_whisker_array[0] << " " << cent_of_whisker_array[1] << " " << cent_of_whisker_array[2] << endl;
 }
 
 void save_oned_array(H5::H5File* file, vector<float> array_to_save, string dataset_name, H5::DSetCreatPropList plist){
@@ -867,6 +868,15 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
         startTransform.setOrigin(position);
     }
 
+    if (reset_speed==1){
+        btVector3 new_speed=cent_of_whisker_array - btVector3(pos[0], pos[1], pos[2]);
+        new_speed.normalize();
+        new_speed = new_speed*(btVector3(obj_speed_list[0], obj_speed_list[1], obj_speed_list[2]).norm());
+        obj_speed_list[0] = new_speed[0];
+        obj_speed_list[1] = new_speed[1];
+        obj_speed_list[2] = new_speed[2];
+    }
+
 
     btRigidBody* body = createRigidBody(mass,startTransform,shape);
     
@@ -933,6 +943,7 @@ void TestHingeTorque::initPhysics(){
         ("obj_mass_list", po::value<vector<float>>()->multitoken(), "Object mass list")
         ("control_len", po::value<vector<float>>()->multitoken(), "Object list of whether to control the maximal length")
         ("reset_pos", po::value<int>(), "Whether to reset positions according to the center of whisker array, default is 1, resetting, 0 for not resetting")
+        ("reset_speed", po::value<int>(), "Whether to reset speed according to the center of whisker array (the norm of input speed will be kept), default is 0, not resetting, 1 for resetting")
 
         ("do_save", po::value<int>(), "Whether to save to hdf5, default is 0, not saving, 1 for saving to hdf5")
         ("FILE_NAME", po::value<string>(), "The filename for hdf5")
@@ -1078,6 +1089,10 @@ void TestHingeTorque::initPhysics(){
         if (vm.count("reset_pos")){
             reset_pos           = vm["reset_pos"].as<int>();
         }
+        if (vm.count("reset_speed")){
+            reset_speed         = vm["reset_speed"].as<int>();
+        }
+
 
         if ((add_objs==1) and ((obj_scaling_list.size()!=4*obj_filename.size()) || (obj_speed_list.size()!=3*obj_filename.size())
                    || (obj_pos_list.size()!=obj_orn_list.size()) || (obj_orn_list.size()!=obj_scaling_list.size()) || 

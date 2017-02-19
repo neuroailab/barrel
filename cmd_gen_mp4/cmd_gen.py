@@ -19,12 +19,15 @@ The script to run the whisker thing and generate the mp4s through command line
 
 host_sys = os.uname()[0]
 
+obj_path_prefix = "/Users/chengxuz/barrel/bullet/bullet3/data/"
+
 if host_sys=='Darwin':
     default_pathconfig = "/Users/chengxuz/barrel/bullet/barrle_related_files/configs"
     default_pathexe = "/Users/chengxuz/barrel/bullet/example_build/Constraints/App_TestHinge"
 else:
     default_pathconfig = "/scratch/users/chengxuz/barrel/barrel_relat_files/configs"
     default_pathexe = "/scratch/users/chengxuz/barrel/examples_build/Constraints/App_TestHinge"
+    obj_path_prefix = "/home/chengxuz/barrel/bullet3/data/"
 
 host_name = os.uname()[1]
 
@@ -202,72 +205,79 @@ for indx_unit in xrange(num_whis):
     }
     parameter_each.append(curr_dict)
 
-config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":"float"}, 
-        "y_len_link":{"value":y_len_link, "help":"Size y of cubes", "type":"float"},
-        "z_len_link":{"value":0.3, "help":"Size z of cubes", "type":"float"}, 
-        "x_pos_base":{"value":array_dict['x'], "help":"Position x of base", "type":"list", "type_in":"float"},
-        "y_pos_base":{"value":array_dict['y'], "help":"Position y of base", "type":"list", "type_in":"float"},
-        "z_pos_base":{"value":array_dict['z'], "help":"Position z of base", "type":"list", "type_in":"float"},
-        "const_numLinks":{"value":array_dict['c'], "help":"Number of units", "type":"list", "type_in":"int"},
-        "yaw_y_base":{"value":array_dict['yaw'], "help":"Yaw of base", "type":"list", "type_in":"float"},
-        "pitch_x_base":{"value":array_dict['pitch'], "help":"Pitch of base", "type":"list", "type_in":"float"},
-        "roll_z_base":{"value":array_dict['roll'], "help":"Roll of base", "type":"list", "type_in":"float"},
-        "qua_a_list":{"value":array_dict['qua'], "help":"Quadratic Coefficient", "type":"list", "type_in":"float"},
-        "inter_spring":{"value":inter_spring_value, "help":"Number of units between two strings", "type":"list", "type_in": "int"}, 
-        "every_spring":{"value":every_spring_value, "help":"Number of units between one strings", "type":"list", "type_in": "int"},
+def get_config_dict():
 
-        "parameter_each": {"value":parameter_each, "type": "list_dict"},
+    config_dict     = {"x_len_link":{"value":0.53, "help":"Size x of cubes", "type":"float"}, 
+            "y_len_link":{"value":y_len_link, "help":"Size y of cubes", "type":"float"},
+            "z_len_link":{"value":0.3, "help":"Size z of cubes", "type":"float"}, 
+            "x_pos_base":{"value":array_dict['x'], "help":"Position x of base", "type":"list", "type_in":"float"},
+            "y_pos_base":{"value":array_dict['y'], "help":"Position y of base", "type":"list", "type_in":"float"},
+            "z_pos_base":{"value":array_dict['z'], "help":"Position z of base", "type":"list", "type_in":"float"},
+            "const_numLinks":{"value":array_dict['c'], "help":"Number of units", "type":"list", "type_in":"int"},
+            "yaw_y_base":{"value":array_dict['yaw'], "help":"Yaw of base", "type":"list", "type_in":"float"},
+            "pitch_x_base":{"value":array_dict['pitch'], "help":"Pitch of base", "type":"list", "type_in":"float"},
+            "roll_z_base":{"value":array_dict['roll'], "help":"Roll of base", "type":"list", "type_in":"float"},
+            "qua_a_list":{"value":array_dict['qua'], "help":"Quadratic Coefficient", "type":"list", "type_in":"float"},
+            "inter_spring":{"value":inter_spring_value, "help":"Number of units between two strings", "type":"list", "type_in": "int"}, 
+            "every_spring":{"value":every_spring_value, "help":"Number of units between one strings", "type":"list", "type_in": "int"},
 
-        "time_leap":{"value":1.0/240.0, "help":"Time unit for simulation", "type":"float"},
-        #"time_leap":{"value":1.0/120.0, "help":"Time unit for simulation", "type":"float"},
-        "camera_dist":{"value":80, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
-        "camera_yaw":{"value":183, "type":"float"}, 
-        "camera_pitch":{"value":83, "type":"float"}, 
+            "parameter_each": {"value":parameter_each, "type": "list_dict"},
 
-        "add_objs":{"value":1, "type":"int"},
-        #"obj_filename":{"value":["/Users/chengxuz/barrel/bullet/bullet3/data/teddy.obj"], "type":"list", "type_in":"string"},
-        "obj_filename":{"value":["/home/chengxuz/barrel/bullet3/data/teddy.obj"], "type":"list", "type_in":"string"},
-        #"obj_filename":{"value":["/Users/chengxuz/barrel/bullet/bullet3/data/cube.obj"], "type":"list", "type_in":"string"},
-        #"obj_filename":{"value":["/Users/chengxuz/barrel/bullet/bullet3/data/duck.obj"], "type":"list", "type_in":"string"},
-        #"obj_scaling_list":{"value":[1,1,1,1], "type":"list", "type_in":"float"},
-        #"obj_mass_list":{"value":[100], "type":"list", "type_in":"float"},
-        #"obj_filename":{"value":["/Users/chengxuz/barrel/bullet/bullet3/data/sphere8.obj"], "type":"list", "type_in":"string"},
-        #"obj_filename":{"value":["/Users/chengxuz/barrel/bullet/bullet3/data/cube.obj"], "type":"list", "type_in":"string"},
-        "obj_scaling_list":{"value":[30,30,30,1], "type":"list", "type_in":"float"},
-        "obj_mass_list":{"value":[100000], "type":"list", "type_in":"float"},
-        "obj_pos_list":{"value":[-20,30,-30,0], "type":"list", "type_in":"float"},
-        #"obj_orn_list":{"value":[0,0,0,1], "type":"list", "type_in":"float"},
-        "obj_orn_list":{"value":[0,0,0,1], "type":"list", "type_in":"float"},
-        #"obj_speed_list":{"value":[0,-5,0], "type":"list", "type_in":"float"},
-        "obj_speed_list":{"value":[0,-10,0], "type":"list", "type_in":"float"},
-        "control_len":{"value":[40], "type":"list", "type_in":"float"},
-        "reset_pos":{"value":1, "type":"int"},
-        #"reset_pos":{"value":2, "type":"int"},
+            "time_leap":{"value":1.0/240.0, "help":"Time unit for simulation", "type":"float"},
+            #"time_leap":{"value":1.0/120.0, "help":"Time unit for simulation", "type":"float"},
+            "camera_dist":{"value":80, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
+            "camera_yaw":{"value":183, "type":"float"}, 
+            "camera_pitch":{"value":83, "type":"float"}, 
 
-        "do_save":{"value":1, "type":"int"},
-        "FILE_NAME":{"value":"Select.h5", "type":"string"},
-        "num_unit_to_save":{"value":3, "type":"int"},
-        "sample_rate":{"value":24, "type":"int"},
+            "add_objs":{"value":1, "type":"int"},
+            #"obj_filename":{"value":["/Users/chengxuz/barrel/bullet/bullet3/data/teddy.obj"], "type":"list", "type_in":"string"},
+            #"obj_filename":{"value":[os.path.join(obj_path_prefix, "teddy.obj")], "type":"list", "type_in":"string"},
+            #"obj_filename":{"value":["/Users/chengxuz/barrel/bullet/bullet3/data/cube.obj"], "type":"list", "type_in":"string"},
+            "obj_filename":{"value":[os.path.join(obj_path_prefix, "duck.obj")], "type":"list", "type_in":"string"},
+            #"obj_scaling_list":{"value":[1,1,1,1], "type":"list", "type_in":"float"},
+            #"obj_mass_list":{"value":[100], "type":"list", "type_in":"float"},
+            #"obj_filename":{"value":["/Users/chengxuz/barrel/bullet/bullet3/data/sphere8.obj"], "type":"list", "type_in":"string"},
+            #"obj_filename":{"value":["/Users/chengxuz/barrel/bullet/bullet3/data/cube.obj"], "type":"list", "type_in":"string"},
+            #"obj_scaling_list":{"value":[30,30,30,1], "type":"list", "type_in":"float"},
+            "obj_mass_list":{"value":[100000], "type":"list", "type_in":"float"},
+            "obj_pos_list":{"value":[-10.1199,10,-18.9956,0], "type":"list", "type_in":"float"},
+            #"obj_orn_list":{"value":[0,0,0,1], "type":"list", "type_in":"float"},
+            "obj_orn_list":{"value":[0,0,0,1], "type":"list", "type_in":"float"},
+            #"obj_speed_list":{"value":[0,-5,0], "type":"list", "type_in":"float"},
+            #"obj_speed_list":{"value":[0,-10,0], "type":"list", "type_in":"float"},
+            "obj_speed_list":{"value":[0,-12,0], "type":"list", "type_in":"float"},
+            "control_len":{"value":[40], "type":"list", "type_in":"float"},
+            "reset_pos":{"value":1, "type":"int"},
+            "reset_speed":{"value":1, "type":"int"},
+            #"reset_pos":{"value":2, "type":"int"},
 
-        #"time_limit":{"value":60.0, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
-        "time_limit":{"value":12.0, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
-        "initial_str":{"value":10000, "help":"Initial strength of force applied", "type":"float"}, 
-        "max_str":{"value":10000, "help":"Max strength of force applied", "type":"float"}, 
-        "initial_stime":{"value":3.1/8, "help":"Initial time to apply force", "type":"float"}, 
-        "angl_ban_limit":{"value":0.5, "help":"While flag_time is 2, used for angular velocities of rigid bodys to judge whether stop", "type":"float"}, 
-        "velo_ban_limit":{"value":0.5, "help":"While flag_time is 2, used for linear velocities of rigid bodys to judge whether stop", "type":"float"}, 
-        "force_limit":{"value":40, "help":"While flag_time is 2, used for force states of hinges to judge whether stop", "type":"float"}, 
-        "torque_limit":{"value":120, "help":"While flag_time is 2, used for torque states of hinges to judge whether stop", "type":"float"}, 
-        "dispos_limit":{"value":50, "help":"While flag_time is 2, used for distance to balance states of rigid bodys to judge whether stop", "type":"float"}, 
-        "test_mode":{"value":0, "help":"Whether enter test mode for some temp test codes, default is 0", "type":"int"},
-        #"test_mode":{"value":0, "help":"Whether enter test mode for some temp test codes, default is 0", "type":"int"},
-        #"force_mode":{"value":2, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
-        #"force_mode":{"value":1, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
-        "force_mode":{"value":-1, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
-        #"flag_time":{"value":2, "help":"Whether open time limit", "type":"int"}}
-        #"flag_time":{"value":0, "help":"Whether open time limit", "type":"int"}}
-        "flag_time":{"value":1, "help":"Whether open time limit", "type":"int"}}
+            "do_save":{"value":1, "type":"int"},
+            "FILE_NAME":{"value":"Select.h5", "type":"string"},
+            "num_unit_to_save":{"value":3, "type":"int"},
+            "sample_rate":{"value":24, "type":"int"},
 
+            #"time_limit":{"value":60.0, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
+            #"time_limit":{"value":12.0, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
+            "time_limit":{"value":11.0, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
+            "initial_str":{"value":10000, "help":"Initial strength of force applied", "type":"float"}, 
+            "max_str":{"value":10000, "help":"Max strength of force applied", "type":"float"}, 
+            "initial_stime":{"value":3.1/8, "help":"Initial time to apply force", "type":"float"}, 
+            "angl_ban_limit":{"value":0.5, "help":"While flag_time is 2, used for angular velocities of rigid bodys to judge whether stop", "type":"float"}, 
+            "velo_ban_limit":{"value":0.5, "help":"While flag_time is 2, used for linear velocities of rigid bodys to judge whether stop", "type":"float"}, 
+            "force_limit":{"value":40, "help":"While flag_time is 2, used for force states of hinges to judge whether stop", "type":"float"}, 
+            "torque_limit":{"value":120, "help":"While flag_time is 2, used for torque states of hinges to judge whether stop", "type":"float"}, 
+            "dispos_limit":{"value":50, "help":"While flag_time is 2, used for distance to balance states of rigid bodys to judge whether stop", "type":"float"}, 
+            "test_mode":{"value":0, "help":"Whether enter test mode for some temp test codes, default is 0", "type":"int"},
+            #"test_mode":{"value":0, "help":"Whether enter test mode for some temp test codes, default is 0", "type":"int"},
+            #"force_mode":{"value":2, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
+            #"force_mode":{"value":1, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
+            "force_mode":{"value":-1, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
+            #"flag_time":{"value":2, "help":"Whether open time limit", "type":"int"}}
+            #"flag_time":{"value":0, "help":"Whether open time limit", "type":"int"}}
+            "flag_time":{"value":1, "help":"Whether open time limit", "type":"int"}}
+    return config_dict
+
+config_dict = get_config_dict()
 orig_config_dict = copy.deepcopy(config_dict)
 
 inner_loop = {0: {'force_mode': 0, "initial_str": 30000}, 1: {'force_mode': 1, "initial_str": 10000}, 2: {'force_mode': 2, "initial_str": 10000}, 3: {'force_mode': 2, "initial_str": 8000}}
@@ -432,10 +442,12 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser(description='The script to generate the mp4s through command line')
     parser.add_argument('--nproc', default = 4, type = int, action = 'store', help = 'Number of processes')
     parser.add_argument('--pathconfig', default = "/home/chengxuz/barrel/barrel/bullet_demos_extracted/configs", type = str, action = 'store', help = 'Path to config folder')
-    parser.add_argument('--pathmp4', default = "/home/chengxuz/barrel/barrel/cmd_gen_mp4/generated_mp4s", type = str, action = 'store', help = 'Path to mp4 folder')
     parser.add_argument('--pathexe', default = "/home/chengxuz/barrel/build_examples/ExampleBrowser/App_ExampleBrowser", type = str, action = 'store', help = 'Path to App_ExampleBrowser')
-    parser.add_argument('--mp4flag', default = 1, type = int, action = 'store', help = 'Whether generate mp4 files')
     parser.add_argument('--mapn', default = 30, type = int, action = 'store', help = 'Number of items in each processes')
+
+    parser.add_argument('--mp4flag', default = 1, type = int, action = 'store', help = 'Whether generate mp4 files')
+    parser.add_argument('--pathmp4', default = "/home/chengxuz/barrel/barrel/cmd_gen_mp4/generated_mp4s", type = str, action = 'store', help = 'Path to mp4 folder')
+
     parser.add_argument('--testmode', default = 0, type = int, action = 'store', help = 'Whether run the test command or not')
     parser.add_argument('--innernum', default = -1, type = int, action = 'store', help = 'Number of inner loop')
     parser.add_argument('--fromcfg', default = None, type = str, action = 'store', help = 'None means no, if the path of file sent, then get config from the file')
