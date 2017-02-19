@@ -20,9 +20,6 @@ import json
 import copy
 import argparse
 
-import train_normalnet_hdf5
-import train_normalnet
-
 import pdb
 
 def loss_ave_l2(output, labels):
@@ -98,6 +95,7 @@ def get_current_predicted_future_action(inputs, outputs, num_to_save = 1, **loss
     return retval
 
 
+
 def main(args):
     global NORM_NUM
     #cfg_initial = postprocess_config(json.load(open(cfgfile)))
@@ -109,7 +107,22 @@ def main(args):
 
     host = os.uname()[1]
     DATA_PATH = {}
+    IMAGE_SIZE_CROP = 224
+    BATCH_SIZE = 128
+
+    targdict = {'func': get_extraction_target,
+                'to_extract': {'features': 'validation/valid1/dec7/conv:0'},
+                }
+    '''
+    targdict = {'func': get_current_predicted_future_action,
+                'targets' : [],
+                'num_to_save' : 3
+                }
+    '''
+
     if args.hdf5ortfc==0:
+        import train_normalnet_hdf5
+
         Threedworld = train_normalnet_hdf5.Threedworld
 
         if host == 'freud':  # freud
@@ -119,7 +132,27 @@ def main(args):
         elif host.startswith('node') or host == 'openmind7':  # OpenMind
             DATA_PATH['train'] = '/om/user/chengxuz/Data/one_world_dataset/randomperm.hdf5'
             DATA_PATH['val'] = '/om/user/chengxuz/Data/one_world_dataset/randomperm_test1.hdf5'
+
+        val_dict = {
+            'data_params': {
+                'func': Threedworld,
+                'data_path': DATA_PATH,
+                'group': 'val',
+                'crop_size': IMAGE_SIZE_CROP,
+                'batch_size': 1,
+            },
+            'queue_params': {
+                'queue_type': 'fifo',
+                'batch_size': BATCH_SIZE,
+                'seed': 0,
+                'capacity': BATCH_SIZE,
+                'n_threads' : 1
+            },
+            'targets': targdict,
+            'num_steps': 1,
+            'online_agg_func': utils.reduce_mean_dict}
     else:
+        import train_normalnet
         Threedworld = train_normalnet.Threedworld
 
         if host == 'freud':  # freud
@@ -134,11 +167,31 @@ def main(args):
             DATA_PATH['train'] = '/om/user/chengxuz/Data/one_world_dataset/dataset.tfrecords'
             DATA_PATH['val'] = '/om/user/chengxuz/Data/one_world_dataset/dataset8.tfrecords'
 
-    BATCH_SIZE = 128
+        val_dict = {
+            'data_params': {
+                'func': Threedworld,
+                'data_path': DATA_PATH,
+                'group': 'val',
+                'crop_size': IMAGE_SIZE_CROP,
+                'batch_size': BATCH_SIZE,
+                'n_threads' : 1
+            },
+            'queue_params': {
+                'queue_type': 'fifo',
+                'batch_size': BATCH_SIZE,
+                'seed': 0,
+                'capacity': BATCH_SIZE*20,
+            },
+            'targets': targdict,
+            'num_steps': 3,
+            'online_agg_func': utils.reduce_mean_dict}
+
     NUM_BATCHES_PER_EPOCH = Threedworld.N_TRAIN // BATCH_SIZE
-    IMAGE_SIZE_CROP = 224
+    #IMAGE_SIZE_CROP = 224
     NUM_CHANNELS = 3
     NORM_NUM = (IMAGE_SIZE_CROP**2) * NUM_CHANNELS * BATCH_SIZE
+
+    valid_expid = 'validation3'
 
     # set up parameters
     params = {}
@@ -154,40 +207,14 @@ def main(args):
                              'do_restore': True,
                              'exp_id': exp_id}
     #params['save_params'] = {'exp_id': 'validation1',
-    params['save_params'] = {'exp_id': 'validation1',
+    params['save_params'] = {'exp_id': valid_expid,
                              'save_intermediate_freq': 1,
                              #'save_to_gfs': ['images', 'normals', 'val_loss'],
-                             'save_to_gfs': ['images'],
+                             #'save_to_gfs': ['images'],
+                             'save_to_gfs': ['features'],
                              'cache_dir': cache_dir,}
-
-    '''
-    targdict = {'func': get_extraction_target,
-                'to_extract': {'features': 'validation/valid1/dec7/conv:0'},
-                }
-    '''
-    targdict = {'func': get_current_predicted_future_action,
-                'targets' : [],
-                'num_to_save' : 3
-                }
     targdict.update(base.DEFAULT_LOSS_PARAMS)
-    params['validation_params'] = {'valid1': {
-            'data_params': {
-                'func': Threedworld,
-                'data_path': DATA_PATH,
-                'group': 'train',
-                'crop_size': IMAGE_SIZE_CROP,
-                'batch_size': BATCH_SIZE,
-                'n_threads' : 1
-            },
-            'queue_params': {
-                'queue_type': 'fifo',
-                'batch_size': BATCH_SIZE,
-                'seed': 0,
-                'capacity': BATCH_SIZE*20,
-            },
-            'targets': targdict,
-            'num_steps': 8,
-            'online_agg_func': utils.reduce_mean_dict}}
+    params['validation_params'] = {'valid1': val_dict}
 
     # actually run the feature extraction
     base.test_from_params(**params)
@@ -197,37 +224,39 @@ def main(args):
                           port=args.nport)
     coll = conn['normalnet-test']['normalnet'+'.files']
 
-    print(coll.find({'exp_id': 'validation1'}).count())
+    print(coll.find({'exp_id': valid_expid}).count())
 
     # ... load the containing the final "aggregate" result after all features have been extracted
-    q = {'exp_id': 'validation1', 'validation_results.valid1.intermediate_steps': {'$exists': True}}
+    q = {'exp_id': valid_expid, 'validation_results.valid1.intermediate_steps': {'$exists': True}}
     #assert coll.find(q).count() == 1
     print(coll.find(q).count())
     r = coll.find(q)[0]
+    #r = coll.find(q)[1]
     # ... check that the record is well-formed
     #asserts_for_record(r, params, train=False)
 
     # ... check that the correct "intermediate results" (the actual features extracted) records exist
     # and are correctly referenced.
-    q1 = {'exp_id': 'validation1', 'validation_results.valid1.intermediate_steps': {'$exists': False}}
+    q1 = {'exp_id': valid_expid, 'validation_results.valid1.intermediate_steps': {'$exists': False}}
     ids = coll.find(q1).distinct('_id')
     #assert r['validation_results']['valid1']['intermediate_steps'] == ids
 
     # ... actually load feature batch 3
-    #idval = r['validation_results']['valid1']['intermediate_steps'][0]
-    idval = r['validation_results']['valid1']['intermediate_steps'][2]
+    print(r['validation_results']['valid1']['intermediate_steps'])
+    #idval = r['validation_results']['valid1']['intermediate_steps'][2]
+    idval = r['validation_results']['valid1']['intermediate_steps'][0]
     fn = coll.find({'item_for': idval})[0]['filename']
     fs = gridfs.GridFS(coll.database, 'normalnet')
     fh = fs.get_last_version(fn)
     saved_data = cPickle.loads(fh.read())
     fh.close()
-    pdb.set_trace()
+    #pdb.set_trace()
 
     features = saved_data['validation_results']['valid1']['features']
     print(features.shape)
     #cPickle.dump(saved_data, open('save_features.pkl', 'wb'))
     #cPickle.dump(saved_data, open('save_features_3.pkl', 'wb'))
-    cPickle.dump(saved_data, open('save_features_4.pkl', 'wb'))
+    cPickle.dump(saved_data, open('save_features_hdf5.pkl', 'wb'))
     #assert features.shape == (100, 128)
     #assert features.dtype == np.float32
 

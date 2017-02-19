@@ -34,6 +34,7 @@ host_name = os.uname()[1]
 if host_name.startswith('node') or host_name == 'openmind7':
     default_pathconfig = "/om/user/chengxuz/barrel/configs"
     default_pathexe = "/om/user/chengxuz/barrel/example_build/Constraints/App_TestHinge"
+    obj_path_prefix = "/om/user/chengxuz/barrel/bullet3/data/"
 elif host_name=="kanefsky":
     default_pathconfig = "/home/chengxuz/barrel/barrel_github/configs"
     default_pathexe = "/home/chengxuz/barrel/barrel_github/example_build/Constraints/App_TestHinge"
