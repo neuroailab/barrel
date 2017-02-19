@@ -81,6 +81,7 @@ vector<float> obj_orn_list = {0,0,0,1};
 vector<float> obj_speed_list = {0,-5,0};
 vector<float> obj_mass_list = {100};
 vector<float> control_len = {-1};
+vector<float> offset_center_pos = {0,0,0};
 int reset_pos           = 1;
 int reset_speed         = 0;
 int center_mass_sam_r   = 100;
@@ -161,6 +162,9 @@ void TestHingeTorque::cal_cent_whisker(){
         }
     }
     cent_of_whisker_array /= num_units_all;
+
+    for (int i=0;i<3;i++)
+        cent_of_whisker_array[i] += offset_center_pos[i];
 
     // Test code
     // cout << cent_of_whisker_array[0] << " " << cent_of_whisker_array[1] << " " << cent_of_whisker_array[2] << endl;
@@ -940,6 +944,7 @@ void TestHingeTorque::initPhysics(){
         ("obj_pos_list", po::value<vector<float>>()->multitoken(), "Object position list")
         ("obj_orn_list", po::value<vector<float>>()->multitoken(), "Object orientation list")
         ("obj_speed_list", po::value<vector<float>>()->multitoken(), "Object speed list")
+        ("offset_center_pos", po::value<vector<float>>()->multitoken(), "offset to the center point, only used when reset_pos is 1")
         ("obj_mass_list", po::value<vector<float>>()->multitoken(), "Object mass list")
         ("control_len", po::value<vector<float>>()->multitoken(), "Object list of whether to control the maximal length")
         ("reset_pos", po::value<int>(), "Whether to reset positions according to the center of whisker array, default is 1, resetting, 0 for not resetting")
@@ -1079,6 +1084,9 @@ void TestHingeTorque::initPhysics(){
         }
         if (vm.count("obj_speed_list")){
             obj_speed_list    = vm["obj_speed_list"].as< vector<float> >();
+        }
+        if (vm.count("offset_center_pos")){
+            offset_center_pos    = vm["offset_center_pos"].as< vector<float> >();
         }
         if (vm.count("obj_mass_list")){
             obj_mass_list     = vm["obj_mass_list"].as< vector<float> >();

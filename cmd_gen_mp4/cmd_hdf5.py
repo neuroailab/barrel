@@ -15,8 +15,8 @@ def get_scale_list():
     return [[40], [30], [50]]
 
 def get_pos_list():
-    center_pos = [-10.1199,-13.1702,-18.9956]
-    start_pos = [-10.1199,10,-18.9956,0]
+    center_pos = [-10.1199,-13.1702,-22.9956]
+    start_pos = [-10.1199,10,-22.9956,0]
 
     deg_aways = [(10.0/180.0)*np.pi, -(10.0/180.0)*np.pi]
     which_axs = [0,2]
@@ -44,7 +44,7 @@ if __name__=="__main__":
     parser.add_argument('--indxsta', default = 0, type = int, action = 'store', help = 'Start index of whisker needed')
     parser.add_argument('--indxend', default = 31, type = int, action = 'store', help = 'End index of whisker needed')
     parser.add_argument('--pathconfig', default = "/home/chengxuz/barrel/related_files/configs", type = str, action = 'store', help = 'Path to config folder')
-    parser.add_argument('--testmode', default = 1, type = int, action = 'store', help = 'Whether run the test command or not')
+    parser.add_argument('--testmode', default = 2, type = int, action = 'store', help = 'Whether run the test command or not')
     parser.add_argument('--spindxsta', default = 0, type = int, action = 'store', help = 'Start index of speed')
     parser.add_argument('--spindxlen', default = 1, type = int, action = 'store', help = 'Length index of speed')
     parser.add_argument('--scindxsta', default = 0, type = int, action = 'store', help = 'Start index of scale')
@@ -53,6 +53,7 @@ if __name__=="__main__":
     parser.add_argument('--oindxlen', default = 1, type = int, action = 'store', help = 'Length index of orn')
     parser.add_argument('--pindxsta', default = 0, type = int, action = 'store', help = 'Start index of pos')
     parser.add_argument('--pindxlen', default = 1, type = int, action = 'store', help = 'Length index of pos')
+    parser.add_argument('--objindx', default = 0, type = int, action = 'store', help = 'Object index, 0 for duck, 1 for teddy')
 
     args    = parser.parse_args()
 
@@ -76,6 +77,13 @@ if __name__=="__main__":
 
     #print(pos_list)
 
+    if args.objindx==0:
+        config_dict["obj_filename"]["value"] = [os.path.join(obj_path_prefix, "duck.obj")]
+        hdf5_prefix = "duck"
+    elif args.objindx==1:
+        config_dict["obj_filename"]["value"] = [os.path.join(obj_path_prefix, "teddy.obj")]
+        hdf5_prefix = "teddy"
+
     for indx_pos_now in xrange(args.pindxsta, args.pindxsta + args.pindxlen):
         config_dict["obj_pos_list"]["value"] = pos_list[indx_pos_now]
 
@@ -89,7 +97,7 @@ if __name__=="__main__":
                     config_dict["obj_orn_list"]["value"] = orn_list[indx_orn_now]
 
                     hash_value = make_hash(config_dict)
-                    config_dict["FILE_NAME"]["value"] = os.path.join(args.pathhdf5, "data_%s.hdf5" % str(hash_value))
+                    config_dict["FILE_NAME"]["value"] = os.path.join(args.pathhdf5, "%s_%s.hdf5" % (hdf5_prefix, str(hash_value)))
 
                     now_config_fn   = os.path.join(args.pathconfig, "test_%s.cfg" % str(hash_value))
 

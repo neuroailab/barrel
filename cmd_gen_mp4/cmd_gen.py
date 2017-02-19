@@ -246,6 +246,7 @@ def get_config_dict():
             #"obj_speed_list":{"value":[0,-5,0], "type":"list", "type_in":"float"},
             #"obj_speed_list":{"value":[0,-10,0], "type":"list", "type_in":"float"},
             "obj_speed_list":{"value":[0,-12,0], "type":"list", "type_in":"float"},
+            "offset_center_pos":{"value":[0,0,-4], "type":"list", "type_in":"float"},
             "control_len":{"value":[40], "type":"list", "type_in":"float"},
             "reset_pos":{"value":1, "type":"int"},
             "reset_speed":{"value":1, "type":"int"},
