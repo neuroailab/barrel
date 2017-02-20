@@ -6,17 +6,20 @@ from cmd_gen import *
 import numpy as np
 
 def get_speed_list():
-    return [[0,-12,0], [0, -10, 0], [0, -8, 0]]
+    #return [[0,-12,0], [0, -10, 0], [0, -8, 0]]
+    return [[0,-12.5,0], [0, -10.5, 0], [0, -8.5, 0]]
 
 def get_orn_list():
     return [[0,0,0,1], [1,0,0,0], [0,1,1,1], [1,1,1,1]]
 
 def get_scale_list():
-    return [[40], [30], [50]]
+    #return [[40], [30], [50]]
+    return [[44], [34], [54]]
 
 def get_pos_list():
     center_pos = [-10.1199,-13.1702,-22.9956]
-    start_pos = [-10.1199,10,-22.9956,0]
+    #start_pos = [-10.1199,10,-22.9956,0]
+    start_pos = [-11.1199,12,-20.9956,0]
 
     deg_aways = [(10.0/180.0)*np.pi, -(10.0/180.0)*np.pi]
     which_axs = [0,2]
