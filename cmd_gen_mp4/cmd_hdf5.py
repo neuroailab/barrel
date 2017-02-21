@@ -67,8 +67,10 @@ def get_orn_list(mode=0):
 
             delta_deg = np.pi/2
 
-            for which_ax in xrange(3):
-                for mul_change_deg in xrange(3):
+            #for which_ax in xrange(3):
+            for which_ax in xrange(2):
+                #for mul_change_deg in xrange(3):
+                for mul_change_deg in xrange(2):
                     change_deg  = mul_change_deg*delta_deg
 
                     new_orn     = copy.deepcopy(start_orn)
@@ -91,7 +93,7 @@ def get_scale_list(mode=0):
         ret_val = []
         start_sc = 30
         end_sc = 90
-        step_sc = 5
+        step_sc = 10
         for inter_sc in xrange(start_sc, end_sc, step_sc):
             ret_val.append([inter_sc])
         #return [[60], [70], [80]]
@@ -122,7 +124,8 @@ def get_pos_list(mode=0):
     else:
         change_deg = 10.0
         deg_aways = []
-        for indx_tmp in xrange(1, 4):
+        #for indx_tmp in xrange(1, 4):
+        for indx_tmp in xrange(1, 3):
             deg_aways.append( change_deg*indx_tmp/180.0*np.pi)
             deg_aways.append(-change_deg*indx_tmp/180.0*np.pi)
 
@@ -187,10 +190,10 @@ if __name__=="__main__":
     orn_list = get_orn_list(args.generatemode)
     scale_list = get_scale_list(args.generatemode)
 
-    print(len(pos_list))
-    print(len(speed_list))
-    print(len(orn_list))
-    print(len(scale_list))
+    #print(len(pos_list))
+    #print(len(speed_list))
+    #print(len(orn_list))
+    #print(len(scale_list))
 
     if args.objindx==0:
         config_dict["obj_filename"]["value"] = [os.path.join(obj_path_prefix, "duck.obj")]
