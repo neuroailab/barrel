@@ -251,6 +251,10 @@ def get_config_dict():
             "control_len":{"value":[40], "type":"list", "type_in":"float"},
             "reset_pos":{"value":1, "type":"int"},
             "reset_speed":{"value":1, "type":"int"},
+            "avoid_coll":{"value":1, "type":"int"},
+            "avoid_coll_z_off":{"value":5, "type":"float"},
+            "avoid_coll_x_off":{"value":10, "type":"float"},
+            #"avoid_coll":{"value":0, "type":"int"},
             #"reset_pos":{"value":2, "type":"int"},
 
             "do_save":{"value":1, "type":"int"},

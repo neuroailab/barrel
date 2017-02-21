@@ -84,7 +84,9 @@ vector<float> control_len = {-1};
 vector<float> offset_center_pos = {0,0,0};
 int reset_pos           = 1;
 int reset_speed         = 0;
-int center_mass_sam_r   = 100;
+int avoid_coll          = 0;
+float avoid_coll_z_off  = 0;
+float avoid_coll_x_off  = 5;
 
 int do_save             = 0;
 H5std_string FILE_NAME( "Select.h5" );
@@ -781,6 +783,8 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
         obj_scaling_list[0] = desire_scale;
         obj_scaling_list[1] = desire_scale;
         obj_scaling_list[2] = desire_scale;
+
+        mass_want = mass_want*pow((desire_scale/30), 3);
     }
 
     btVector3 localScaling(scaling[0],scaling[1],scaling[2]);
@@ -812,7 +816,17 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
 
     btVector3 position(pos[0],pos[1],pos[2]);
 
-    if (reset_pos==2){ //Not using!!!
+    if (reset_speed==1){
+        btVector3 new_speed=cent_of_whisker_array - btVector3(pos[0], pos[1], pos[2]);
+        new_speed.normalize();
+        new_speed = new_speed*(btVector3(obj_speed_list[0], obj_speed_list[1], obj_speed_list[2]).norm());
+        obj_speed_list[0] = new_speed[0];
+        obj_speed_list[1] = new_speed[1];
+        obj_speed_list[2] = new_speed[2];
+    }
+
+
+    if (reset_pos==2){ //Not used!!!
         btVector3 min_vec, max_vec;
 
         for (int i=0;i<num_point;i++){
@@ -870,15 +884,28 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
             position        = position - startTransform(shape->getScaledPoint(min_indx));
         }
         startTransform.setOrigin(position);
-    }
 
-    if (reset_speed==1){
-        btVector3 new_speed=cent_of_whisker_array - btVector3(pos[0], pos[1], pos[2]);
-        new_speed.normalize();
-        new_speed = new_speed*(btVector3(obj_speed_list[0], obj_speed_list[1], obj_speed_list[2]).norm());
-        obj_speed_list[0] = new_speed[0];
-        obj_speed_list[1] = new_speed[1];
-        obj_speed_list[2] = new_speed[2];
+        if (avoid_coll==1){
+            float max_value = 0;
+
+            for (int i=0;i<num_point;i++){
+                btVector3 curr_point = shape->getScaledPoint(i);
+                curr_point = startTransform(curr_point);
+                
+                for (int j=0;j<m_allcentpos_big_list.size();j++){
+                    btVector3 now_dest = m_allcentpos_big_list[j][0];
+
+                    float time_need = (now_dest[1] - curr_point[1])/obj_speed_list[1];
+                    btVector3 next_point = curr_point + time_need*btVector3(obj_speed_list[0], obj_speed_list[1], obj_speed_list[2]);
+                    if ((next_point[2] > now_dest[2] - avoid_coll_z_off) && ( abs(next_point[0] - now_dest[0]) < avoid_coll_x_off) ){
+                        if (max_value < next_point[2] - (now_dest[2] - avoid_coll_z_off))
+                            max_value = next_point[2] - (now_dest[2] - avoid_coll_z_off);
+                    }
+                }
+            }
+
+            startTransform.setOrigin(btVector3(position[0], position[1], position[2] - max_value));
+        }
     }
 
 
@@ -949,6 +976,9 @@ void TestHingeTorque::initPhysics(){
         ("control_len", po::value<vector<float>>()->multitoken(), "Object list of whether to control the maximal length")
         ("reset_pos", po::value<int>(), "Whether to reset positions according to the center of whisker array, default is 1, resetting, 0 for not resetting")
         ("reset_speed", po::value<int>(), "Whether to reset speed according to the center of whisker array (the norm of input speed will be kept), default is 0, not resetting, 1 for resetting")
+        ("avoid_coll", po::value<int>(), "Whether to reset position again to avoid collision with base balls, default is 0, not resetting, 1 for resetting")
+        ("avoid_coll_z_off", po::value<float>(), "Z offset used during collision calculationg, default is 0")
+        ("avoid_coll_x_off", po::value<float>(), "X offset used during collision calculationg for whether it's too far away, default is 5")
 
         ("do_save", po::value<int>(), "Whether to save to hdf5, default is 0, not saving, 1 for saving to hdf5")
         ("FILE_NAME", po::value<string>(), "The filename for hdf5")
@@ -1099,6 +1129,15 @@ void TestHingeTorque::initPhysics(){
         }
         if (vm.count("reset_speed")){
             reset_speed         = vm["reset_speed"].as<int>();
+        }
+        if (vm.count("avoid_coll")){
+            avoid_coll          = vm["avoid_coll"].as<int>();
+        }
+        if (vm.count("avoid_coll_z_off")){
+            avoid_coll_z_off    = vm["avoid_coll_z_off"].as<float>();
+        }
+        if (vm.count("avoid_coll_x_off")){
+            avoid_coll_x_off    = vm["avoid_coll_x_off"].as<float>();
         }
 
 

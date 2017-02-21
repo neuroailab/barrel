@@ -5,36 +5,143 @@ import copy
 from cmd_gen import *
 import numpy as np
 
-def get_speed_list():
+def get_speed_list(mode=0):
     #return [[0,-12,0], [0, -10, 0], [0, -8, 0]]
-    return [[0,-12.5,0], [0, -10.5, 0], [0, -8.5, 0]]
+    if mode==0:
+        return [[0,-12,0], [0, -10, 0], [0, -8, 0]]
+    elif mode==1:
+        return [[0,-12.5,0], [0, -10.5, 0], [0, -8.5, 0]]
+    elif mode==2:
+        start_speed = -14
+        end_speed = -7
 
-def get_orn_list():
-    return [[0,0,0,1], [1,0,0,0], [0,1,1,1], [1,1,1,1]]
+        ret_list = []
 
-def get_scale_list():
-    #return [[40], [30], [50]]
-    return [[44], [34], [54]]
+        for now_speed in np.arange(start_speed, end_speed):
+            now_speed_list = [0, now_speed, 0]
+            ret_list.append(now_speed_list)
 
-def get_pos_list():
+        start_speed = -14.5
+        end_speed = -7.5
+
+        for now_speed in np.arange(start_speed, end_speed):
+            now_speed_list = [0, now_speed, 0]
+            ret_list.append(now_speed_list)
+
+        return ret_list
+    else:
+        return [[0,-12,0], [0, -10, 0], [0, -8, 0]]
+
+def qua_from_euler(euler):
+    cos_x = np.cos(euler[0]/2)
+    sin_x = np.sin(euler[0]/2)
+    cos_y = np.cos(euler[1]/2)
+    sin_y = np.sin(euler[1]/2)
+    cos_z = np.cos(euler[2]/2)
+    sin_z = np.sin(euler[2]/2)
+
+    qua_0 = cos_x*cos_y*cos_z + sin_x*sin_y*sin_z
+    qua_1 = sin_x*cos_y*cos_z - cos_x*sin_y*sin_z
+    qua_2 = cos_x*sin_y*cos_z + sin_x*cos_y*sin_z
+    qua_3 = cos_x*cos_y*sin_z - sin_x*sin_y*cos_z
+
+    return [qua_0, qua_1, qua_2, qua_3]
+
+def get_orn_list(mode=0):
+    if mode==0:
+        return [[0,0,0,1], [1,0,0,0], [0,1,1,1], [1,1,1,1]]
+    elif mode==1:
+        return [[0,0,0,1], [1,0,0,0], [0,1,1,1], [1,1,1,1]]
+    elif mode==2:
+        ret_val = []
+        offset_unit = (5.0/180.0)*np.pi
+
+        for offset_mul in xrange(4):
+            if offset_mul==2:
+                continue
+            start_orn = []
+            for indx_tmp in xrange(3):
+                start_orn.append(offset_unit*offset_mul)
+
+            ret_val.append(qua_from_euler(start_orn))
+
+            delta_deg = np.pi/2
+
+            for which_ax in xrange(3):
+                for mul_change_deg in xrange(3):
+                    change_deg  = mul_change_deg*delta_deg
+
+                    new_orn     = copy.deepcopy(start_orn)
+                    new_orn[which_ax] = new_orn[which_ax] + change_deg
+
+                    ret_val.append(qua_from_euler(new_orn))
+
+        return ret_val
+    else:
+        return [[0,0,0,1], [1,0,0,0], [0,1,1,1], [1,1,1,1]]
+
+
+def get_scale_list(mode=0):
+    if mode==0:
+        return [[40], [30], [50]]
+    elif mode==1:
+        return [[44], [34], [54]]
+    elif mode==2:
+        #return [[60], [70], [80]]
+        ret_val = []
+        start_sc = 30
+        end_sc = 90
+        step_sc = 5
+        for inter_sc in xrange(start_sc, end_sc, step_sc):
+            ret_val.append([inter_sc])
+        #return [[60], [70], [80]]
+        return ret_val
+    else:
+        return [[40], [30], [50]]
+
+def get_pos_list(mode=0):
     center_pos = [-10.1199,-13.1702,-22.9956]
     #start_pos = [-10.1199,10,-22.9956,0]
-    start_pos = [-11.1199,12,-20.9956,0]
+    #start_pos = [-11.1199,12,-20.9956,0]
+    if mode==0:
+        start_poses = [[-10.1199,10,-22.9956,0]]
+    elif mode==2:
+        start_poses = [[-10.1199,10,-22.9956,0]]
+        change_pos = [-2, 2, 2]
+        for indx_tmp in xrange(3):
+            new_pos = copy.deepcopy(start_poses[0])
+            for indx_tmp2 in xrange(3):
+                new_pos[indx_tmp2] = new_pos[indx_tmp2] + change_pos[indx_tmp2]*indx_tmp
+            start_poses.append(new_pos)
 
-    deg_aways = [(10.0/180.0)*np.pi, -(10.0/180.0)*np.pi]
+    else:
+        start_poses = [[-11.1199,12,-24.9956,0]]
+
+    if not mode==2:
+        deg_aways = [(10.0/180.0)*np.pi, -(10.0/180.0)*np.pi]
+    else:
+        change_deg = 10.0
+        deg_aways = []
+        for indx_tmp in xrange(1, 4):
+            deg_aways.append( change_deg*indx_tmp/180.0*np.pi)
+            deg_aways.append(-change_deg*indx_tmp/180.0*np.pi)
+
     which_axs = [0,2]
 
-    ret_list = [start_pos]
+    ret_list = copy.deepcopy(start_poses)
 
-    r_now   = start_pos[1] - center_pos[1]
-    for deg_away in deg_aways:
-        for which_ax in which_axs:
-            new_pos = copy.deepcopy(start_pos)
-            new_pos[which_ax]   = new_pos[which_ax] + r_now*np.sin(deg_away)
-            new_pos[1]          = center_pos[1] + r_now*np.cos(deg_away)
+    for start_pos in start_poses:
+        r_now   = start_pos[1] - center_pos[1]
+        for deg_away in deg_aways:
+            for which_ax in which_axs:
+                new_pos = copy.deepcopy(start_pos)
+                new_pos[which_ax]   = new_pos[which_ax] + r_now*np.sin(deg_away)
+                new_pos[1]          = center_pos[1] + r_now*np.cos(deg_away)
 
-            if not new_pos[2] > start_pos[2] + 1:
+                #if not new_pos[2] > start_pos[2] + 1:
+                #print(new_pos)
                 ret_list.append(new_pos)
+                #print(len(ret_list))
 
     return ret_list
 
@@ -48,6 +155,8 @@ if __name__=="__main__":
     parser.add_argument('--indxsta', default = 0, type = int, action = 'store', help = 'Start index of whisker needed')
     parser.add_argument('--indxend', default = 31, type = int, action = 'store', help = 'End index of whisker needed')
     parser.add_argument('--testmode', default = 1, type = int, action = 'store', help = 'Whether run the test command or not')
+    parser.add_argument('--generatemode', default = 0, type = int, action = 'store', help = 'Whether in validation mode or not')
+
     parser.add_argument('--spindxsta', default = 0, type = int, action = 'store', help = 'Start index of speed')
     parser.add_argument('--spindxlen', default = 1, type = int, action = 'store', help = 'Length index of speed')
     parser.add_argument('--scindxsta', default = 0, type = int, action = 'store', help = 'Start index of scale')
@@ -73,12 +182,15 @@ if __name__=="__main__":
             whisker_config_name.append("%s%i.cfg" % (args.fromcfg, curr_indx))
         config_dict["whisker_config_name"] = {"value":whisker_config_name, "type":"list", "type_in": "string"}
 
-    pos_list = get_pos_list()
-    speed_list = get_speed_list()
-    orn_list = get_orn_list()
-    scale_list = get_scale_list()
+    pos_list = get_pos_list(args.generatemode)
+    speed_list = get_speed_list(args.generatemode)
+    orn_list = get_orn_list(args.generatemode)
+    scale_list = get_scale_list(args.generatemode)
 
-    #print(pos_list)
+    print(len(pos_list))
+    print(len(speed_list))
+    print(len(orn_list))
+    print(len(scale_list))
 
     if args.objindx==0:
         config_dict["obj_filename"]["value"] = [os.path.join(obj_path_prefix, "duck.obj")]
