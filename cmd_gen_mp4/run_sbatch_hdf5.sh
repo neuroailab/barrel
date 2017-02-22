@@ -22,13 +22,16 @@ for objindx in 0 1
 #for objindx in 0
 do
     for pindxsta in 1 $(seq 12 19)
-    #for oindxsta in 0
+    #for pindxsta in 1
     do
         for scindxsta in $(seq 0 5)
-        #for spindxsta in 0
+        #for scindxsta in 0
         do
-            #sbatch script_sbatch_hdf5_om.sh ${objindx} ${oindxsta} ${spindxsta}
-            sh run_check_hdf5.sh ${objindx} ${pindxsta} ${scindxsta}
+            for oindxsta in $(seq 0 3 14)
+            #for oindxsta in 0
+            do
+                sbatch script_sbatch_hdf5_om.sh ${objindx} ${pindxsta} ${scindxsta} ${oindxsta}
+            done
         done
     done
 done
