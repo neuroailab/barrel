@@ -113,7 +113,10 @@ def get_pos_list(mode=0):
         for indx_tmp in xrange(3):
             new_pos = copy.deepcopy(start_poses[0])
             for indx_tmp2 in xrange(3):
-                new_pos[indx_tmp2] = new_pos[indx_tmp2] + change_pos[indx_tmp2]*indx_tmp
+                if indx_tmp>0:
+                    new_pos[indx_tmp2] = new_pos[indx_tmp2] + change_pos[indx_tmp2]*indx_tmp
+                else:
+                    new_pos[indx_tmp2] = new_pos[indx_tmp2] + change_pos[indx_tmp2]*3
             start_poses.append(new_pos)
 
     else:
@@ -206,10 +209,14 @@ if __name__=="__main__":
     exist_num = 0
     not_exist = 0
 
+    #for pos_array,indx in enumerate(pos_list):
+    #    print(indx, pos_array)
+
     for indx_pos_now in xrange(args.pindxsta, args.pindxsta + args.pindxlen):
         if indx_pos_now>=len(pos_list):
             break
         config_dict["obj_pos_list"]["value"] = pos_list[indx_pos_now]
+        #print(pos_list[indx_pos_now])
 
         for indx_scale_now in xrange(args.scindxsta, args.scindxsta + args.scindxlen):
             if indx_scale_now>=len(scale_list):
@@ -257,5 +264,6 @@ if __name__=="__main__":
                     cmd_str         = cmd_tmp % (args.pathexe, now_config_fn)
 
                     os.system(cmd_str)
+                    config_dict["FILE_NAME"]["value"] = orig_config_dict["FILE_NAME"]["value"]
     if args.checkmode>=1:
         print(exist_num)
