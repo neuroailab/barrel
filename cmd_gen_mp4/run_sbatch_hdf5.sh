@@ -7,7 +7,8 @@ do
         for spindxsta in $(seq 0 13)
         #for spindxsta in 0
         do
-            sbatch script_sbatch_hdf5_om.sh ${objindx} ${oindxsta} ${spindxsta}
+            #sbatch script_sbatch_hdf5_om.sh ${objindx} ${oindxsta} ${spindxsta}
+            sh run_check_hdf5.sh ${objindx} ${oindxsta} ${spindxsta}
         done
     done
 done

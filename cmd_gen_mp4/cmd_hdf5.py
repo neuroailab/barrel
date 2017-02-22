@@ -159,6 +159,7 @@ if __name__=="__main__":
     parser.add_argument('--indxend', default = 31, type = int, action = 'store', help = 'End index of whisker needed')
     parser.add_argument('--testmode', default = 1, type = int, action = 'store', help = 'Whether run the test command or not')
     parser.add_argument('--generatemode', default = 0, type = int, action = 'store', help = 'Whether in validation mode or not')
+    parser.add_argument('--checkmode', default = 0, type = int, action = 'store', help = 'Whether run the check first before running')
 
     parser.add_argument('--spindxsta', default = 0, type = int, action = 'store', help = 'Start index of speed')
     parser.add_argument('--spindxlen', default = 1, type = int, action = 'store', help = 'Length index of speed')
@@ -202,22 +203,46 @@ if __name__=="__main__":
         config_dict["obj_filename"]["value"] = [os.path.join(obj_path_prefix, "teddy.obj")]
         hdf5_prefix = "teddy"
 
+    exist_num = 0
+    not_exist = 0
+
     for indx_pos_now in xrange(args.pindxsta, args.pindxsta + args.pindxlen):
+        if indx_pos_now>=len(pos_list):
+            break
         config_dict["obj_pos_list"]["value"] = pos_list[indx_pos_now]
 
         for indx_scale_now in xrange(args.scindxsta, args.scindxsta + args.scindxlen):
+            if indx_scale_now>=len(scale_list):
+                break
             config_dict["control_len"]["value"] = scale_list[indx_scale_now]
 
             for indx_speed_now in xrange(args.spindxsta, args.spindxsta + args.spindxlen):
+                if indx_speed_now>=len(speed_list):
+                    break
                 config_dict["obj_speed_list"]["value"] = speed_list[indx_speed_now]
 
                 for indx_orn_now in xrange(args.oindxsta, args.oindxsta + args.oindxlen):
+                    if indx_orn_now>=len(orn_list):
+                        break
                     config_dict["obj_orn_list"]["value"] = orn_list[indx_orn_now]
 
                     hash_value = make_hash(config_dict)
-                    config_dict["FILE_NAME"]["value"] = os.path.join(args.pathhdf5, "%s_%s.hdf5" % (hdf5_prefix, str(hash_value)))
+                    hash_value = "%i_%i_%i_%i_%i" % (hash_value, indx_pos_now, indx_scale_now, indx_speed_now, indx_orn_now)
+                    #config_dict["FILE_NAME"]["value"] = os.path.join(args.pathhdf5, "%s_%s.hdf5" % (hdf5_prefix, str(hash_value)))
+                    config_dict["FILE_NAME"]["value"] = os.path.join(args.pathhdf5, "%s_%s.hdf5" % (hdf5_prefix, hash_value))
 
-                    now_config_fn   = os.path.join(args.pathconfig, "test_%s.cfg" % str(hash_value))
+                    if (args.checkmode>=1):
+                        if (os.path.exists(config_dict["FILE_NAME"]["value"])):
+                            exist_num = exist_num + 1
+                            #print("Exist:", exist_num)
+                        else:
+                            not_exist = not_exist + 1
+                            #print("Not exist!", not_exist, config_dict["FILE_NAME"]["value"])
+                        if args.checkmode==1:
+                            continue
+
+                    #now_config_fn   = os.path.join(args.pathconfig, "test_%s.cfg" % str(hash_value))
+                    now_config_fn   = os.path.join(args.pathconfig, "test_%s.cfg" % hash_value)
 
                     # Make config files
                     #now_config_fn   = "test.cfg"
@@ -232,3 +257,5 @@ if __name__=="__main__":
                     cmd_str         = cmd_tmp % (args.pathexe, now_config_fn)
 
                     os.system(cmd_str)
+    if args.checkmode>=1:
+        print(exist_num)
