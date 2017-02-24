@@ -163,6 +163,7 @@ if __name__=="__main__":
     parser.add_argument('--testmode', default = 1, type = int, action = 'store', help = 'Whether run the test command or not')
     parser.add_argument('--generatemode', default = 0, type = int, action = 'store', help = 'Whether in validation mode or not')
     parser.add_argument('--checkmode', default = 0, type = int, action = 'store', help = 'Whether run the check first before running')
+    parser.add_argument('--mp4flag', default = None, type = str, action = 'store', help = 'Whether generate mp4 files, if not None, will be used as mp4 name')
 
     parser.add_argument('--spindxsta', default = 0, type = int, action = 'store', help = 'Start index of speed')
     parser.add_argument('--spindxlen', default = 1, type = int, action = 'store', help = 'Length index of speed')
@@ -205,6 +206,10 @@ if __name__=="__main__":
     elif args.objindx==1:
         config_dict["obj_filename"]["value"] = [os.path.join(obj_path_prefix, "teddy.obj")]
         hdf5_prefix = "teddy"
+
+    config_dict["add_objs"]["value"] = 1
+    config_dict["time_limit"]["value"] = 11.0
+    config_dict["flag_time"]["value"] = 1
 
     exist_num = 0
     not_exist = 0
@@ -256,12 +261,15 @@ if __name__=="__main__":
 
                     make_config(config_dict, now_config_fn)
 
-                    if args.testmode==1:
-                        cmd_tmp         = "%s --config_filename=%s --start_demo_name=TestHingeTorque"
+                    if args.mp4flag is None:
+                        if args.testmode==1:
+                            cmd_tmp         = "%s --config_filename=%s --start_demo_name=TestHingeTorque"
+                        else:
+                            cmd_tmp         = "%s %s"
+                        cmd_str         = cmd_tmp % (args.pathexe, now_config_fn)
                     else:
-                        cmd_tmp         = "%s %s"
-
-                    cmd_str         = cmd_tmp % (args.pathexe, now_config_fn)
+                        cmd_tmp         = "%s --config_filename=%s --mp4=%s --start_demo_name=TestHingeTorque"
+                        cmd_str         = cmd_tmp % (args.pathexe, now_config_fn, args.mp4flag)
 
                     os.system(cmd_str)
                     config_dict["FILE_NAME"]["value"] = orig_config_dict["FILE_NAME"]["value"]

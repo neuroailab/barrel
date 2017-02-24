@@ -226,11 +226,13 @@ def get_config_dict():
 
             "time_leap":{"value":1.0/240.0, "help":"Time unit for simulation", "type":"float"},
             #"time_leap":{"value":1.0/120.0, "help":"Time unit for simulation", "type":"float"},
-            "camera_dist":{"value":80, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
-            "camera_yaw":{"value":183, "type":"float"}, 
-            "camera_pitch":{"value":83, "type":"float"}, 
+            "camera_dist":{"value":60, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
+            #"camera_yaw":{"value":183, "type":"float"}, 
+            "camera_yaw":{"value":21, "type":"float"}, 
+            #"camera_pitch":{"value":83, "type":"float"}, 
+            "camera_pitch":{"value":270, "type":"float"}, 
 
-            "add_objs":{"value":1, "type":"int"},
+            "add_objs":{"value":0, "type":"int"},
             #"obj_filename":{"value":["/Users/chengxuz/barrel/bullet/bullet3/data/teddy.obj"], "type":"list", "type_in":"string"},
             #"obj_filename":{"value":[os.path.join(obj_path_prefix, "teddy.obj")], "type":"list", "type_in":"string"},
             #"obj_filename":{"value":["/Users/chengxuz/barrel/bullet/bullet3/data/cube.obj"], "type":"list", "type_in":"string"},
@@ -262,9 +264,9 @@ def get_config_dict():
             "num_unit_to_save":{"value":3, "type":"int"},
             "sample_rate":{"value":24, "type":"int"},
 
-            #"time_limit":{"value":60.0, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
+            "time_limit":{"value":60.0, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
             #"time_limit":{"value":12.0, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
-            "time_limit":{"value":11.0, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
+            #"time_limit":{"value":11.0, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
             "initial_str":{"value":10000, "help":"Initial strength of force applied", "type":"float"}, 
             "max_str":{"value":10000, "help":"Max strength of force applied", "type":"float"}, 
             "initial_stime":{"value":3.1/8, "help":"Initial time to apply force", "type":"float"}, 
@@ -278,9 +280,9 @@ def get_config_dict():
             #"force_mode":{"value":2, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
             #"force_mode":{"value":1, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
             "force_mode":{"value":-1, "help":"Force mode to apply at the beginning, default is 0", "type":"int"},
-            #"flag_time":{"value":2, "help":"Whether open time limit", "type":"int"}}
+            "flag_time":{"value":2, "help":"Whether open time limit", "type":"int"}}
             #"flag_time":{"value":0, "help":"Whether open time limit", "type":"int"}}
-            "flag_time":{"value":1, "help":"Whether open time limit", "type":"int"}}
+            #"flag_time":{"value":1, "help":"Whether open time limit", "type":"int"}}
     return config_dict
 
 config_dict = get_config_dict()
