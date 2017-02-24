@@ -76,6 +76,22 @@ class NoramlNetfromConv(model.ConvNet):
 
         return self.output
 
+    def UnPooling2x2ZeroFilled(x):
+	# https://github.com/tensorflow/tensorflow/issues/2169
+	out = tf.concat([x, tf.zeros_like(x)], 3)
+	out = tf.concat([out, tf.zeros_like(out)], 2)
+
+	sh = x.get_shape().as_list()
+	if None not in sh[1:]:
+	    out_size = [-1, sh[1] * 2, sh[2] * 2, sh[3]]
+	    return tf.reshape(out, out_size)
+	else:
+	    shv = tf.shape(x)
+	    ret = tf.reshape(out, tf.stack([-1, shv[1] * 2, shv[2] * 2, sh[3]]))
+	    ret.set_shape([None, None, None, sh[3]])
+	    return ret
+
+
 def getEncodeDepth(cfg):
     val = None
     if 'encode_depth' in cfg:
