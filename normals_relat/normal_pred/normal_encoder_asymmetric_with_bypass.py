@@ -76,20 +76,16 @@ class NoramlNetfromConv(model.ConvNet):
 
         return self.output
 
-    def UnPooling2x2ZeroFilled(x):
-	# https://github.com/tensorflow/tensorflow/issues/2169
-	out = tf.concat([x, tf.zeros_like(x)], 3)
-	out = tf.concat([out, tf.zeros_like(out)], 2)
+    def resize_images_scale(self, scale, in_layer=None):
+        if in_layer is None:
+            in_layer = self.output
 
-	sh = x.get_shape().as_list()
-	if None not in sh[1:]:
-	    out_size = [-1, sh[1] * 2, sh[2] * 2, sh[3]]
-	    return tf.reshape(out, out_size)
-	else:
-	    shv = tf.shape(x)
-	    ret = tf.reshape(out, tf.stack([-1, shv[1] * 2, shv[2] * 2, sh[3]]))
-	    ret.set_shape([None, None, None, sh[3]])
-	    return ret
+        im_h = in_layer.get_shape().as_list()[1]
+        im_w = in_layer.get_shape().as_list()[2]
+
+        self.output = tf.image.resize_images(in_layer, [im_h*scale, im_w*scale])
+        return self.output
+    
 
 
 def getEncodeDepth(cfg):
@@ -104,12 +100,13 @@ def getEncodeDepth(cfg):
     val = 2
     return val
 
-def getEncodeConvFilterSize(i, cfg, prev=None):
+def getEncodeConvFilterSize(i, cfg, prev=None, wihch_one = 'encode'):
     val = None
-    if 'encode' in cfg and (i in cfg['encode']):
-        if 'conv' in cfg['encode'][i]:
-            if 'filter_size' in cfg['encode'][i]['conv']:
-                val = cfg['encode'][i]['conv']['filter_size']    
+
+    if which_one in cfg and (i in cfg[which_one]):
+        if 'conv' in cfg[which_one][i]:
+            if 'filter_size' in cfg[which_one][i]['conv']:
+                val = cfg[which_one][i]['conv']['filter_size']    
 
     if val is not None:
         return val
@@ -117,12 +114,13 @@ def getEncodeConvFilterSize(i, cfg, prev=None):
     val = 5
     return val
 
-def getEncodeConvNumFilters(i, cfg):
+def getEncodeConvNumFilters(i, cfg, wihch_one = 'encode'):
     val = None
-    if 'encode' in cfg and (i in cfg['encode']):
-        if 'conv' in cfg['encode'][i]:
-            if 'num_filters' in cfg['encode'][i]['conv']:
-                val = cfg['encode'][i]['conv']['num_filters']
+
+    if which_one in cfg and (i in cfg[which_one]):
+        if 'conv' in cfg[which_one][i]:
+            if 'num_filters' in cfg[which_one][i]['conv']:
+                val = cfg[which_one][i]['conv']['num_filters']
 
     if val is not None:
         return val
@@ -130,12 +128,13 @@ def getEncodeConvNumFilters(i, cfg):
     L = [3, 48, 96, 128, 256, 128]
     return L[i]
 
-def getEncodeConvStride(i, encode_depth, cfg):
+def getEncodeConvStride(i, encode_depth, cfg, wihch_one = 'encode'):
     val = None
-    if 'encode' in cfg and (i in cfg['encode']):
-        if 'conv' in cfg['encode'][i]:
-            if 'stride' in cfg['encode'][i]['conv']:
-                val = cfg['encode'][i]['conv']['stride']
+
+    if which_one in cfg and (i in cfg[which_one]):
+        if 'conv' in cfg[which_one][i]:
+            if 'stride' in cfg[which_one][i]['conv']:
+                val = cfg[which_one][i]['conv']['stride']
 
     if val is not None:
         return val
@@ -144,6 +143,28 @@ def getEncodeConvStride(i, encode_depth, cfg):
         return 2 if i == 1 else 1
     else:
         return 3 if i == 1 else 1
+
+def getDecodeDoUnPool(i, cfg):
+    val = None
+    if 'decode' in cfg and (i in cfg['decode']):
+        if 'unpool' in cfg['decode'][i]:
+            val = True
+
+    if val is not None:
+        return val
+    return False
+
+def getDecodeUnPoolScale(i, cfg):
+    val = None
+    if 'decode' in cfg and (i in cfg['decode']):
+        if 'unpool' in cfg['decode'][i]:
+            if 'scale' in cfg['decode'][i]['unpool']:
+                val = cfg['decode'][i]['unpool']['scale']
+
+    if val is not None:
+        return val
+
+    return 2
 
 def getEncodeDoPool(i, cfg):
     val = None
@@ -154,7 +175,7 @@ def getEncodeDoPool(i, cfg):
             val = True
     if val is not None:
         return val
-    return 1 
+    return False
 
 def getEncodePoolFilterSize(i, cfg):
     val = None
@@ -187,7 +208,10 @@ def getEncodePoolType(i, cfg):
     if val is not None:
         return val
     L = ['max', 'max', 'avg', 'avg', 'avg']
-    return L[i]
+    if i<len(L):
+        return L[i]
+    else:
+        return 'max'
 
 def getHiddenDepth(cfg):
     val = None
@@ -274,6 +298,91 @@ def getFilterSeed(cfg):
     else:    
         return 0
     
+def normal_vgg16(inputs, cfg_initial, train=True, seed = None, **kwargs):
+    """The Model definition for normals"""
+
+    cfg = cfg_initial
+    if seed==None:
+        fseed = getFilterSeed(cfg)
+    else:
+        fseed = seed
+
+    dropout_rate = 0.5
+    if not train:
+        dropout_rate = None
+
+    m = NoramlNetfromConv(seed = fseed, **kwargs)
+
+    encode_nodes = []
+    encode_nodes.append(inputs)
+
+    with tf.contrib.framework.arg_scope([m.conv], init='xavier',
+                                        stddev=.01, bias=0, activation='relu'):
+        encode_depth = getEncodeDepth(cfg)
+        print('Encode depth: %d' % encode_depth)
+
+        for i in range(1, encode_depth + 1):
+            with tf.variable_scope('encode%i' % i):
+                cfs = getEncodeConvFilterSize(i, cfg)
+                nf = getEncodeConvNumFilters(i, cfg)
+                cs = getEncodeConvStride(i, encode_depth, cfg)
+
+                if i==1:
+                    new_encode_node = m.conv(nf, cfs, cs, padding='VALID', in_layer=inputs)
+                else:
+                    new_encode_node = m.conv(nf, cfs, cs)
+
+                print('Encode conv %d with size %d stride %d numfilters %d' % (i, cfs, cs, nf))        
+                do_pool = getEncodeDoPool(i, cfg)
+                if do_pool:
+                    pfs = getEncodePoolFilterSize(i, cfg)
+                    ps = getEncodePoolStride(i, cfg)
+                    pool_type = getEncodePoolType(i, cfg)
+
+                    if pool_type == 'max':
+                        pfunc = 'maxpool'
+                    elif pool_type == 'avg':
+                        pfunc = 'avgpool' 
+
+                    new_encode_node = m.pool(pfs, ps, pfunc=pfunc)
+                    print('Encode %s pool %d with size %d stride %d' % (pfunc, i, pfs, ps))
+                encode_nodes.append(new_encode_node)   
+
+        decode_depth = getDecodeDepth(cfg)
+        print('Decode depth: %d' % decode_depth)
+
+        for i in range(1, decode_depth + 1):
+            with tf.variable_scope('decode%i' % (encode_depth + i)):
+
+                add_bypass = getDecodeBypass(i, encode_nodes, ds, 0, cfg)
+
+                if add_bypass != None:
+                    bypass_layer = encode_nodes[add_bypass]
+
+                    decode = m.add_bypass(bypass_layer)
+
+                    print('Decode bypass from %d at %d for shape' % (add_bypass, i), decode.get_shape().as_list())
+
+                do_unpool = getDecodeDoUnPool(i, cfg)
+                if do_unpool:
+                    unpool_scale = getDecodeUnPoolScale(i, cfg)
+                    new_encode_node = m.resize_images_scale(unpool_scale)
+
+                    print('Decode unpool %d with scale %d' % (i, unpool_scale))
+
+                cfs = getEncodeConvFilterSize(i, cfg, wihch_one = 'decode')
+                nf = getEncodeConvNumFilters(i, cfg, wihch_one = 'decode')
+                cs = getEncodeConvStride(i, encode_depth, cfg, wihch_one = 'decode')
+
+                new_encode_node = m.conv(nf, cfs, cs)
+
+                print('Decode conv %d with size %d stride %d numfilters %d' % (i, cfs, cs, nf))        
+
+    return m
+
+def normal_vgg16_tfutils(inputs, **kwargs):
+    m = normal_vgg16(inputs['images'], **kwargs)
+    return m.output, m.params
 
 def normalnet(inputs, cfg_initial, train=True, seed = None, **kwargs):
     """The Model definition."""
