@@ -356,7 +356,7 @@ def main(args):
             'learning_rate': .01,
             #'learning_rate': .001,
             'decay_rate': .95,
-            'decay_rate': .5,
+            #'decay_rate': .5,
             #'decay_steps': 5*NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
             'decay_steps': NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
             'staircase': True
