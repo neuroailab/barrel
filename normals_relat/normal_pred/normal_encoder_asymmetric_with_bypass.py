@@ -100,7 +100,7 @@ def getEncodeDepth(cfg):
     val = 2
     return val
 
-def getEncodeConvFilterSize(i, cfg, prev=None, wihch_one = 'encode'):
+def getEncodeConvFilterSize(i, cfg, prev=None, which_one = 'encode'):
     val = None
 
     if which_one in cfg and (i in cfg[which_one]):
@@ -114,7 +114,7 @@ def getEncodeConvFilterSize(i, cfg, prev=None, wihch_one = 'encode'):
     val = 5
     return val
 
-def getEncodeConvNumFilters(i, cfg, wihch_one = 'encode'):
+def getEncodeConvNumFilters(i, cfg, which_one = 'encode'):
     val = None
 
     if which_one in cfg and (i in cfg[which_one]):
@@ -128,7 +128,7 @@ def getEncodeConvNumFilters(i, cfg, wihch_one = 'encode'):
     L = [3, 48, 96, 128, 256, 128]
     return L[i]
 
-def getEncodeConvStride(i, encode_depth, cfg, wihch_one = 'encode'):
+def getEncodeConvStride(i, encode_depth, cfg, which_one = 'encode'):
     val = None
 
     if which_one in cfg and (i in cfg[which_one]):
@@ -176,6 +176,7 @@ def getEncodeDoPool(i, cfg):
     if val is not None:
         return val
     return False
+    #return 1
 
 def getEncodePoolFilterSize(i, cfg):
     val = None
@@ -354,7 +355,7 @@ def normal_vgg16(inputs, cfg_initial, train=True, seed = None, **kwargs):
         for i in range(1, decode_depth + 1):
             with tf.variable_scope('decode%i' % (encode_depth + i)):
 
-                add_bypass = getDecodeBypass(i, encode_nodes, ds, 0, cfg)
+                add_bypass = getDecodeBypass(i, encode_nodes, None, 0, cfg)
 
                 if add_bypass != None:
                     bypass_layer = encode_nodes[add_bypass]
@@ -370,9 +371,9 @@ def normal_vgg16(inputs, cfg_initial, train=True, seed = None, **kwargs):
 
                     print('Decode unpool %d with scale %d' % (i, unpool_scale))
 
-                cfs = getEncodeConvFilterSize(i, cfg, wihch_one = 'decode')
-                nf = getEncodeConvNumFilters(i, cfg, wihch_one = 'decode')
-                cs = getEncodeConvStride(i, encode_depth, cfg, wihch_one = 'decode')
+                cfs = getEncodeConvFilterSize(i, cfg, which_one = 'decode')
+                nf = getEncodeConvNumFilters(i, cfg, which_one = 'decode')
+                cs = getEncodeConvStride(i, encode_depth, cfg, which_one = 'decode')
 
                 new_encode_node = m.conv(nf, cfs, cs)
 

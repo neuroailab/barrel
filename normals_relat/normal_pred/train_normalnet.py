@@ -109,7 +109,8 @@ class Threedworld(TFRecordsDataProvider):
             data_path[group],
             {self.images: tf.string, self.labels: tf.string},
             batch_size=batch_size,
-            postprocess={self.images: self.postproc, self.labels: self.postproc},
+            #postprocess={self.images: self.postproc_img, self.labels: self.postproc_lab},
+            postprocess={self.images: self.postproc_img, self.labels: self.postproc_img},
             #postprocess={self.images: self.postproc_resize, self.labels: self.postproc_resize},
             imagelist=[self.images, self.labels],
             n_threads=n_threads,
@@ -133,7 +134,47 @@ class Threedworld(TFRecordsDataProvider):
 
         return [images_batch, images_batch.dtype, images_batch[0].get_shape()]
 
-    def postproc(self, images, dtype, shape):
+    def postproc_lab(self, images, dtype, shape):
+
+        norm = tf.cast(images, tf.float32)
+        #norm = tf.div(norm, tf.constant(255, dtype=tf.float32))
+        norm = tf.nn.l2_normalize(norm, 3)
+        #norm = tf.cast(norm, tf.float32)
+
+        if self.group=='train':
+
+            if self.now_num==0:
+                off = np.zeros(shape = [self.batch_size, 4])
+                off[:, :2] = np.random.randint(0, IMAGE_SIZE - self.crop_size, size=[self.batch_size, 2])
+                off[:, 2:4] = off[:, :2] + self.crop_size
+                off = off*1.0/(IMAGE_SIZE - 1)
+                self.off = off
+            else:
+                off = self.off
+
+            '''
+            off = np.zeros(shape = [self.batch_size, 4])
+            off[:, :2] = int((IMAGE_SIZE - self.crop_size)/2)
+            off[:, 2:4] = off[:, :2] + self.crop_size
+            off = off*1.0/(IMAGE_SIZE - 1)
+            '''
+
+        else:
+            off = np.zeros(shape = [self.batch_size, 4])
+            off[:, :2] = int((IMAGE_SIZE - self.crop_size)/2)
+            off[:, 2:4] = off[:, :2] + self.crop_size
+            off = off*1.0/(IMAGE_SIZE - 1)
+
+        images_batch = tf.image.crop_and_resize(norm, off, self.box_ind, tf.constant([self.crop_size, self.crop_size]))
+        if self.now_num==0:
+            self.now_num = 1
+        else:
+            self.now_num = 0
+
+        return [images_batch, images_batch.dtype, images_batch[0].get_shape()]
+
+    #def postproc(self, images, dtype, shape):
+    def postproc_img(self, images, dtype, shape):
 
         norm = tf.cast(images, tf.float32)
         norm = tf.div(norm, tf.constant(255, dtype=tf.float32))
@@ -180,7 +221,9 @@ class Threedworld(TFRecordsDataProvider):
 
 #BATCH_SIZE = 256
 #BATCH_SIZE = 192
-BATCH_SIZE = 128
+#BATCH_SIZE = 128
+#BATCH_SIZE = 64
+BATCH_SIZE = 32
 NUM_BATCHES_PER_EPOCH = Threedworld.N_TRAIN // BATCH_SIZE
 IMAGE_SIZE_CROP = 224
 IMAGE_SIZE = 256
@@ -191,9 +234,15 @@ def loss_ave_l2(output, labels):
     loss = tf.nn.l2_loss(output - labels) / NORM_NUM
     return loss
 
+def loss_ave_invdot(output, labels):
+    output = tf.nn.l2_normalize(output, 3)
+    loss = -tf.reduce_sum(tf.multiply(output, labels)) / NORM_NUM
+    return loss
+
 def rep_loss(inputs, outputs, target):
-    loss = tf.nn.l2_loss(outputs - inputs[target]) / NORM_NUM
-    return {'loss': loss}
+    loss    = tf.nn.l2_loss(outputs - inputs[target]) / NORM_NUM
+    loss_2  = -tf.reduce_sum(tf.multiply(outputs, inputs[target])) / NORM_NUM
+    return {'loss': loss, 'loss_2': loss_2}
 
 def postprocess_config(cfg):
     cfg = copy.deepcopy(cfg)
@@ -219,12 +268,17 @@ def main(args):
     #cfg_initial = postprocess_config(json.load(open(cfgfile)))
     if args.gpu>-1:
         os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
-    cfg_initial = preprocess_config(json.load(open(args.pathconfig)))
+    #cfg_initial = preprocess_config(json.load(open(args.pathconfig)))
+    cfg_initial = postprocess_config(json.load(open(args.pathconfig)))
     exp_id  = args.expId
     cache_dir = os.path.join(args.cacheDirPrefix, '.tfutils', 'localhost:'+ str(args.nport), 'normalnet-test', 'normalnet', exp_id)
 
-    queue_capa = BATCH_SIZE*120
+    #queue_capa = BATCH_SIZE*120
+    queue_capa = BATCH_SIZE*500
+    print('Test mode!!! Change queue_capa to make it work!')
     n_threads = 1
+
+    func_net = getattr(normal_encoder_asymmetric_with_bypass, args.namefunc)
 
     params = {
         'save_params': {
@@ -264,7 +318,7 @@ def main(args):
         },
 
         'model_params': {
-            'func': normal_encoder_asymmetric_with_bypass.normalnet_tfutils,
+            'func': func_net,
             'seed': args.seed,
             'cfg_initial': cfg_initial
         },
@@ -292,6 +346,7 @@ def main(args):
         'loss_params': {
             'targets': 'normals',
             'agg_func': tf.reduce_mean,
+            #'loss_per_case_func': loss_ave_invdot,
             'loss_per_case_func': loss_ave_l2,
             'loss_per_case_func_params': {}
         },
@@ -299,7 +354,10 @@ def main(args):
         'learning_rate_params': {
             'func': tf.train.exponential_decay,
             'learning_rate': .01,
+            #'learning_rate': .001,
             'decay_rate': .95,
+            'decay_rate': .5,
+            #'decay_steps': 5*NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
             'decay_steps': NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
             'staircase': True
         },
@@ -331,7 +389,8 @@ def main(args):
                     'func': rep_loss,
                     'target': 'normals',
                 },
-                'num_steps': Threedworld.N_VAL // BATCH_SIZE + 1,
+                #'num_steps': Threedworld.N_VAL // BATCH_SIZE + 1,
+                'num_steps': 1000 + 1,
                 'agg_func': lambda x: {k:np.mean(v) for k,v in x.items()},
                 'online_agg_func': online_agg
             },
@@ -350,6 +409,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', default = 0, type = int, action = 'store', help = 'Random seed for model')
     parser.add_argument('--gpu', default = -1, type = int, action = 'store', help = 'Index of gpu, currently only one gpu is allowed')
     parser.add_argument('--cacheDirPrefix', default = "/home/chengxuz", type = str, action = 'store', help = 'Prefix of cache directory')
+    parser.add_argument('--namefunc', default = "normalnet_tfutils", type = str, action = 'store', help = 'Function to build the network')
 
     args    = parser.parse_args()
 
