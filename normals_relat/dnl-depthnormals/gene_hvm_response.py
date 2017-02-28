@@ -13,6 +13,16 @@ import pdb
 
 import h5py
 
+def get_network(model_name):
+    module_fn = 'models/iccv15/%s.py' % model_name
+    config_fn = 'models/iccv15/%s.conf' % model_name
+    #params_dir = 'weights/%s' % model_name
+    params_dir = 'weights/iccv15/%s' % model_name
+
+    # load depth network
+    machine = net.create_machine(module_fn, config_fn, params_dir)
+    return machine
+
 def main():
     parser = argparse.ArgumentParser(description='The script to generate responses of hvmdataset')
     parser.add_argument('--network', default = 0, type = int, action = 'store', help = '0 is alexnet, 1 is vgg')
@@ -29,13 +39,7 @@ def main():
     else:
         model_name = 'depthnormals_nyud_vgg'
 
-    module_fn = 'models/iccv15/%s.py' % model_name
-    config_fn = 'models/iccv15/%s.conf' % model_name
-    #params_dir = 'weights/%s' % model_name
-    params_dir = 'weights/iccv15/%s' % model_name
-
-    # load depth network
-    machine = net.create_machine(module_fn, config_fn, params_dir)
+    machine = get_network(model_name)
 
     dataset = nd.HvMWithDiscfade()
     meta = dataset.meta

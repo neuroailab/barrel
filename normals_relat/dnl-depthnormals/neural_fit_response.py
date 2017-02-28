@@ -13,6 +13,67 @@ from sklearn import linear_model # for model_type = 0,1
 from sklearn import cross_decomposition # for model_type = 2
 from sklearn.metrics import r2_score
 import argparse
+import sklearn.decomposition
+import gene_hvm_response
+
+def resize_prep(img_unit8, want_out_w = 240, want_out_h = 320):
+    return misc.imresize(img_unit8, [want_out_w, want_out_h])
+
+def post_func(ret_val):
+    ret_val_now = []
+    for indx_now in xrange(len(ret_val)):
+        if not ret_val[indx_now] is None:
+            ret_val[indx_now] = ret_val[indx_now].reshape(ret_val[indx_now].shape[0], ret_val[indx_now].size/ret_val[indx_now].shape[0])
+            ret_val_now.append(ret_val[indx_now])
+
+    if len(ret_val_now)==1:
+        return ret_val_now[0]
+    else:
+        return ret_val_now
+
+class Feature_select_PCA:
+    def __init__(self, datapath = '/mnt/data/imagenet2012.hdf5', source = 'train/images', nimgs = 5000, nfeats = 1500):
+        self.file_in    = h5py.File(datapath, 'r')
+        self.data       = self.file_in[source]
+        self.nimgs      = nimgs
+        self.nfeats     = nfeats
+
+        self.curr_indx  = 0
+        self.big_img_array = None
+
+    def get_imagenet_imgs(self, preproc = resize_prep, want_out_w = 240, want_out_h = 320, num_channel = 3, kwargs = {}):
+        # preproc takes one image and return the image preprocessed
+        big_img_array = np.zeros([self.nimgs, want_out_w, want_out_h, num_channel])
+
+        for tmp_indx in xrange(self.curr_indx, self.curr_indx + self.nimgs):
+            now_img     = np.asarray(self.data[tmp_indx])
+            big_img_array[tmp_indx - self.curr_indx]    = preproc(now_img, want_out_w, want_out_h, **kwargs)
+
+        self.curr_indx  = self.curr_indx + self.nimgs
+        self.big_img_array = big_img_array
+
+    def get_PCA_ready(self, resp_func, kwargs, post_func, post_kwargs = {},  get_img_kwargs = {}):
+        if self.big_img_array is None:
+            self.get_imagenet_imgs(**get_img_kwargs)
+        all_imgs    = self.big_img_array
+        ret_func    = resp_func(all_imgs, **kwargs)
+        img_resp    = post_func(ret_func, **post_kwargs)
+
+        if isinstance(img_resp, list) and len(img_resp) > 1:
+            self.pca = []
+            for indx_res, res_now in enumerate(img_resp):
+                tmp_pca     = sklearn.decomposition.PCA(n_components=self.nfeats)
+                tmp_pca.fit(res_now)
+                self.pca.append(tmp_pca)
+        else:
+            self.pca = sklearn.decomposition.PCA(n_components=self.nfeats)
+            self.pca.fit(img_resp)
+
+    def get_PCA_trans(self, to_trans, which_one=0):
+        if isinstance(self.pca, list):
+            return self.pca[which_one].transform(to_trans)
+        else:
+            return self.pca.transform(to_trans)
 
 def main():
     parser = argparse.ArgumentParser(description='The script to generate responses of hvmdataset')
@@ -23,6 +84,7 @@ def main():
     parser.add_argument('--savedir', default = "/home/chengxuz/barrel/barrel_github/normal_pretrained/fitting_results", type = str, action = 'store', help = 'where to store the file')
     parser.add_argument('--saveprefix', default = "regress_layer_", type = str, action = 'store', help = 'Prefix of saving file')
     parser.add_argument('--cachedir', default = "/home/chengxuz/barrel/barrel_github/normal_pretrained/fitting_cache", type = str, action = 'store', help = 'where to store the file')
+    parser.add_argument('--dimethod', default = "random", type = str, action = 'store', help = "How to implement the dimension reduction, default is random, PCA available")
 
     args    = parser.parse_args()
 
