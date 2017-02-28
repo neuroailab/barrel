@@ -15,9 +15,18 @@ from sklearn.metrics import r2_score
 import argparse
 import sklearn.decomposition
 import gene_hvm_response
+from scipy import misc
 
 def resize_prep(img_unit8, want_out_w = 240, want_out_h = 320):
     return misc.imresize(img_unit8, [want_out_w, want_out_h])
+
+def post_func_one(ret_val, which_one):
+    desire_one = ret_val[which_one]
+    if desire_one is None:
+        desire_one = ret_val[0]
+
+    desire_one = desire_one.reshape(desire_one.shape[0], desire_one.size/desire_one.shape[0])
+    return desire_one
 
 def post_func(ret_val):
     ret_val_now = []
@@ -46,9 +55,12 @@ class Feature_select_PCA:
         big_img_array = np.zeros([self.nimgs, want_out_w, want_out_h, num_channel])
 
         for tmp_indx in xrange(self.curr_indx, self.curr_indx + self.nimgs):
+            if (tmp_indx - self.curr_indx) % 100==0:
+                print('Now img indx: %i' % (tmp_indx - self.curr_indx))
             now_img     = np.asarray(self.data[tmp_indx])
             big_img_array[tmp_indx - self.curr_indx]    = preproc(now_img, want_out_w, want_out_h, **kwargs)
 
+        big_img_array   = big_img_array.astype(np.float32)
         self.curr_indx  = self.curr_indx + self.nimgs
         self.big_img_array = big_img_array
 
@@ -68,6 +80,9 @@ class Feature_select_PCA:
         else:
             self.pca = sklearn.decomposition.PCA(n_components=self.nfeats)
             self.pca.fit(img_resp)
+
+    def set_curr_indx(self, expect_val):
+        self.curr_indx = expect_val
 
     def get_PCA_trans(self, to_trans, which_one=0):
         if isinstance(self.pca, list):
@@ -97,8 +112,14 @@ def main():
 
     if args.network==0:
         no_double_out_list = ["1.1", "1.2", "1.3", "2.1", "3.1"]
+        model_name = 'depthnormals_nyud_alexnet'
     else:
         no_double_out_list = ["1.1", "1.2", "1.3", "2.1"]
+        model_name = 'depthnormals_nyud_vgg'
+
+    if args.dimethod=='PCA':
+        machine = gene_hvm_response.get_network(model_name)
+        sel_pca = Feature_select_PCA()
 
     if args.layer in no_double_out_list:
         input_data_paths     = [os.path.join(args.loaddir, "%s%s.hdf5" % (args.loadprefix, args.layer))]
@@ -162,15 +183,28 @@ def main():
         if cache_flag==1:
             cache_data = {}
 
+        if args.dimethod=='PCA':
+            sel_pca.set_curr_indx(0)
+            which_one = 0
+            if 'normals.hdf5' in input_data_path:
+                which_one = 1
+
         #for sample_num in [500, 700, 1000, 1200, 1500, 1700]:
         for subsample_indx in xrange(sub_rep_time):
             kf      = KFold(neural_fea.shape[0], Kfold, shuffle = True, random_state = 0)
             if Subsample==True:
                 #model_features_aftersub     = model_features[:, np.random.choice(model_features.shape[1], sample_num, 0)]
                 if sample_num <= model_features.shape[1]:
-                    tmp_indx_list   = np.random.choice(model_features.shape[1], sample_num, 0)
-                    tmp_indx_list.sort()
-                    model_features_aftersub     = model_features[:, tmp_indx_list]
+                    if args.dimethod=='random':
+                        tmp_indx_list   = np.random.choice(model_features.shape[1], sample_num, 0)
+                        tmp_indx_list.sort()
+                        model_features_aftersub     = model_features[:, tmp_indx_list]
+                    elif args.dimethod=='PCA':
+                        sel_pca.get_imagenet_imgs()
+                        sel_pca.get_PCA_ready(machine.infer_some_layer_depth_and_normals, kwargs = {'which_layer': args.layer}, post_func = post_func_one, post_kwargs = {'which_one': which_one})
+                        model_features_aftersub     = sel_pca.get_PCA_trans(model_features)
+                    else:
+                        raise Exception('Not implemented!')
                 else:
                     model_features_aftersub     = model_features
                 print(model_features_aftersub.shape, subsample_indx)
