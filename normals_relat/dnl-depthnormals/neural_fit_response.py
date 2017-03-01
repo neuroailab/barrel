@@ -20,12 +20,14 @@ from scipy import misc
 def resize_prep(img_unit8, want_out_w = 240, want_out_h = 320):
     return misc.imresize(img_unit8, [want_out_w, want_out_h])
 
-def post_func_one(ret_val, which_one):
+def post_func_one(ret_val, which_one, want_indx = None):
     desire_one = ret_val[which_one]
     if desire_one is None:
         desire_one = ret_val[0]
 
     desire_one = desire_one.reshape(desire_one.shape[0], desire_one.size/desire_one.shape[0])
+    if not want_indx == None:
+        desire_one = desire_one[:, want_indx]
     return desire_one
 
 def post_func(ret_val):
@@ -100,6 +102,7 @@ def main():
     parser.add_argument('--saveprefix', default = "regress_layer_", type = str, action = 'store', help = 'Prefix of saving file')
     parser.add_argument('--cachedir', default = "/home/chengxuz/barrel/barrel_github/normal_pretrained/fitting_cache", type = str, action = 'store', help = 'where to store the file')
     parser.add_argument('--dimethod', default = "random", type = str, action = 'store', help = "How to implement the dimension reduction, default is random, PCA available")
+    parser.add_argument('--PCAMaxcontrol', default = -1, type = int, action = 'store', help = '<=0 means no control, else random sample that number of features')
 
     args    = parser.parse_args()
 
@@ -200,9 +203,19 @@ def main():
                         tmp_indx_list.sort()
                         model_features_aftersub     = model_features[:, tmp_indx_list]
                     elif args.dimethod=='PCA':
+                        if args.PCAMaxcontrol>0:
+                            tmp_indx_list   = np.random.choice(model_features.shape[1], args.PCAMaxcontrol, 0)
+                            tmp_indx_list.sort()
+                            model_features_inter     = model_features[:, tmp_indx_list]
+                        else:
+                            tmp_indx_list   = None
+
                         sel_pca.get_imagenet_imgs()
-                        sel_pca.get_PCA_ready(machine.infer_some_layer_depth_and_normals, kwargs = {'which_layer': args.layer}, post_func = post_func_one, post_kwargs = {'which_one': which_one})
-                        model_features_aftersub     = sel_pca.get_PCA_trans(model_features)
+                        sel_pca.get_PCA_ready(machine.infer_some_layer_depth_and_normals, kwargs = {'which_layer': args.layer}, post_func = post_func_one, post_kwargs = {'which_one': which_one, 'want_indx': tmp_indx_list})
+                        if args.PCAMaxcontrol>0:
+                            model_features_aftersub     = sel_pca.get_PCA_trans(model_features_inter)
+                        else:
+                            model_features_aftersub     = sel_pca.get_PCA_trans(model_features)
                     else:
                         raise Exception('Not implemented!')
                 else:
