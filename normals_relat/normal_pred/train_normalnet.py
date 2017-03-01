@@ -15,11 +15,7 @@ from tfutils import base, data, model, optimizer
 import json
 import copy
 import argparse
-import train_normalnet_hdf5
-
-#from tfutils.data import TFRecordsDataProvider#, LMDBDataProvider
-
-#os.environ["CUDA_VISIBLE_DEVICES"]="2"
+#import train_normalnet_hdf5
 
 host = os.uname()[1]
 
@@ -27,14 +23,20 @@ DATA_PATH = {}
 if host == 'freud':  # freud
     #DATA_PATH['train'] = '/media/data/one_world_dataset/randomperm.hdf5'
     #DATA_PATH['val'] = '/media/data/one_world_dataset/randomperm_test1.hdf5'
-    DATA_PATH['train'] = '/media/data2/one_world_dataset/dataset.tfrecords'
-    DATA_PATH['val'] = '/media/data2/one_world_dataset/dataset8.tfrecords'
+    DATA_PATH['train/images'] = '/media/data2/one_world_dataset/tfdata/images/'
+    DATA_PATH['train/normals'] = '/media/data2/one_world_dataset/tfdata/normals/'
+    DATA_PATH['val/images'] = '/media/data2/one_world_dataset/tfvaldata/images/'
+    DATA_PATH['val/normals'] = '/media/data2/one_world_dataset/tfvaldata/normals/'
 
 elif host.startswith('node') or host == 'openmind7':  # OpenMind
     #DATA_PATH['train'] = '/om/user/chengxuz/Data/one_world_dataset/randomperm.hdf5'
     #DATA_PATH['val'] = '/om/user/chengxuz/Data/one_world_dataset/randomperm_test1.hdf5'
-    DATA_PATH['train'] = '/om/user/chengxuz/Data/one_world_dataset/dataset.tfrecords'
-    DATA_PATH['val'] = '/om/user/chengxuz/Data/one_world_dataset/dataset8.tfrecords'
+    #DATA_PATH['train'] = '/om/user/chengxuz/Data/one_world_dataset/dataset.tfrecords'
+    #DATA_PATH['val'] = '/om/user/chengxuz/Data/one_world_dataset/dataset8.tfrecords'
+    DATA_PATH['train/images'] = '/om/user/chengxuz/Data/one_world_dataset/tfdata/images/'
+    DATA_PATH['train/normals'] = '/om/user/chengxuz/Data/one_world_dataset/tfdata/normals/'
+    DATA_PATH['val/images'] = '/om/user/chengxuz/Data/one_world_dataset/tfvaldata/images/'
+    DATA_PATH['val/normals'] = '/om/user/chengxuz/Data/one_world_dataset/tfvaldata/normals/'
 else:
     print("Not supported yet!")
     exit()
@@ -43,6 +45,8 @@ DATA_PATH_hdf5 = {}
 if host == 'freud':  # freud
     DATA_PATH_hdf5['train'] = '/media/data/one_world_dataset/randomperm.hdf5'
     DATA_PATH_hdf5['val'] = '/media/data/one_world_dataset/randomperm_test1.hdf5'
+    #print("No file now!")
+    #exit()
 
 elif host.startswith('node') or host == 'openmind7':  # OpenMind
     DATA_PATH_hdf5['train'] = '/om/user/chengxuz/Data/one_world_dataset/randomperm.hdf5'
@@ -59,8 +63,7 @@ def online_agg(agg_res, res, step):
         agg_res[k].append(np.mean(v))
     return agg_res
 
-#class Threedworld_hdf5(data.ParallelBySliceProvider):
-class Threedworld_hdf5(data.HDF5DataProvider): # for temporary
+class Threedworld_hdf5(data.ParallelBySliceProvider):
 
     N_TRAIN = 2048000
     N_VAL = 128000
@@ -142,8 +145,8 @@ class Threedworld_hdf5(data.HDF5DataProvider): # for temporary
 
         return [self.input_ops, self.dtypes, self.shapes]
 
-'''
-class Threedworld(data.TFRecordsDataProvider):
+#class Threedworld(data.TFRecordsDataProvider):
+class Threedworld(data.TFRecordsParallelByFileProvider):
 
     N_TRAIN = 2048000
     N_VAL = 128000
@@ -182,14 +185,14 @@ class Threedworld(data.TFRecordsDataProvider):
         self.labels = 'normals'
 
         super(Threedworld, self).__init__(
-            data_path[group],
-            {self.images: tf.string, self.labels: tf.string},
+            source_dirs = [data_path["%s/%s" % (group, self.images)] , data_path["%s/%s" % (group, self.labels)]],
             batch_size=batch_size,
+            postprocess={self.images: [(self.postproc_img, (), {})], self.labels: [(self.postproc_img, (), {})]},
             #postprocess={self.images: self.postproc_img, self.labels: self.postproc_lab},
-            postprocess={self.images: self.postproc_img, self.labels: self.postproc_img},
             #postprocess={self.images: self.postproc_resize, self.labels: self.postproc_resize},
-            imagelist=[self.images, self.labels],
+            #imagelist=[self.images, self.labels],
             n_threads=n_threads,
+            shuffle = True,
             *args, **kwargs)
         if crop_size is None:
             self.crop_size = 224
@@ -243,8 +246,8 @@ class Threedworld(data.TFRecordsDataProvider):
 
         return [images_batch, images_batch.dtype, images_batch[0].get_shape()]
 
-    #def postproc(self, images, dtype, shape):
-    def postproc_img(self, images, dtype, shape):
+    #def postproc_img(self, images, dtype, shape):
+    def postproc_img(self, images):
 
         norm = tf.cast(images, tf.float32)
         norm = tf.div(norm, tf.constant(255, dtype=tf.float32))
@@ -273,14 +276,14 @@ class Threedworld(data.TFRecordsDataProvider):
         else:
             self.now_num = 0
 
-        return [images_batch, images_batch.dtype, images_batch[0].get_shape()]
+        #return [images_batch, images_batch.dtype, images_batch[0].get_shape()]
+        return images_batch
 
     def init_threads(self):
         self.input_ops, self.dtypes, self.shapes = \
                 super(Threedworld, self).init_threads()
 
         return [self.input_ops, self.dtypes, self.shapes]
-'''
 
 
 #BATCH_SIZE = 256
@@ -338,7 +341,8 @@ def main(args):
     cache_dir = os.path.join(args.cacheDirPrefix, '.tfutils', 'localhost:'+ str(args.nport), 'normalnet-test', 'normalnet', exp_id)
 
     #queue_capa = BATCH_SIZE*120
-    queue_capa = BATCH_SIZE*500
+    #queue_capa = BATCH_SIZE*500
+    queue_capa = BATCH_SIZE*100
     print('Test mode!!! Change queue_capa to make it work!')
     #n_threads = 1
     n_threads = 4
@@ -346,16 +350,16 @@ def main(args):
     func_net = getattr(normal_encoder_asymmetric_with_bypass, args.namefunc)
 
     train_data_param = {
-                #'func': Threedworld_hdf5,
-                'func': train_normalnet_hdf5.Threedworld,
+                'func': Threedworld_hdf5,
+                #'func': train_normalnet_hdf5.Threedworld,
                 'data_path': DATA_PATH_hdf5,
                 'group': 'train',
                 'crop_size': IMAGE_SIZE_CROP,
                 'batch_size': BATCH_SIZE,
             }
     val_data_param = {
-                    #'func': Threedworld_hdf5,
-                    'func': train_normalnet_hdf5.Threedworld,
+                    'func': Threedworld_hdf5,
+                    #'func': train_normalnet_hdf5.Threedworld,
                     'data_path': DATA_PATH_hdf5,
                     'group': 'val',
                     'crop_size': IMAGE_SIZE_CROP,
@@ -371,14 +375,14 @@ def main(args):
     val_target          = 'labels'
 
     if args.usehdf5==0:
-        #train_data_parama['func']   = Threedworld_hdf5
-        #val_data_parama['func']     = Threedworld_hdf5
-        train_data_parama['func']   = Threedworld
-        val_data_parama['func']     = Threedworld
-        train_data_parama['data_path']   = DATA_PATH
-        val_data_parama['data_path']   = DATA_PATH
-        train_data_parama['n_threads'] = n_threads
-        val_data_parama['n_threads'] = n_threads
+        #train_data_params['func']   = Threedworld_hdf5
+        #val_data_params['func']     = Threedworld_hdf5
+        train_data_param['func']   = Threedworld
+        val_data_param['func']     = Threedworld
+        train_data_param['data_path']   = DATA_PATH
+        val_data_param['data_path']   = DATA_PATH
+        train_data_param['n_threads'] = n_threads
+        val_data_param['n_threads'] = n_threads
 
         train_queue_params = {
                 'queue_type': 'random',
