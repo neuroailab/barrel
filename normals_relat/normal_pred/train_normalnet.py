@@ -15,8 +15,9 @@ from tfutils import base, data, model, optimizer
 import json
 import copy
 import argparse
+import train_normalnet_hdf5
 
-from tfutils.data import TFRecordsDataProvider#, LMDBDataProvider
+#from tfutils.data import TFRecordsDataProvider#, LMDBDataProvider
 
 #os.environ["CUDA_VISIBLE_DEVICES"]="2"
 
@@ -38,6 +39,17 @@ else:
     print("Not supported yet!")
     exit()
 
+DATA_PATH_hdf5 = {}
+if host == 'freud':  # freud
+    DATA_PATH_hdf5['train'] = '/media/data/one_world_dataset/randomperm.hdf5'
+    DATA_PATH_hdf5['val'] = '/media/data/one_world_dataset/randomperm_test1.hdf5'
+
+elif host.startswith('node') or host == 'openmind7':  # OpenMind
+    DATA_PATH_hdf5['train'] = '/om/user/chengxuz/Data/one_world_dataset/randomperm.hdf5'
+    DATA_PATH_hdf5['val'] = '/om/user/chengxuz/Data/one_world_dataset/randomperm_test1.hdf5'
+else:
+    print("Not supported yet!")
+    exit()
 
 
 def online_agg(agg_res, res, step):
@@ -47,27 +59,91 @@ def online_agg(agg_res, res, step):
         agg_res[k].append(np.mean(v))
     return agg_res
 
+#class Threedworld_hdf5(data.ParallelBySliceProvider):
+class Threedworld_hdf5(data.HDF5DataProvider): # for temporary
 
-def exponential_decay(global_step,
-                      learning_rate=.01,
-                      decay_factor=.95,
-                      decay_steps=1,
-                      ):
-    # Decay the learning rate exponentially based on the number of steps.
-    if decay_factor is None:
-        lr = learning_rate  # just a constant.
-    else:
-        # Calculate the learning rate schedule.
-        lr = tf.train.exponential_decay(
-            learning_rate,  # Base learning rate.
-            global_step,  # Current index into the dataset.
-            decay_steps,  # Decay step
-            decay_factor,  # Decay rate.
-            staircase=True)
-    return lr
+    N_TRAIN = 2048000
+    N_VAL = 128000
 
+    def __init__(self,
+                 data_path,
+                 group='train',
+                 batch_size=1,
+                 n_threads=4,
+                 crop_size=None,
+                 *args,
+                 **kwargs):
+        """
+        A specific reader for Threedworld generated dataset stored as a HDF5 file
 
-class Threedworld(TFRecordsDataProvider):
+        Args:
+            - data_path
+                path to raw hdf5 data
+        Kwargs:
+            - group (str, default: 'train')
+                Which subset of the dataset you want: train, val.
+                The latter contains 50k images from the train set,
+                so that you can directly compare performance on the validation set
+                to the performance on the train set to track overfitting.
+            - batch_size (int, default: 1)
+                Number of images to return when `next` is called. By default set
+                to 1 since it is expected to be used with queues where reading one
+                image at a time is ok.
+            - crop_size (int or None, default: None)
+                For center crop (crop_size x crop_size). If None, no cropping will occur.
+            - *args, **kwargs
+                Extra arguments for HDF5DataProvider
+        """
+        self.group = group
+        self.images = 'images'
+        self.labels = 'normals'
+
+        super(Threedworld_hdf5, self).__init__(
+            basefunc = data.HDF5DataReader,
+            kwargs = {'hdf5source': data_path[group], 'sourcelist': [self.images, self.labels], 
+                      'postprocess':{self.images: self.postproc, self.labels: self.postproc}},
+            batch_size=batch_size,
+            n_threads=n_threads,
+            *args, **kwargs)
+
+        if crop_size is None:
+            self.crop_size = 224
+        else:
+            self.crop_size = crop_size
+
+        self.off        = None
+        self.now_num    = 0
+
+    def postproc(self, ims, f):
+        norm = ims.astype(np.float32) / 255
+        if self.group=='train':
+            #print('In train')
+            if self.now_num==0:
+                off = np.random.randint(0, 256 - self.crop_size, size=2)
+                self.off = off
+            else:
+                off = self.off
+        else:
+            off = int((256 - self.crop_size)/2)
+            off = [off, off]
+        images_batch = norm[:,
+                            off[0]: off[0] + self.crop_size,
+                            off[1]: off[1] + self.crop_size]
+        if self.now_num==0:
+            self.now_num = 1
+        else:
+            self.now_num = 0
+
+        return images_batch
+
+    def init_threads(self):
+        self.input_ops, self.dtypes, self.shapes = \
+                super(Threedworld_hdf5, self).init_ops()
+
+        return [self.input_ops, self.dtypes, self.shapes]
+
+'''
+class Threedworld(data.TFRecordsDataProvider):
 
     N_TRAIN = 2048000
     N_VAL = 128000
@@ -152,12 +228,6 @@ class Threedworld(TFRecordsDataProvider):
             else:
                 off = self.off
 
-            '''
-            off = np.zeros(shape = [self.batch_size, 4])
-            off[:, :2] = int((IMAGE_SIZE - self.crop_size)/2)
-            off[:, 2:4] = off[:, :2] + self.crop_size
-            off = off*1.0/(IMAGE_SIZE - 1)
-            '''
 
         else:
             off = np.zeros(shape = [self.batch_size, 4])
@@ -191,13 +261,6 @@ class Threedworld(TFRecordsDataProvider):
             else:
                 off = self.off
 
-            '''
-            off = np.zeros(shape = [self.batch_size, 4])
-            off[:, :2] = int((IMAGE_SIZE - self.crop_size)/2)
-            off[:, 2:4] = off[:, :2] + self.crop_size
-            off = off*1.0/(IMAGE_SIZE - 1)
-            '''
-
         else:
             off = np.zeros(shape = [self.batch_size, 4])
             off[:, :2] = int((IMAGE_SIZE - self.crop_size)/2)
@@ -217,6 +280,7 @@ class Threedworld(TFRecordsDataProvider):
                 super(Threedworld, self).init_threads()
 
         return [self.input_ops, self.dtypes, self.shapes]
+'''
 
 
 #BATCH_SIZE = 256
@@ -224,7 +288,7 @@ class Threedworld(TFRecordsDataProvider):
 #BATCH_SIZE = 128
 #BATCH_SIZE = 64
 BATCH_SIZE = 32
-NUM_BATCHES_PER_EPOCH = Threedworld.N_TRAIN // BATCH_SIZE
+NUM_BATCHES_PER_EPOCH = Threedworld_hdf5.N_TRAIN // BATCH_SIZE
 IMAGE_SIZE_CROP = 224
 IMAGE_SIZE = 256
 NUM_CHANNELS = 3
@@ -276,9 +340,91 @@ def main(args):
     #queue_capa = BATCH_SIZE*120
     queue_capa = BATCH_SIZE*500
     print('Test mode!!! Change queue_capa to make it work!')
-    n_threads = 1
+    #n_threads = 1
+    n_threads = 4
 
     func_net = getattr(normal_encoder_asymmetric_with_bypass, args.namefunc)
+
+    train_data_param = {
+                #'func': Threedworld_hdf5,
+                'func': train_normalnet_hdf5.Threedworld,
+                'data_path': DATA_PATH_hdf5,
+                'group': 'train',
+                'crop_size': IMAGE_SIZE_CROP,
+                'batch_size': BATCH_SIZE,
+            }
+    val_data_param = {
+                    #'func': Threedworld_hdf5,
+                    'func': train_normalnet_hdf5.Threedworld,
+                    'data_path': DATA_PATH_hdf5,
+                    'group': 'val',
+                    'crop_size': IMAGE_SIZE_CROP,
+                    'batch_size': BATCH_SIZE,
+                }
+    train_queue_params = {
+                'queue_type': 'fifo',
+                'batch_size': BATCH_SIZE,
+                'n_threads': n_threads,
+                'seed': 0,
+            }
+    val_queue_params    = train_queue_params
+    val_target          = 'labels'
+
+    if args.usehdf5==0:
+        #train_data_parama['func']   = Threedworld_hdf5
+        #val_data_parama['func']     = Threedworld_hdf5
+        train_data_parama['func']   = Threedworld
+        val_data_parama['func']     = Threedworld
+        train_data_parama['data_path']   = DATA_PATH
+        val_data_parama['data_path']   = DATA_PATH
+        train_data_parama['n_threads'] = n_threads
+        val_data_parama['n_threads'] = n_threads
+
+        train_queue_params = {
+                'queue_type': 'random',
+                'batch_size': BATCH_SIZE,
+                'seed': 0,
+                'capacity': queue_capa,
+                # 'n_threads' : 4
+            }
+        val_queue_params = {
+                    'queue_type': 'fifo',
+                    'batch_size': BATCH_SIZE,
+                    'seed': 0,
+                    'capacity': BATCH_SIZE*10,
+                }
+        val_target          = 'normals'
+
+    val_step_num = Threedworld_hdf5.N_VAL // BATCH_SIZE
+
+    if args.valinum>-1:
+        val_step_num = args.valinum
+
+    loss_func = loss_ave_l2
+    if args.whichloss==1:
+        loss_func = loss_ave_invdot
+
+    learning_rate_params = {
+            'func': tf.train.exponential_decay,
+            'learning_rate': .01,
+            #'learning_rate': .001,
+            'decay_rate': .95,
+            #'decay_rate': .5,
+            #'decay_steps': 5*NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
+            'decay_steps': NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
+            'staircase': True
+        }
+    if args.whichrate==1:
+        learning_rate_params = {
+                'func': tf.train.exponential_decay,
+                #'learning_rate': .01,
+                'learning_rate': .001,
+                #'decay_rate': .95,
+                'decay_rate': .5,
+                'decay_steps': 5*NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
+                #'decay_steps': NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
+                'staircase': True
+            }
 
     params = {
         'save_params': {
@@ -324,43 +470,20 @@ def main(args):
         },
 
         'train_params': {
-            'data_params': {
-                'func': Threedworld,
-                'data_path': DATA_PATH,
-                'group': 'train',
-                'crop_size': IMAGE_SIZE_CROP,
-                'batch_size': BATCH_SIZE,
-                'n_threads' : n_threads
-            },
-            'queue_params': {
-                'queue_type': 'random',
-                'batch_size': BATCH_SIZE,
-                'seed': 0,
-                'capacity': queue_capa,
-                # 'n_threads' : 4
-            },
+            'data_params': train_data_param,
+            'queue_params': train_queue_params,
             'thres_loss': 1000,
             'num_steps': 90 * NUM_BATCHES_PER_EPOCH  # number of steps to train
         },
 
         'loss_params': {
-            'targets': 'normals',
+            'targets': val_target,
             'agg_func': tf.reduce_mean,
-            #'loss_per_case_func': loss_ave_invdot,
-            'loss_per_case_func': loss_ave_l2,
+            'loss_per_case_func': loss_func,
             'loss_per_case_func_params': {}
         },
 
-        'learning_rate_params': {
-            'func': tf.train.exponential_decay,
-            'learning_rate': .01,
-            #'learning_rate': .001,
-            'decay_rate': .95,
-            #'decay_rate': .5,
-            #'decay_steps': 5*NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
-            'decay_steps': NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
-            'staircase': True
-        },
+        'learning_rate_params': learning_rate_params,
 
         'optimizer_params': {
             'func': optimizer.ClipOptimizer,
@@ -371,26 +494,14 @@ def main(args):
         'log_device_placement': False,  # if variable placement has to be logged
         'validation_params': {
             'topn': {
-                'data_params': {
-                    'func': Threedworld,
-                    'data_path': DATA_PATH,
-                    'group': 'val',
-                    'crop_size': IMAGE_SIZE_CROP,
-                    'batch_size': BATCH_SIZE,
-                    'n_threads' : n_threads
-                },
-                'queue_params': {
-                    'queue_type': 'fifo',
-                    'batch_size': BATCH_SIZE,
-                    'seed': 0,
-                    'capacity': BATCH_SIZE*10,
-                },
+                'data_params': val_data_param,
+                'queue_params': val_queue_params,
                 'targets': {
                     'func': rep_loss,
-                    'target': 'normals',
+                    'target': val_target,
                 },
                 #'num_steps': Threedworld.N_VAL // BATCH_SIZE + 1,
-                'num_steps': 1000 + 1,
+                'num_steps': val_step_num + 1,
                 'agg_func': lambda x: {k:np.mean(v) for k,v in x.items()},
                 'online_agg_func': online_agg
             },
@@ -409,7 +520,11 @@ if __name__ == '__main__':
     parser.add_argument('--seed', default = 0, type = int, action = 'store', help = 'Random seed for model')
     parser.add_argument('--gpu', default = -1, type = int, action = 'store', help = 'Index of gpu, currently only one gpu is allowed')
     parser.add_argument('--cacheDirPrefix', default = "/home/chengxuz", type = str, action = 'store', help = 'Prefix of cache directory')
-    parser.add_argument('--namefunc', default = "normalnet_tfutils", type = str, action = 'store', help = 'Function to build the network')
+    parser.add_argument('--namefunc', default = "normalnet_tfutils", type = str, action = 'store', help = 'Name of function to build the network')
+    parser.add_argument('--usehdf5', default = 0, type = int, action = 'store', help = 'Whether use hdf5 data reader')
+    parser.add_argument('--valinum', default = -1, type = int, action = 'store', help = 'Number of validation steps, default is -1, which means all the validation')
+    parser.add_argument('--whichloss', default = 0, type = int, action = 'store', help = 'Whether to use new loss')
+    parser.add_argument('--whichrate', default = 0, type = int, action = 'store', help = 'Whether to use slower learning rate')
 
     args    = parser.parse_args()
 
