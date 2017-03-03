@@ -310,7 +310,7 @@ def getFilterSeed(cfg):
     else:    
         return 0
     
-def normal_vgg16(inputs, cfg_initial, train=True, seed = None, **kwargs):
+def normal_vgg16(inputs, cfg_initial, train=True, seed = None, center_im = False, **kwargs):
     """The Model definition for normals"""
 
     cfg = cfg_initial
@@ -319,9 +319,8 @@ def normal_vgg16(inputs, cfg_initial, train=True, seed = None, **kwargs):
     else:
         fseed = seed
 
-    dropout_rate = 0.5
-    if not train:
-        dropout_rate = None
+    if center_im:
+        inputs  = tf.subtract(inputs, tf.constant(0.5, dtype=tf.float32))
 
     m = NoramlNetfromConv(seed = fseed, **kwargs)
 
