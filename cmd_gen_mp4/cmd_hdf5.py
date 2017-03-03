@@ -210,6 +210,8 @@ if __name__=="__main__":
     config_dict["add_objs"]["value"] = 1
     config_dict["time_limit"]["value"] = 11.0
     config_dict["flag_time"]["value"] = 1
+    config_dict["camera_yaw"]["value"] = 183
+    config_dict["camera_pitch"]["value"] = 83
 
     exist_num = 0
     not_exist = 0
