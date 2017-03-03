@@ -513,6 +513,7 @@ def main(args):
         },
 
         'train_params': {
+            'validate_first': False,
             'data_params': train_data_param,
             'queue_params': train_queue_params,
             'thres_loss': 1000,
