@@ -762,6 +762,8 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
 
     //btVector3 average_point(0, 0, 0);
 
+    shape->optimizeConvexHull();
+
     int num_point = shape->getNumPoints();
 
     if (control_len_now!=-1){
@@ -790,8 +792,10 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
     btVector3 localScaling(scaling[0],scaling[1],scaling[2]);
     shape->setLocalScaling(localScaling);
 
-    shape->optimizeConvexHull();
     shape->initializePolyhedralFeatures();    
+
+    //num_point = shape->getNumPoints();
+    //cout << "Num of point now: " << num_point << endl;
 
     //shape->setMargin(0.001);
     
