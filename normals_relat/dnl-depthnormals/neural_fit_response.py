@@ -204,9 +204,13 @@ def main():
                         model_features_aftersub     = model_features[:, tmp_indx_list]
                     elif args.dimethod=='PCA':
                         if args.PCAMaxcontrol>0:
-                            tmp_indx_list   = np.random.choice(model_features.shape[1], args.PCAMaxcontrol, 0)
-                            tmp_indx_list.sort()
-                            model_features_inter     = model_features[:, tmp_indx_list]
+                            if model_features.shape[1] >= args.PCAMaxcontrol:
+                                tmp_indx_list   = np.random.choice(model_features.shape[1], args.PCAMaxcontrol, 0)
+                                tmp_indx_list.sort()
+                                model_features_inter     = model_features[:, tmp_indx_list]
+                            else:
+                                model_features_inter     = model_features
+                                tmp_indx_list   = None
                         else:
                             tmp_indx_list   = None
 
