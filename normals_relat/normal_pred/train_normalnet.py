@@ -251,7 +251,7 @@ class Threedworld(data.TFRecordsParallelByFileProvider):
 
         norm = tf.cast(images, tf.float32)
         norm = tf.div(norm, tf.constant(255, dtype=tf.float32))
-        norm = tf.cast(norm, tf.float32)
+        #norm = tf.cast(norm, tf.float32)
 
         if self.group=='train':
 
@@ -291,25 +291,54 @@ class Threedworld(data.TFRecordsParallelByFileProvider):
 #BATCH_SIZE = 128
 #BATCH_SIZE = 64
 BATCH_SIZE = 32
-NUM_BATCHES_PER_EPOCH = Threedworld_hdf5.N_TRAIN // BATCH_SIZE
 IMAGE_SIZE_CROP = 224
 IMAGE_SIZE = 256
 NUM_CHANNELS = 3
-NORM_NUM = (IMAGE_SIZE_CROP**2) * NUM_CHANNELS * BATCH_SIZE
+#NORM_NUM = (IMAGE_SIZE_CROP**2) * NUM_CHANNELS * BATCH_SIZE
 
 def loss_ave_l2(output, labels):
-    loss = tf.nn.l2_loss(output - labels) / NORM_NUM
+    loss = tf.nn.l2_loss(output - labels) / np.prod(labels.get_shape().as_list())
     return loss
 
 def loss_ave_invdot(output, labels):
     output = tf.nn.l2_normalize(output, 3)
-    loss = -tf.reduce_sum(tf.multiply(output, labels)) / NORM_NUM
+    loss = -tf.reduce_sum(tf.multiply(output, labels)) / np.prod(labels.get_shape().as_list())
     return loss
 
 def rep_loss(inputs, outputs, target):
-    loss    = tf.nn.l2_loss(outputs - inputs[target]) / NORM_NUM
-    loss_2  = -tf.reduce_sum(tf.multiply(outputs, inputs[target])) / NORM_NUM
+    loss    = loss_ave_l2(outputs, inputs[target])
+    loss_2  = loss_ave_invdot(outputs, inputs[target])
     return {'loss': loss, 'loss_2': loss_2}
+
+def save_features(inputs, outputs, num_to_save, **loss_params):
+    curr_input      = inputs['images'][:num_to_save]
+    curr_input      = tf.multiply(curr_input, tf.constant(255, dtype=tf.float32))
+    curr_input      = tf.cast(curr_input, tf.uint8)
+
+    curr_output     = outputs[:num_to_save]
+    curr_output     = tf.multiply(curr_output, tf.constant(255, dtype=tf.float32))
+    curr_output     = tf.cast(curr_output, tf.uint8)
+
+    curr_label      = inputs['normals'][:num_to_save]
+    curr_label      = tf.multiply(curr_label, tf.constant(255, dtype=tf.float32))
+    curr_label      = tf.cast(curr_label, tf.uint8)
+    #curr_label      = tf.cast(curr_output, tf.uint8)
+
+    #loss    = tf.nn.l2_loss(outputs - inputs['normals']) / NORM_NUM
+
+    #return {'loss': loss, 'images': curr_input, 'normals': curr_label, 'outputs': curr_output}
+    return {'images_fea': curr_input, 'normals_fea': curr_label, 'outputs_fea': curr_output}
+
+def mean_losses_keep_rest(step_results):
+    retval = {}
+    keys = step_results[0].keys()
+    for k in keys:
+        plucked = [d[k] for d in step_results]
+        if 'loss' in k:
+            retval[k] = np.mean(plucked)
+        else:
+            retval[k] = plucked
+    return retval
 
 def postprocess_config(cfg):
     cfg = copy.deepcopy(cfg)
@@ -342,10 +371,9 @@ def main(args):
 
     #queue_capa = BATCH_SIZE*120
     #queue_capa = BATCH_SIZE*500
-    queue_capa = BATCH_SIZE*100
-    print('Test mode!!! Change queue_capa to make it work!')
-    #n_threads = 1
-    n_threads = 4
+    BATCH_SIZE  = normal_encoder_asymmetric_with_bypass.getBatchSize(cfg_initial)
+    queue_capa  = normal_encoder_asymmetric_with_bypass.getQueueCap(cfg_initial)
+    n_threads   = 4
 
     func_net = getattr(normal_encoder_asymmetric_with_bypass, args.namefunc)
 
@@ -375,8 +403,6 @@ def main(args):
     val_target          = 'labels'
 
     if args.usehdf5==0:
-        #train_data_params['func']   = Threedworld_hdf5
-        #val_data_params['func']     = Threedworld_hdf5
         train_data_param['func']   = Threedworld
         val_data_param['func']     = Threedworld
         train_data_param['data_path']   = DATA_PATH
@@ -399,7 +425,8 @@ def main(args):
                 }
         val_target          = 'normals'
 
-    val_step_num = Threedworld_hdf5.N_VAL // BATCH_SIZE
+    val_step_num = val_data_param['func'].N_VAL // BATCH_SIZE + 1
+    NUM_BATCHES_PER_EPOCH = train_data_param['func'].N_TRAIN // BATCH_SIZE
 
     if args.valinum>-1:
         val_step_num = args.valinum
@@ -446,9 +473,13 @@ def main(args):
             'save_initial_filters': True,
             'save_metrics_freq': 2000,  # keeps loss from every SAVE_LOSS_FREQ steps.
             'save_valid_freq': 10000,
+            #'save_metrics_freq': 100,  # keeps loss from every SAVE_LOSS_FREQ steps.
+            #'save_valid_freq': 100,
             'save_filters_freq': 30000,
             'cache_filters_freq': 10000,
             'cache_dir': cache_dir,  # defaults to '~/.tfutils'
+            'save_to_gfs': ['images_fea', 'normals_fea', 'outputs_fea'], 
+            #'save_intermediate_freq': 1,
         },
 
         'load_params': {
@@ -505,9 +536,22 @@ def main(args):
                     'target': val_target,
                 },
                 #'num_steps': Threedworld.N_VAL // BATCH_SIZE + 1,
-                'num_steps': val_step_num + 1,
+                'num_steps': val_step_num,
                 'agg_func': lambda x: {k:np.mean(v) for k,v in x.items()},
                 'online_agg_func': online_agg
+            },
+            'feats':{
+                'data_params': val_data_param,
+                'queue_params': val_queue_params,
+                'targets': {
+                    'func': save_features,
+                    'num_to_save': 5,
+                    'targets' : [],
+                },
+                #'num_steps': Threedworld.N_VAL // BATCH_SIZE + 1,
+                'num_steps': 10,
+                'agg_func': mean_losses_keep_rest,
+                #'online_agg_func': online_agg
             },
         },
     }
