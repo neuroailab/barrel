@@ -377,6 +377,8 @@ def main(args):
 
     func_net = getattr(normal_encoder_asymmetric_with_bypass, args.namefunc)
 
+
+
     train_data_param = {
                 'func': Threedworld_hdf5,
                 #'func': train_normalnet_hdf5.Threedworld,
@@ -458,6 +460,10 @@ def main(args):
                 #'decay_steps': NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
                 'staircase': True
             }
+    optimizer_class = tf.train.MomentumOptimizer
+
+    if args.whichoptim==1:
+        optimizer_class     = tf.train.RMSPropOptimizer
 
     params = {
         'save_params': {
@@ -524,7 +530,7 @@ def main(args):
 
         'optimizer_params': {
             'func': optimizer.ClipOptimizer,
-            'optimizer_class': tf.train.MomentumOptimizer,
+            'optimizer_class': optimizer_class,
             'clip': True,
             'momentum': .9
         },
@@ -575,6 +581,7 @@ if __name__ == '__main__':
     parser.add_argument('--valinum', default = -1, type = int, action = 'store', help = 'Number of validation steps, default is -1, which means all the validation')
     parser.add_argument('--whichloss', default = 0, type = int, action = 'store', help = 'Whether to use new loss')
     parser.add_argument('--whichrate', default = 0, type = int, action = 'store', help = 'Whether to use slower learning rate')
+    parser.add_argument('--whichoptim', default = 0, type = int, action = 'store', help = 'Whether to use normal momentum training or rmsprop')
 
     args    = parser.parse_args()
 
