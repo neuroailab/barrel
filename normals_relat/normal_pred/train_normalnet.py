@@ -342,7 +342,8 @@ def main(args):
 
     #queue_capa = BATCH_SIZE*120
     #queue_capa = BATCH_SIZE*500
-    queue_capa = BATCH_SIZE*100
+    #queue_capa = BATCH_SIZE*100
+    queue_capa = BATCH_SIZE*32
     print('Test mode!!! Change queue_capa to make it work!')
     #n_threads = 1
     n_threads = 4
@@ -355,6 +356,7 @@ def main(args):
                 'data_path': DATA_PATH_hdf5,
                 'group': 'train',
                 'crop_size': IMAGE_SIZE_CROP,
+                'n_threads': n_threads,
                 'batch_size': BATCH_SIZE,
             }
     val_data_param = {
@@ -363,16 +365,17 @@ def main(args):
                     'data_path': DATA_PATH_hdf5,
                     'group': 'val',
                     'crop_size': IMAGE_SIZE_CROP,
+                    'n_threads': n_threads,
                     'batch_size': BATCH_SIZE,
                 }
     train_queue_params = {
                 'queue_type': 'fifo',
                 'batch_size': BATCH_SIZE,
-                'n_threads': n_threads,
                 'seed': 0,
+                'capacity': BATCH_SIZE*10,
             }
     val_queue_params    = train_queue_params
-    val_target          = 'labels'
+    val_target          = 'normals'
 
     if args.usehdf5==0:
         #train_data_params['func']   = Threedworld_hdf5
@@ -381,8 +384,8 @@ def main(args):
         val_data_param['func']     = Threedworld
         train_data_param['data_path']   = DATA_PATH
         val_data_param['data_path']   = DATA_PATH
-        train_data_param['n_threads'] = n_threads
-        val_data_param['n_threads'] = n_threads
+        #train_data_param['n_threads'] = n_threads
+        #val_data_param['n_threads'] = n_threads
 
         train_queue_params = {
                 'queue_type': 'random',
