@@ -87,6 +87,17 @@ class NoramlNetfromConv(model.ConvNet):
         return self.output
     
 
+def getBatchSize(cfg):
+    val = 128
+    if 'BATCH_SIZE' in cfg:
+        val = cfg['BATCH_SIZE']
+    return val
+
+def getQueueCap(cfg):
+    val = 5120
+    if 'QUEUE_CAP' in cfg:
+        val = cfg['QUEUE_CAP']
+    return val
 
 def getEncodeDepth(cfg):
     val = None
