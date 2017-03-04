@@ -14,6 +14,7 @@
 #include "LinearMath/btAlignedObjectArray.h" 
 #include "../Importers/ImportObjDemo/LoadMeshFromObj.h"
 #include "../OpenGLWindow/GLInstanceGraphicsShape.h"
+#include "BulletCollision/NarrowPhaseCollision/btRaycastCallback.h"
 
 
 namespace po = boost::program_options;
@@ -258,6 +259,28 @@ void TestHingeTorque::stepSimulation(float deltaTime){
         }
     }
 
+    // Raytest tmp test
+    {
+		btVector3 blue(0,0,1);
+        btVector3 from(cent_of_whisker_array);
+        btVector3 to(m_allobjs[0]->getCenterOfMassPosition());
+        m_dynamicsWorld->getDebugDrawer()->drawLine(from,to,btVector4(0,0,1,1));
+
+        btCollisionWorld::ClosestRayResultCallback	closestResults(from,to);
+        closestResults.m_collisionFilterGroup   = collisionFilterGroup;
+        closestResults.m_collisionFilterMask    = collisionFilterMask;
+        
+        m_dynamicsWorld->rayTest(from,to,closestResults);
+
+        if (closestResults.hasHit()){
+            
+            btVector3 p = from.lerp(to,closestResults.m_closestHitFraction);
+            m_dynamicsWorld->getDebugDrawer()->drawSphere(p,0.1,blue);
+            m_dynamicsWorld->getDebugDrawer()->drawLine(p,p+closestResults.m_hitNormalWorld,blue);
+
+        }
+    }
+
     curr_velo   = 0; //Linear speed
     curr_angl   = 0; //angle speed
     curr_force  = 0; //force applied by springs 
@@ -336,7 +359,6 @@ void TestHingeTorque::stepSimulation(float deltaTime){
         all_size_for_big_list   += all_size;
         all_size_for_fb         += m_jointFeedback.size();
 
-        //if ((pass_time < initial_stime) && (initial_poi < all_size-1)){
         if ((pass_time < initial_stime)){
 
             btVector3 base_loc  = m_allbones[0]->getCenterOfMassPosition();
@@ -400,12 +422,6 @@ void TestHingeTorque::stepSimulation(float deltaTime){
             exit(0);
         }
     }
-
-    /*
-    if (count %10==0){
-        cout << "Now state:" << curr_velo << " " << curr_angl << " " << curr_force << " " << curr_torque << " " << curr_dispos << ". Now time:" << pass_time << endl;
-    }
-    */
 
 }
 
