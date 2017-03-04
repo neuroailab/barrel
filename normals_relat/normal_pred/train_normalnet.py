@@ -9,6 +9,7 @@ import numpy as np
 import tensorflow as tf
 
 import normal_encoder_asymmetric_with_bypass
+from sklearn.preprocessing import normalize
 
 from tfutils import base, data, model, optimizer
 
@@ -74,6 +75,7 @@ class Threedworld_hdf5(data.ParallelBySliceProvider):
                  batch_size=1,
                  n_threads=4,
                  crop_size=None,
+                 #center_im = False,
                  *args,
                  **kwargs):
         """
@@ -100,11 +102,13 @@ class Threedworld_hdf5(data.ParallelBySliceProvider):
         self.group = group
         self.images = 'images'
         self.labels = 'normals'
+        #self.center_im = center_im
 
         super(Threedworld_hdf5, self).__init__(
             basefunc = data.HDF5DataReader,
             kwargs = {'hdf5source': data_path[group], 'sourcelist': [self.images, self.labels], 
-                      'postprocess':{self.images: self.postproc, self.labels: self.postproc}},
+                      #'postprocess':{self.images: self.postproc, self.labels: self.postproc}},
+                      'postprocess':{self.images: self.postproc_image, self.labels: self.postproc_normal}},
             batch_size=batch_size,
             n_threads=n_threads,
             *args, **kwargs)
@@ -117,8 +121,7 @@ class Threedworld_hdf5(data.ParallelBySliceProvider):
         self.off        = None
         self.now_num    = 0
 
-    def postproc(self, ims, f):
-        norm = ims.astype(np.float32) / 255
+    def get_off(self):
         if self.group=='train':
             #print('In train')
             if self.now_num==0:
@@ -129,14 +132,37 @@ class Threedworld_hdf5(data.ParallelBySliceProvider):
         else:
             off = int((256 - self.crop_size)/2)
             off = [off, off]
-        images_batch = norm[:,
-                            off[0]: off[0] + self.crop_size,
-                            off[1]: off[1] + self.crop_size]
+
+        return off
+
+    def update_nownum(self):
         if self.now_num==0:
             self.now_num = 1
         else:
             self.now_num = 0
 
+
+    def postproc_image(self, ims, f):
+        norm = ims.astype(np.float32) / 255
+
+        #if self.center_im:
+        #    norm = norm - 0.5
+
+        off = self.get_off()
+        images_batch = norm[:,
+                            off[0]: off[0] + self.crop_size,
+                            off[1]: off[1] + self.crop_size]
+        self.update_nownum()
+        return images_batch
+
+    def postproc_normal(self, ims, f):
+        norm = ims.astype(np.float32) / 255
+
+        off = self.get_off()
+        images_batch = norm[:,
+                            off[0]: off[0] + self.crop_size,
+                            off[1]: off[1] + self.crop_size]
+        self.update_nownum()
         return images_batch
 
     def init_threads(self):
@@ -302,7 +328,8 @@ def loss_ave_l2(output, labels):
 
 def loss_ave_invdot(output, labels):
     output = tf.nn.l2_normalize(output, 3)
-    loss = -tf.reduce_sum(tf.multiply(output, labels)) / np.prod(labels.get_shape().as_list())
+    labels = tf.nn.l2_normalize(labels, 3)
+    loss = -tf.reduce_sum(tf.multiply(output, labels)) / np.prod(labels.get_shape().as_list()) * 3
     return loss
 
 def rep_loss(inputs, outputs, target):
@@ -377,6 +404,8 @@ def main(args):
 
     func_net = getattr(normal_encoder_asymmetric_with_bypass, args.namefunc)
 
+
+
     train_data_param = {
                 'func': Threedworld_hdf5,
                 #'func': train_normalnet_hdf5.Threedworld,
@@ -434,30 +463,35 @@ def main(args):
         val_step_num = args.valinum
 
     loss_func = loss_ave_l2
-    if args.whichloss==1:
-        loss_func = loss_ave_invdot
-
     learning_rate_params = {
             'func': tf.train.exponential_decay,
             'learning_rate': .01,
-            #'learning_rate': .001,
             'decay_rate': .95,
-            #'decay_rate': .5,
-            #'decay_steps': 5*NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
             'decay_steps': NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
             'staircase': True
         }
-    if args.whichrate==1:
+
+    optimizer_class = tf.train.MomentumOptimizer
+
+    model_params = {
+            'func': func_net,
+            'seed': args.seed,
+            'cfg_initial': cfg_initial
+        }
+
+    if args.whichloss==1:
+        loss_func = loss_ave_invdot
         learning_rate_params = {
                 'func': tf.train.exponential_decay,
-                #'learning_rate': .01,
                 'learning_rate': .001,
-                #'decay_rate': .95,
                 'decay_rate': .5,
                 'decay_steps': 5*NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
-                #'decay_steps': NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
                 'staircase': True
             }
+        #optimizer_class     = tf.train.RMSPropOptimizer
+        #train_data_param['center_im'] = True
+        #val_data_param['center_im'] = True
+        model_params['center_im']   = True
 
     params = {
         'save_params': {
@@ -500,13 +534,10 @@ def main(args):
             'load_query': None
         },
 
-        'model_params': {
-            'func': func_net,
-            'seed': args.seed,
-            'cfg_initial': cfg_initial
-        },
+        'model_params': model_params,
 
         'train_params': {
+            'validate_first': False,
             'data_params': train_data_param,
             'queue_params': train_queue_params,
             'thres_loss': 1000,
@@ -524,7 +555,7 @@ def main(args):
 
         'optimizer_params': {
             'func': optimizer.ClipOptimizer,
-            'optimizer_class': tf.train.MomentumOptimizer,
+            'optimizer_class': optimizer_class,
             'clip': True,
             'momentum': .9
         },
@@ -574,7 +605,6 @@ if __name__ == '__main__':
     parser.add_argument('--usehdf5', default = 0, type = int, action = 'store', help = 'Whether use hdf5 data reader')
     parser.add_argument('--valinum', default = -1, type = int, action = 'store', help = 'Number of validation steps, default is -1, which means all the validation')
     parser.add_argument('--whichloss', default = 0, type = int, action = 'store', help = 'Whether to use new loss')
-    parser.add_argument('--whichrate', default = 0, type = int, action = 'store', help = 'Whether to use slower learning rate')
 
     args    = parser.parse_args()
 
