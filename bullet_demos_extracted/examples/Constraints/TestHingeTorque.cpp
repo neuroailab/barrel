@@ -121,6 +121,7 @@ struct TestHingeTorque : public CommonRigidBodyBase{
 
     vector< vector< vector< vector<float> > > > all_force_data;
     vector< vector< vector< vector<float> > > > all_torque_data;
+    vector< vector< vector< vector<float> > > > all_normals;
 
     btVector3 base_ball_location;
     btTransform base_ball_trans;
@@ -138,6 +139,8 @@ struct TestHingeTorque : public CommonRigidBodyBase{
     btRigidBody* addObjasRigidBody(string fileName, float scaling[4], float orn[4], float pos[4] , float mass_want, float control_len_now );
     void save_all_data();
     void cal_cent_whisker();
+    vector< vector< vector<float> > > get_normal_picture(btVector3 from_p, btVector3 to_p, int image_h, int image_w, btVector3 unit_x, btVector3 unit_y);
+
 	
 	virtual void resetCamera(){
         //float dist = 5;
@@ -246,6 +249,47 @@ TestHingeTorque::~ TestHingeTorque(){
 		delete m_jointFeedback[i];
 	}
     */
+}
+
+vector< vector< vector<float> > > TestHingeTorque::get_normal_picture(btVector3 from_p, btVector3 to_p, int image_h, int image_w, btVector3 unit_x, btVector3 unit_y){
+    vector< vector< vector<float> > > normal_picture;
+    normal_picture.clear();
+
+    int sta_x = -image_h/2, sta_y = -image_w/2;
+
+    for (int indx_x=sta_x;indx_x<sta_x+image_h;indx_x++){
+        vector< vector<float> > curr_row;
+        curr_row.clear();
+
+        for (int indx_y=sta_y;indx_y<sta_y+image_w;indx_y++){
+            vector<float> curr_pos;
+            curr_pos.clear();
+
+            btVector3 new_from = from_p + indx_x*unit_x + indx_y*unit_y;
+            btVector3 new_to = to_p + indx_x*unit_x + indx_y*unit_y;
+            
+            btCollisionWorld::ClosestRayResultCallback	closestResults(new_from,new_to);
+            closestResults.m_collisionFilterGroup   = collisionFilterGroup;
+            closestResults.m_collisionFilterMask    = collisionFilterMask;
+            
+            m_dynamicsWorld->rayTest(new_from,new_to,closestResults);
+
+            btVector3 now_normal(0,0,0);
+
+            if (closestResults.hasHit()){
+                now_normal = closestResults.m_hitNormalWorld;
+            }
+
+            for (int indx_tmp=0;indx_tmp<3;indx_tmp++)
+                curr_pos.push_back(now_normal[indx_tmp]);
+
+            curr_row.push_back(curr_pos);
+
+        }
+        normal_picture.push_back(curr_row);
+    }
+
+    return normal_picture;
 }
 
 void TestHingeTorque::stepSimulation(float deltaTime){
