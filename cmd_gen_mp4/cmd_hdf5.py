@@ -212,6 +212,9 @@ if __name__=="__main__":
     elif args.objindx==3:
         config_dict["obj_filename"]["value"] = [os.path.join(obj_path_prefix, "3957332e2d23ff61ce2704286124606b.obj")]
         hdf5_prefix = "test"
+    elif args.objindx==4:
+        config_dict["obj_filename"]["value"] = [os.path.join(obj_path_prefix, "hat_aftervhacd.obj")]
+        hdf5_prefix = "aftervhacd"
 
     config_dict["add_objs"]["value"] = 1
     config_dict["time_limit"]["value"] = 11.0
