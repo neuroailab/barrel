@@ -206,10 +206,21 @@ if __name__=="__main__":
     elif args.objindx==1:
         config_dict["obj_filename"]["value"] = [os.path.join(obj_path_prefix, "teddy.obj")]
         hdf5_prefix = "teddy"
+    elif args.objindx==2:
+        config_dict["obj_filename"]["value"] = [os.path.join(obj_path_prefix, "11d2b7d8c377632bd4d8765e3910f617.obj")]
+        hdf5_prefix = "test"
+    elif args.objindx==3:
+        config_dict["obj_filename"]["value"] = [os.path.join(obj_path_prefix, "3957332e2d23ff61ce2704286124606b.obj")]
+        hdf5_prefix = "test"
+    elif args.objindx==4:
+        config_dict["obj_filename"]["value"] = [os.path.join(obj_path_prefix, "hat_aftervhacd.obj")]
+        hdf5_prefix = "aftervhacd"
 
     config_dict["add_objs"]["value"] = 1
     config_dict["time_limit"]["value"] = 11.0
     config_dict["flag_time"]["value"] = 1
+    config_dict["camera_yaw"]["value"] = 183
+    config_dict["camera_pitch"]["value"] = 83
 
     exist_num = 0
     not_exist = 0

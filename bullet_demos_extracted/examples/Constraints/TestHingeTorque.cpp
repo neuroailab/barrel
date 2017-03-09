@@ -14,6 +14,7 @@
 #include "LinearMath/btAlignedObjectArray.h" 
 #include "../Importers/ImportObjDemo/LoadMeshFromObj.h"
 #include "../OpenGLWindow/GLInstanceGraphicsShape.h"
+#include "BulletCollision/NarrowPhaseCollision/btRaycastCallback.h"
 
 
 namespace po = boost::program_options;
@@ -87,6 +88,10 @@ int reset_speed         = 0;
 int avoid_coll          = 0;
 float avoid_coll_z_off  = 0;
 float avoid_coll_x_off  = 5;
+int get_normal          = 1;
+int normal_im_h         = 256;
+int normal_im_w         = 256;
+float normal_unit_len   = 0.2;
 
 int do_save             = 0;
 H5std_string FILE_NAME( "Select.h5" );
@@ -101,13 +106,16 @@ struct TestHingeTorque : public CommonRigidBodyBase{
     float curr_force;
     float curr_torque;
     float curr_dispos;
-    float loss_ret; // Final return value, the loss function
+    float loss_ret; // Final return value, the loss function for hyperopt optimization
     float min_dis;
 
-    btAlignedObjectArray< btAlignedObjectArray< btRigidBody* > > m_allbones_big_list;
-    btAlignedObjectArray< btAlignedObjectArray<btJointFeedback*> > m_jointFeedback_big_list;
-    btAlignedObjectArray< btAlignedObjectArray< btVector3 > > m_allcentpos_big_list;
-    btAlignedObjectArray< btRigidBody* > m_allobjs;
+    btAlignedObjectArray< btAlignedObjectArray< btRigidBody* > > m_allbones_big_list; // store all units
+    btAlignedObjectArray< btAlignedObjectArray<btJointFeedback*> > m_jointFeedback_big_list; // store all force, torque feedback reader for springs
+    btAlignedObjectArray< btAlignedObjectArray< btVector3 > > m_allcentpos_big_list; // store all center position for units
+    btAlignedObjectArray< btRigidBody* > m_allobjs; // store all objs
+    btAlignedObjectArray< btTransform > m_objstartTrans; // store all start transform for all objs
+    btAlignedObjectArray< btVector3 > m_objcenter; // store center position calculated from bounding box for all objs, before start trans
+    btAlignedObjectArray< btVector3 > m_objboundingbox; // store bounding box for all objs, before start trans
     vector< vector<int> > m_spring_strtindx;
 
     vector< vector<float> > m_base_spring_stiffness;
@@ -120,10 +128,12 @@ struct TestHingeTorque : public CommonRigidBodyBase{
 
     vector< vector< vector< vector<float> > > > all_force_data;
     vector< vector< vector< vector<float> > > > all_torque_data;
+    vector< vector< vector< vector<float> > > > all_normals;
 
     btVector3 base_ball_location;
     btTransform base_ball_trans;
     btVector3 cent_of_whisker_array;
+    btVector3 orig_cent_of_whisker_array;
 
 	TestHingeTorque(struct GUIHelperInterface* helper);
 	virtual ~ TestHingeTorque();
@@ -137,6 +147,8 @@ struct TestHingeTorque : public CommonRigidBodyBase{
     btRigidBody* addObjasRigidBody(string fileName, float scaling[4], float orn[4], float pos[4] , float mass_want, float control_len_now );
     void save_all_data();
     void cal_cent_whisker();
+    vector< vector< vector<float> > > get_normal_picture(btVector3 from_p, btVector3 to_p, int image_h, int image_w, btVector3 unit_x, btVector3 unit_y);
+
 	
 	virtual void resetCamera(){
         //float dist = 5;
@@ -164,6 +176,7 @@ void TestHingeTorque::cal_cent_whisker(){
         }
     }
     cent_of_whisker_array /= num_units_all;
+    orig_cent_of_whisker_array = btVector3(cent_of_whisker_array);
 
     for (int i=0;i<3;i++)
         cent_of_whisker_array[i] += offset_center_pos[i];
@@ -189,6 +202,31 @@ void save_oned_array(H5::H5File* file, vector<float> array_to_save, string datas
     delete [] all_data_in_array;
 }
 
+void save_fourd_array(H5::H5File* file, vector< vector< vector< vector<float> > > > array_to_save, string dataset_name, H5::DSetCreatPropList plist){
+
+    hsize_t fdim[] = {array_to_save.size(), array_to_save[0].size(), array_to_save[0][0].size(), array_to_save[0][0][0].size()}; // dim sizes of ds (on disk)
+    H5::DataSpace fspace( 4, fdim );
+    float* all_data_in_array;
+    int whole_len = fdim[0]*fdim[1]*fdim[2]*fdim[3];
+    all_data_in_array = new float[whole_len];
+
+    H5::DataSet* dataset = new H5::DataSet(file->createDataSet(
+        dataset_name, H5::PredType::NATIVE_FLOAT, fspace, plist));
+
+    int now_indx = 0;
+    for (int i=0;i<fdim[0];i++)
+        for (int j=0;j<fdim[1];j++)
+            for (int k=0;k<fdim[2];k++)
+                for (int l=0;l<fdim[3];l++){
+                    all_data_in_array[now_indx] = array_to_save[i][j][k][l];
+                    now_indx++;
+                }
+
+    dataset->write( all_data_in_array, H5::PredType::NATIVE_FLOAT);
+    delete dataset;
+    delete [] all_data_in_array;
+}
+
 void TestHingeTorque::save_all_data(){
 
     H5::H5File* file = new H5::H5File( FILE_NAME, H5F_ACC_TRUNC );
@@ -196,36 +234,9 @@ void TestHingeTorque::save_all_data(){
     H5::DSetCreatPropList plist;
     plist.setFillValue(H5::PredType::NATIVE_FLOAT, &fillvalue);
 
-    hsize_t fdim[] = {all_force_data.size(), const_numLinks.size(), (hsize_t) num_unit_to_save, 3}; // dim sizes of ds (on disk)
-    H5::DataSpace fspace( 4, fdim );
-
-    string dataset_name = "Data_force";
-    float* all_data_in_array;
-    int whole_len = all_force_data.size()*const_numLinks.size()*num_unit_to_save*3;
-    all_data_in_array = new float[whole_len];
-
-    for (int data_source=0;data_source<2;data_source++){
-        if (data_source==1)
-            dataset_name = "Data_torque";
-        H5::DataSet* dataset = new H5::DataSet(file->createDataSet(
-            dataset_name, H5::PredType::NATIVE_FLOAT, fspace, plist));
-
-        int now_indx = 0;
-        for (int i=0;i<fdim[0];i++)
-            for (int j=0;j<fdim[1];j++)
-                for (int k=0;k<fdim[2];k++)
-                    for (int l=0;l<fdim[3];l++){
-                        if (data_source==0)
-                            all_data_in_array[now_indx] = all_force_data[i][j][k][l];
-                        else
-                            all_data_in_array[now_indx] = all_torque_data[i][j][k][l];
-                        now_indx++;
-                    }
-
-        dataset->write( all_data_in_array, H5::PredType::NATIVE_FLOAT);
-        delete dataset;
-    }
-    delete [] all_data_in_array;
+    save_fourd_array(file, all_force_data, "Data_force", plist);
+    save_fourd_array(file, all_torque_data, "Data_torque", plist);
+    save_fourd_array(file, all_normals, "Data_normal", plist);
 
     save_oned_array(file, obj_scaling_list, "scale", plist);
     save_oned_array(file, obj_pos_list, "position", plist);
@@ -247,6 +258,47 @@ TestHingeTorque::~ TestHingeTorque(){
     */
 }
 
+vector< vector< vector<float> > > TestHingeTorque::get_normal_picture(btVector3 from_p, btVector3 to_p, int image_h, int image_w, btVector3 unit_x, btVector3 unit_y){
+    vector< vector< vector<float> > > normal_picture;
+    normal_picture.clear();
+
+    int sta_x = -image_h/2, sta_y = -image_w/2;
+
+    for (int indx_x=sta_x;indx_x<sta_x+image_h;indx_x++){
+        vector< vector<float> > curr_row;
+        curr_row.clear();
+
+        for (int indx_y=sta_y;indx_y<sta_y+image_w;indx_y++){
+            vector<float> curr_pos;
+            curr_pos.clear();
+
+            btVector3 new_from = from_p + indx_x*unit_x + indx_y*unit_y;
+            btVector3 new_to = to_p + indx_x*unit_x + indx_y*unit_y;
+            
+            btCollisionWorld::ClosestRayResultCallback	closestResults(new_from,new_to);
+            closestResults.m_collisionFilterGroup   = collisionFilterGroup;
+            closestResults.m_collisionFilterMask    = collisionFilterMask;
+            
+            m_dynamicsWorld->rayTest(new_from,new_to,closestResults);
+
+            btVector3 now_normal(0,0,0);
+
+            if (closestResults.hasHit()){
+                now_normal = closestResults.m_hitNormalWorld;
+            }
+
+            for (int indx_tmp=0;indx_tmp<3;indx_tmp++)
+                curr_pos.push_back(now_normal[indx_tmp]);
+
+            curr_row.push_back(curr_pos);
+
+        }
+        normal_picture.push_back(curr_row);
+    }
+
+    return normal_picture;
+}
+
 void TestHingeTorque::stepSimulation(float deltaTime){
     
     m_dynamicsWorld->stepSimulation(time_leap,0);
@@ -255,6 +307,28 @@ void TestHingeTorque::stepSimulation(float deltaTime){
         if (pass_time > time_limit){
             save_all_data();
             exit(0);
+        }
+    }
+
+    // Raytest tmp test
+    if (false){
+		btVector3 blue(0,0,1);
+        btVector3 from(cent_of_whisker_array);
+        btVector3 to(m_allobjs[0]->getCenterOfMassPosition());
+        m_dynamicsWorld->getDebugDrawer()->drawLine(from,to,btVector4(0,0,1,1));
+
+        btCollisionWorld::ClosestRayResultCallback	closestResults(from,to);
+        closestResults.m_collisionFilterGroup   = collisionFilterGroup;
+        closestResults.m_collisionFilterMask    = collisionFilterMask;
+        
+        m_dynamicsWorld->rayTest(from,to,closestResults);
+
+        if (closestResults.hasHit()){
+            
+            btVector3 p = from.lerp(to,closestResults.m_closestHitFraction);
+            m_dynamicsWorld->getDebugDrawer()->drawSphere(p,0.1,blue);
+            m_dynamicsWorld->getDebugDrawer()->drawLine(p,p+closestResults.m_hitNormalWorld,blue);
+
         }
     }
 
@@ -336,7 +410,6 @@ void TestHingeTorque::stepSimulation(float deltaTime){
         all_size_for_big_list   += all_size;
         all_size_for_fb         += m_jointFeedback.size();
 
-        //if ((pass_time < initial_stime) && (initial_poi < all_size-1)){
         if ((pass_time < initial_stime)){
 
             btVector3 base_loc  = m_allbones[0]->getCenterOfMassPosition();
@@ -400,12 +473,6 @@ void TestHingeTorque::stepSimulation(float deltaTime){
             exit(0);
         }
     }
-
-    /*
-    if (count %10==0){
-        cout << "Now state:" << curr_velo << " " << curr_angl << " " << curr_force << " " << curr_torque << " " << curr_dispos << ". Now time:" << pass_time << endl;
-    }
-    */
 
 }
 
@@ -762,6 +829,8 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
 
     //btVector3 average_point(0, 0, 0);
 
+    //shape->optimizeConvexHull();
+
     int num_point = shape->getNumPoints();
 
     if (control_len_now!=-1){
@@ -790,8 +859,10 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
     btVector3 localScaling(scaling[0],scaling[1],scaling[2]);
     shape->setLocalScaling(localScaling);
 
-    shape->optimizeConvexHull();
-    shape->initializePolyhedralFeatures();    
+    //shape->initializePolyhedralFeatures();    
+
+    //num_point = shape->getNumPoints();
+    //cout << "Num of point now: " << num_point << endl;
 
     //shape->setMargin(0.001);
     
@@ -908,6 +979,29 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
         }
     }
 
+    // Get bounding box, center pos, store them
+    {
+
+        m_objstartTrans.push_back(startTransform);
+
+        btVector3 min_vec, max_vec;
+
+        for (int i=0;i<num_point;i++){
+            btVector3 curr_point = shape->getScaledPoint(i);
+
+            for (int j=0;j<3;j++){
+                if ((i==0) || (curr_point[j] < min_vec[j]))
+                    min_vec[j] = curr_point[j];
+                if ((i==0) || (curr_point[j] > max_vec[j]))
+                    max_vec[j] = curr_point[j];
+            }
+        }
+
+        m_objboundingbox.push_back(max_vec - min_vec);
+        m_objcenter.push_back((max_vec + min_vec)/2);
+
+    }
+
 
     btRigidBody* body = createRigidBody(mass,startTransform,shape);
     
@@ -937,6 +1031,10 @@ void TestHingeTorque::initPhysics(){
     m_allcentpos_big_list.clear();
     m_allobjs.clear();
     m_spring_strtindx.clear();
+    m_objcenter.clear();
+    m_objstartTrans.clear();
+    m_objboundingbox.clear();
+
     all_force_data.clear();
     all_torque_data.clear();
 
@@ -979,6 +1077,7 @@ void TestHingeTorque::initPhysics(){
         ("avoid_coll", po::value<int>(), "Whether to reset position again to avoid collision with base balls, default is 0, not resetting, 1 for resetting")
         ("avoid_coll_z_off", po::value<float>(), "Z offset used during collision calculationg, default is 0")
         ("avoid_coll_x_off", po::value<float>(), "X offset used during collision calculationg for whether it's too far away, default is 5")
+        ("get_normal", po::value<int>(), "Whether to get the normal picture from the center of whisker array to the center of obj (while they are at the same y position), default is 0 for no, 1 for getting")
 
         ("do_save", po::value<int>(), "Whether to save to hdf5, default is 0, not saving, 1 for saving to hdf5")
         ("FILE_NAME", po::value<string>(), "The filename for hdf5")
@@ -1132,6 +1231,9 @@ void TestHingeTorque::initPhysics(){
         }
         if (vm.count("avoid_coll")){
             avoid_coll          = vm["avoid_coll"].as<int>();
+        }
+        if (vm.count("get_normal")){
+            get_normal          = vm["get_normal"].as<int>();
         }
         if (vm.count("avoid_coll_z_off")){
             avoid_coll_z_off    = vm["avoid_coll_z_off"].as<float>();
@@ -1315,6 +1417,41 @@ void TestHingeTorque::initPhysics(){
                 float control_len_now = control_len[indx_obj];
 
                 m_allobjs.push_back(addObjasRigidBody(fileName, scaling, orn, pos, mass_want, control_len_now));
+
+
+                if (get_normal==1){
+                    //cout << "Now getting normal" << endl;
+                    btVector3 now_obj_center = m_objstartTrans[indx_obj](m_objcenter[indx_obj]);
+                    float time_need = (orig_cent_of_whisker_array[1] - now_obj_center[1]) / obj_speed_list[1];
+                    btVector3 new_from = orig_cent_of_whisker_array + time_need*btVector3(-obj_speed_list[0], -obj_speed_list[1], -obj_speed_list[2]);
+                    btVector3 unit_x = now_obj_center - new_from;
+                    float tmp_change = unit_x[0];
+                    unit_x[0] = -unit_x[2];
+                    unit_x[2] = tmp_change;
+
+                    btVector3 new_from_2 = now_obj_center + unit_x;
+                    btVector3 new_from_3 = now_obj_center - unit_x;
+                    btVector3 new_from_4 = orig_cent_of_whisker_array + btVector3(0, unit_x.norm(), 0);
+                    btVector3 new_from_5 = orig_cent_of_whisker_array - btVector3(0, unit_x.norm(), 0);
+                        
+                    unit_x.normalize();
+                    unit_x = unit_x * normal_unit_len;
+                    btVector3 unit_y = btVector3(0, normal_unit_len, 0);
+
+                    btVector3 old_unit_x = unit_x;
+
+                    all_normals.push_back(get_normal_picture(new_from, now_obj_center, normal_im_h, normal_im_w, unit_x, unit_y));
+
+                    unit_x = now_obj_center - new_from;
+                    unit_x.normalize();
+                    unit_x = unit_x * normal_unit_len;
+                    all_normals.push_back(get_normal_picture(new_from_2, now_obj_center, normal_im_h, normal_im_w, unit_x, unit_y));
+                    all_normals.push_back(get_normal_picture(new_from_3, now_obj_center, normal_im_h, normal_im_w, -unit_x, unit_y));
+                    all_normals.push_back(get_normal_picture(new_from_4, now_obj_center, normal_im_h, normal_im_w, unit_x, old_unit_x)); 
+                    all_normals.push_back(get_normal_picture(new_from_5, now_obj_center, normal_im_h, normal_im_w, -unit_x, -old_unit_x)); 
+                    //cout << "Getting normal finished!" << endl;
+
+                }
             }
         }
     }
