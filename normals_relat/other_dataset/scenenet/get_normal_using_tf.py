@@ -4,6 +4,7 @@ import os
 import numpy as np
 import h5py
 import time
+import sys
 
 def get_batch_from_filename_list(filename_list, decode_func, batch_kwargs, decode_func_kwargs = {}, shuffle = False, shape = (240, 320, 1)):
     filename_queue = tf.train.string_input_producer(
@@ -28,6 +29,7 @@ if __name__=="__main__":
     parser.add_argument('--gpu', default = -1, type = int, action = 'store', help = 'Index of gpu to use, currently only one gpu is allowed')
     parser.add_argument('--path', default = '/home/chengxuz/barrel/barrel_github/dataset/scenenet/train/0/', type = str, action = 'store', help = 'Path to the directory hosting the depth and photo')
     parser.add_argument('--hdf5', default = '/home/chengxuz/barrel/barrel_github/dataset/scenenet/hdf5s/train_0.hdf5')
+    parser.add_argument('--seed', default = 0, type = int, action = 'store', help = 'Random seed used to generate random permutations')
 
     args    = parser.parse_args()
 
@@ -38,15 +40,20 @@ if __name__=="__main__":
     #batch_size = 10
     #batch_size = 70
     batch_size = 256
-    num_threads = 1
+    num_threads = 5
     batch_kwargs = {'batch_size': batch_size, 
             'num_threads': num_threads,
             'capacity': batch_size}
 
     #file_list = range(10)
-    file_list = range(1000)
+    #file_list = range(1000)
+    file_list = os.listdir(args.path)
     indx_list = range(0, 7500, 25)
     findx_list = [(x, y) for x in file_list for y in indx_list]
+
+    np.random.seed(args.seed)
+    findx_list = np.random.permutation(findx_list)
+
     depthname_list = [os.path.join(args.path, str(x), "depth",  "%i.png" % y) for x,y in findx_list]
     photoname_list = [os.path.join(args.path, str(x), "photo",  "%i.jpg" % y) for x,y in findx_list]
 
@@ -85,11 +92,13 @@ if __name__=="__main__":
                 del h5_file['normals']
 
         if 'images' not in h5_file:
-            h5_images = h5_file.create_dataset('images', (len(findx_list), 240, 320, 3), dtype='uint8', compression="gzip")
+            #h5_images = h5_file.create_dataset('images', (len(findx_list), 240, 320, 3), dtype='uint8', compression="gzip")
+            h5_images = h5_file.create_dataset('images', (len(findx_list), 240, 320, 3), dtype='uint8')
         else:
             h5_images = h5_file['images']
         if 'normals' not in h5_file:
-            h5_normals = h5_file.create_dataset('normals', (len(findx_list), 240, 320, 3), dtype='uint8', compression="gzip")
+            #h5_normals = h5_file.create_dataset('normals', (len(findx_list), 240, 320, 3), dtype='uint8', compression="gzip")
+            h5_normals = h5_file.create_dataset('normals', (len(findx_list), 240, 320, 3), dtype='uint8')
         else:
             h5_normals = h5_file['normals']
 
@@ -113,6 +122,7 @@ if __name__=="__main__":
                 end_time = time.time()
 
                 print("%i Batch time: %f, gpu time: %f, save time: %f" % (indx_now//batch_size, end_time - start_time, gpu_time - start_time, end_time - gpu_time))
+                sys.stdout.flush()
 
             coord.request_stop()
             coord.join(threads)
