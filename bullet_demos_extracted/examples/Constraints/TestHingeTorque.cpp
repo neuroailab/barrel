@@ -112,6 +112,7 @@ struct TestHingeTorque : public CommonRigidBodyBase{
     btAlignedObjectArray< btAlignedObjectArray< btRigidBody* > > m_allbones_big_list; // store all units
     btAlignedObjectArray< btAlignedObjectArray<btJointFeedback*> > m_jointFeedback_big_list; // store all force, torque feedback reader for springs
     btAlignedObjectArray< btAlignedObjectArray< btVector3 > > m_allcentpos_big_list; // store all center position for units
+    btAlignedObjectArray< btRigidBody* > m_allbaseballs; // store all base balls
     btAlignedObjectArray< btRigidBody* > m_allobjs; // store all objs
     btAlignedObjectArray< btTransform > m_objstartTrans; // store all start transform for all objs
     btAlignedObjectArray< btVector3 > m_objcenter; // store center position calculated from bounding box for all objs, before start trans
@@ -148,7 +149,9 @@ struct TestHingeTorque : public CommonRigidBodyBase{
     void save_all_data();
     void cal_cent_whisker();
     vector< vector< vector<float> > > get_normal_picture(btVector3 from_p, btVector3 to_p, int image_h, int image_w, btVector3 unit_x, btVector3 unit_y);
-
+    void set_initial_speed_all(btVector3 initial_speed);
+    void set_initial_speed_baseballs(btVector3 initial_speed);
+    void set_initial_speed_units(btVector3 initial_speed);
 	
 	virtual void resetCamera(){
         //float dist = 5;
@@ -161,6 +164,30 @@ struct TestHingeTorque : public CommonRigidBodyBase{
         m_guiHelper->resetCamera(dist,pitch,yaw,targetPos[0],targetPos[1],targetPos[2]);
 	}
 };
+
+void TestHingeTorque::set_initial_speed_all(btVector3 initial_speed){
+    set_initial_speed_baseballs(initial_speed);
+    set_initial_speed_units(initial_speed);
+}
+
+void TestHingeTorque::set_initial_speed_baseballs(btVector3 initial_speed){
+    for (int indx_baseball=0;indx_baseball < m_allbaseballs.size();indx_baseball++){
+        btRigidBody* curr_body = m_allbaseballs[indx_baseball];
+        curr_body->setLinearVelocity(initial_speed);
+        curr_body->setAngularVelocity(btVector3(0,0,0));
+    }
+}
+
+void TestHingeTorque::set_initial_speed_units(btVector3 initial_speed){
+    for (int i=0;i < m_allbones_big_list.size();i++){
+        btAlignedObjectArray< btRigidBody* > curr_unit_list = m_allbones_big_list[i];
+        for (int j=0;j < curr_unit_list.size();j++){
+            btRigidBody* curr_body = curr_unit_list[j];
+            curr_body->setLinearVelocity(initial_speed);
+            curr_body->setAngularVelocity(btVector3(0,0,0));
+        }
+    }
+}
 
 void TestHingeTorque::cal_cent_whisker(){
     btAlignedObjectArray< btVector3 > curr_centposes;
@@ -455,11 +482,8 @@ void TestHingeTorque::stepSimulation(float deltaTime){
     curr_force  /= all_size_for_fb;
     curr_torque /= all_size_for_fb;
 
-    for (int indx_obj=0;indx_obj < m_allobjs.size();indx_obj++){
-        btRigidBody* curr_body = m_allobjs[indx_obj];
-        curr_body->setLinearVelocity(btVector3(obj_speed_list[3*indx_obj],obj_speed_list[3*indx_obj+1],obj_speed_list[3*indx_obj+2]));
-        curr_body->setAngularVelocity(btVector3(0,0,0));
-    }
+    set_initial_speed_baseballs(btVector3(-obj_speed_list[0],-obj_speed_list[1],-obj_speed_list[2]));
+    //cout << "Now state:" << curr_velo << " " << curr_angl << " " << curr_force << " " << curr_torque << " " << curr_dispos << endl;
 
     if ((flag_time==2) && (pass_time > initial_stime)){
         if (((curr_velo < velo_ban_limit) && (curr_angl < angl_ban_limit) && (curr_force < force_limit) && (curr_torque < torque_limit) && (curr_dispos < dispos_limit)) || (pass_time > time_limit)){
@@ -579,7 +603,8 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int ind
 
     btRigidBody* pre_unit = 0;
         
-    float baseMass = 0.f;
+    //float baseMass = 0.f;
+    float baseMass = obj_mass_list[0];
     float linkMass = 1.f;
 
     btAlignedObjectArray< btRigidBody* > m_allbones;
@@ -618,6 +643,9 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int ind
         base->setDamping(linear_damp,ang_damp);
         m_dynamicsWorld->addRigidBody(base,collisionFilterGroup,collisionFilterMask);
         //m_dynamicsWorld->addRigidBody(base);
+
+        //base->setLinearVelocity(btVector3(-obj_speed_list[0],-obj_speed_list[1],-obj_speed_list[2]));
+        //base->setAngularVelocity(btVector3(0,0,0));
 
         if (pre_unit){
             for (float x_land_pos=-x_len_link;x_land_pos < x_len_link*1.1;x_land_pos+=x_len_link){
@@ -675,6 +703,10 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int ind
 
             base_ball_location = base_ball->getCenterOfMassPosition();
             base_ball_trans = base_ball->getCenterOfMassTransform();
+
+            //base_ball->setLinearVelocity(btVector3(-obj_speed_list[0],-obj_speed_list[1],-obj_speed_list[2]));
+            //base_ball->setAngularVelocity(btVector3(0,0,0));
+            m_allbaseballs.push_back(base_ball);
 
             // Special spring for base ball and base box unit 
             btTransform pivotInA(btQuaternion::getIdentity(),btVector3(0, radius, 0));						//par body's COM to cur body's COM offset
@@ -827,25 +859,26 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
     const GLInstanceVertex& v = glmesh->m_vertices->at(0);
     btConvexHullShape* shape = new btConvexHullShape((const btScalar*)(&(v.xyzw[0])), glmesh->m_numvertices, sizeof(GLInstanceVertex));
 
-    //btVector3 average_point(0, 0, 0);
-
     //shape->optimizeConvexHull();
 
     int num_point = shape->getNumPoints();
 
     if (control_len_now!=-1){
         btVector3* all_point_list = shape->getUnscaledPoints();
+        btVector3 min_vec, max_vec;
 
-        float max_distance = 0;
-        for (int indx_point=0;indx_point<num_point;indx_point++){
-            for (int indx_point_in=indx_point+1;indx_point_in<num_point;indx_point_in++){
-                btVector3 curr_dif = all_point_list[indx_point] - all_point_list[indx_point_in];
-                float curr_dis = curr_dif.norm();
-                if (curr_dis>max_distance) max_distance = curr_dis;
+        for (int i=0;i<num_point;i++){
+            btVector3 curr_point = all_point_list[i];
+
+            for (int j=0;j<3;j++){
+                if ((i==0) || (curr_point[j] < min_vec[j]))
+                    min_vec[j] = curr_point[j];
+                if ((i==0) || (curr_point[j] > max_vec[j]))
+                    max_vec[j] = curr_point[j];
             }
         }
 
-        float desire_scale = control_len_now/max_distance;
+        float desire_scale = control_len_now/(max_vec - min_vec).norm();
         scaling[0] = desire_scale;
         scaling[1] = desire_scale;
         scaling[2] = desire_scale;
@@ -859,27 +892,8 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
     btVector3 localScaling(scaling[0],scaling[1],scaling[2]);
     shape->setLocalScaling(localScaling);
 
-    //shape->initializePolyhedralFeatures();    
-
-    //num_point = shape->getNumPoints();
-    //cout << "Num of point now: " << num_point << endl;
-
-    //shape->setMargin(0.001);
-    
-    //btVector3* all_point_list = shape->getUnscaledPoints();
-    //int num_point = shape->getNumPoints();
-    //for (int indx_point=0;indx_point<num_point;indx_point++)
-        //average_point += all_point_list[indx_point];
-    //average_point /= num_point;
-
     btTransform startTransform;
     startTransform.setIdentity();
-
-    btScalar	mass(mass_want);
-    bool isDynamic = (mass != 0.f);
-    btVector3 localInertia(0,0,0);
-    if (isDynamic)
-        shape->calculateLocalInertia(mass,localInertia);
 
     float color[4] = {1,1,1,1};
     startTransform.setOrigin(btVector3(0,0,0));
@@ -896,87 +910,46 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
         obj_speed_list[2] = new_speed[2];
     }
 
+    if (reset_pos==1){
 
-    if (reset_pos==2){ //Not used!!!
-        btVector3 min_vec, max_vec;
+        btVector3 diff_vec = position - cent_of_whisker_array;
+        float min_value = 0;
+        int min_indx    = 0;
 
         for (int i=0;i<num_point;i++){
             btVector3 curr_point = shape->getScaledPoint(i);
-
-            for (int j=0;j<3;j++){
-                if ((i==0) || (curr_point[j] < min_vec[j]))
-                    min_vec[j] = curr_point[j];
-                if ((i==0) || (curr_point[j] > max_vec[j]))
-                    max_vec[j] = curr_point[j];
+            curr_point = startTransform(curr_point);
+            float curr_value = curr_point.dot(diff_vec);
+            if ((i==0) || (curr_value < min_value)){
+                min_value   = curr_value;
+                min_indx    = i;
             }
         }
 
-        btVector3 step_vec = (max_vec - min_vec)/sample_rate;
-        btVector3 center_mass_obj(0,0,0);
+        position        = position - startTransform(shape->getScaledPoint(min_indx));
+    }
+    startTransform.setOrigin(position);
 
-        cout << "Max vec: " << max_vec[0] << " " << max_vec[1] << " " << max_vec[2] << endl;
-        cout << "Min vec: " << min_vec[0] << " " << min_vec[1] << " " << min_vec[2] << endl;
+    if (avoid_coll==1){
+        float max_value = 0;
 
-        int num_dot_in = 0;
-        float toler     = (step_vec[0] + step_vec[1] + step_vec[2])/3;
-        for (float i=min_vec[0];i<max_vec[0];i+=step_vec[0])
-            for (float j=min_vec[1];j<max_vec[1];j+=step_vec[1])
-                for (float k=min_vec[1];k<max_vec[1];k+=step_vec[2])
-                    if (shape->isInside(btVector3(i,j,k), toler)){
-                        num_dot_in++;
-                        center_mass_obj+=btVector3(i,j,k);
-                    }
-        center_mass_obj /= num_dot_in;
-        btTransform tmp_trans;
-        tmp_trans.setIdentity();
-        tmp_trans.setOrigin(-center_mass_obj);
-        startTransform.setOrigin(position);
-        cout << "Center mass: " <<  center_mass_obj[0] << " " << center_mass_obj[1] << " " << center_mass_obj[2] << endl;
-        //startTransform = tmp_trans*startTransform;
-        
-    } else {
-        if (reset_pos==1){
-            //btVector3* all_point_list = shape->getUnscaledPoints();
+        for (int i=0;i<num_point;i++){
+            btVector3 curr_point = shape->getScaledPoint(i);
+            curr_point = startTransform(curr_point);
+            
+            for (int j=0;j<m_allcentpos_big_list.size();j++){
+                btVector3 now_dest = m_allcentpos_big_list[j][0];
 
-            btVector3 diff_vec = position - cent_of_whisker_array;
-            float min_value = 0;
-            int min_indx    = 0;
-
-            for (int i=0;i<num_point;i++){
-                btVector3 curr_point = shape->getScaledPoint(i);
-                curr_point = startTransform(curr_point);
-                float curr_value = curr_point.dot(diff_vec);
-                if ((i==0) || (curr_value < min_value)){
-                    min_value   = curr_value;
-                    min_indx    = i;
+                float time_need = (now_dest[1] - curr_point[1])/obj_speed_list[1];
+                btVector3 next_point = curr_point + time_need*btVector3(obj_speed_list[0], obj_speed_list[1], obj_speed_list[2]);
+                if ((next_point[2] > now_dest[2] - avoid_coll_z_off) && ( abs(next_point[0] - now_dest[0]) < avoid_coll_x_off) ){
+                    if (max_value < next_point[2] - (now_dest[2] - avoid_coll_z_off))
+                        max_value = next_point[2] - (now_dest[2] - avoid_coll_z_off);
                 }
             }
-
-            position        = position - startTransform(shape->getScaledPoint(min_indx));
         }
-        startTransform.setOrigin(position);
 
-        if (avoid_coll==1){
-            float max_value = 0;
-
-            for (int i=0;i<num_point;i++){
-                btVector3 curr_point = shape->getScaledPoint(i);
-                curr_point = startTransform(curr_point);
-                
-                for (int j=0;j<m_allcentpos_big_list.size();j++){
-                    btVector3 now_dest = m_allcentpos_big_list[j][0];
-
-                    float time_need = (now_dest[1] - curr_point[1])/obj_speed_list[1];
-                    btVector3 next_point = curr_point + time_need*btVector3(obj_speed_list[0], obj_speed_list[1], obj_speed_list[2]);
-                    if ((next_point[2] > now_dest[2] - avoid_coll_z_off) && ( abs(next_point[0] - now_dest[0]) < avoid_coll_x_off) ){
-                        if (max_value < next_point[2] - (now_dest[2] - avoid_coll_z_off))
-                            max_value = next_point[2] - (now_dest[2] - avoid_coll_z_off);
-                    }
-                }
-            }
-
-            startTransform.setOrigin(btVector3(position[0], position[1], position[2] - max_value));
-        }
+        startTransform.setOrigin(btVector3(position[0], position[1], position[2] - max_value));
     }
 
     // Get bounding box, center pos, store them
@@ -1002,20 +975,20 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
 
     }
 
+    btTriangleMesh* meshInterface = new btTriangleMesh();
+    for (int i=0;i<num_point/3;i++)
+        meshInterface->addTriangle(shape->getScaledPoint(i*3), shape->getScaledPoint(i*3+1), shape->getScaledPoint(i*3+2));
+    btBvhTriangleMeshShape* trimesh = new btBvhTriangleMeshShape(meshInterface,true,true);
 
-    btRigidBody* body = createRigidBody(mass,startTransform,shape);
-    
-    // Test code
-    //btVector3 center_pos = body->getCenterOfMassPosition();
-    //cout << center_pos[0] << " " << center_pos[1] << " " << center_pos[2] << endl;
-    //cout << average_point[0] << " " << average_point[1] << " " << average_point[2] << endl;
+    //btRigidBody* body = createRigidBody(mass,startTransform,shape);
+    btRigidBody* body = createRigidBody(0.f,startTransform,trimesh);
 
     int shapeId = m_guiHelper->registerGraphicsShape(&glmesh->m_vertices->at(0).xyzw[0], 
                                                                     glmesh->m_numvertices, 
                                                                     &glmesh->m_indices->at(0), 
                                                                     glmesh->m_numIndices,
                                                                     B3_GL_TRIANGLES, -1);
-    shape->setUserIndex(shapeId);
+    //shape->setUserIndex(shapeId);
     int renderInstance = m_guiHelper->registerGraphicsInstance(shapeId,pos,orn,color,scaling);
     body->setUserIndex(renderInstance);
 
@@ -1029,6 +1002,7 @@ void TestHingeTorque::initPhysics(){
     min_dis     = 10000;
     m_allbones_big_list.clear();
     m_allcentpos_big_list.clear();
+    m_allbaseballs.clear();
     m_allobjs.clear();
     m_spring_strtindx.clear();
     m_objcenter.clear();
@@ -1454,6 +1428,7 @@ void TestHingeTorque::initPhysics(){
                 }
             }
         }
+        set_initial_speed_all(btVector3(-obj_speed_list[0],-obj_speed_list[1],-obj_speed_list[2]));
     }
 	
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);

@@ -137,6 +137,7 @@ ImportUrdfSetup::ImportUrdfSetup(struct GUIHelperInterface* helper, int option, 
 		{
 			//gFileNameArray.push_back("r2d2.urdf");
 			gFileNameArray.push_back("teddy_vhacd.urdf");
+			//gFileNameArray.push_back("teddy_test.urdf");
 
 		}
 
@@ -416,6 +417,7 @@ void ImportUrdfSetup::stepSimulation(float deltaTime)
         }
 
 		//the maximal coordinates/iterative MLCP solver requires a smallish timestep to converge
+        m_data->m_rb->setLinearVelocity(btVector3(0, 0.5, 0));
 		m_dynamicsWorld->stepSimulation(deltaTime,10,1./240.);
 	}
 }
