@@ -201,7 +201,7 @@ if __name__=="__main__":
     #print(len(scale_list))
 
     if args.objindx==0:
-        config_dict["obj_filename"]["value"] = [os.path.join(obj_path_prefix, "duck.obj")]
+        config_dict["obj_filename"]["value"] = [os.path.join(obj_path_prefix, "duck_vhacd.obj")]
         hdf5_prefix = "duck"
     elif args.objindx==1:
         config_dict["obj_filename"]["value"] = [os.path.join(obj_path_prefix, "teddy.obj")]
@@ -215,6 +215,12 @@ if __name__=="__main__":
     elif args.objindx==4:
         config_dict["obj_filename"]["value"] = [os.path.join(obj_path_prefix, "hat_aftervhacd.obj")]
         hdf5_prefix = "aftervhacd"
+    elif args.objindx==5:
+        config_dict["obj_filename"]["value"] = [os.path.join(obj_path_prefix, "hat_aftervhacd_2.obj")]
+        hdf5_prefix = "aftervhacd"
+    elif args.objindx==6:
+        config_dict["obj_filename"]["value"] = [os.path.join(obj_path_prefix, "teddy2_VHACD_CHs.obj")]
+        hdf5_prefix = "teddy"
 
     config_dict["add_objs"]["value"] = 1
     config_dict["time_limit"]["value"] = 11.0

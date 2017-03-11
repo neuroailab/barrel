@@ -151,7 +151,7 @@ struct TestHingeTorque : public CommonRigidBodyBase{
     btRigidBody* addObjasRigidBody(string fileName, float scaling[4], float orn[4], float pos[4] , float mass_want, float control_len_now, int indx_obj );
     void save_all_data();
     void cal_cent_whisker();
-    vector< vector< vector<float> > > get_normal_picture(btVector3 from_p, btVector3 to_p, int image_h, int image_w, btVector3 unit_x, btVector3 unit_y);
+    vector< vector< vector<float> > > get_normal_picture(btVector3 from_p, btVector3 to_p, int image_h, int image_w, btVector3 unit_x, btVector3 unit_y, float control_len_now);
     void set_initial_speed_all(btVector3 initial_speed);
     void set_initial_speed_baseballs(btVector3 initial_speed);
     void set_initial_speed_units(btVector3 initial_speed);
@@ -297,9 +297,15 @@ TestHingeTorque::~ TestHingeTorque(){
     */
 }
 
-vector< vector< vector<float> > > TestHingeTorque::get_normal_picture(btVector3 from_p, btVector3 to_p, int image_h, int image_w, btVector3 unit_x, btVector3 unit_y){
+vector< vector< vector<float> > > TestHingeTorque::get_normal_picture(btVector3 from_p, btVector3 to_p, int image_h, int image_w, btVector3 unit_x, btVector3 unit_y, float control_len_now){
     vector< vector< vector<float> > > normal_picture;
     normal_picture.clear();
+
+    if (control_len_now>0) {
+        btVector3 diff_vec = from_p - to_p;
+        diff_vec = diff_vec/diff_vec.norm()*control_len_now;
+        from_p = to_p + diff_vec;
+    }
 
     int sta_x = -image_h/2, sta_y = -image_w/2;
 
@@ -1439,15 +1445,15 @@ void TestHingeTorque::initPhysics(){
 
                     btVector3 old_unit_x = unit_x;
 
-                    all_normals.push_back(get_normal_picture(new_from, now_obj_center, normal_im_h, normal_im_w, unit_x, unit_y));
+                    all_normals.push_back(get_normal_picture(new_from, now_obj_center, normal_im_h, normal_im_w, unit_x, unit_y, control_len_now));
 
                     unit_x = now_obj_center - new_from;
                     unit_x.normalize();
                     unit_x = unit_x * normal_unit_len;
-                    all_normals.push_back(get_normal_picture(new_from_2, now_obj_center, normal_im_h, normal_im_w, unit_x, unit_y));
-                    all_normals.push_back(get_normal_picture(new_from_3, now_obj_center, normal_im_h, normal_im_w, -unit_x, unit_y));
-                    all_normals.push_back(get_normal_picture(new_from_4, now_obj_center, normal_im_h, normal_im_w, unit_x, old_unit_x)); 
-                    all_normals.push_back(get_normal_picture(new_from_5, now_obj_center, normal_im_h, normal_im_w, -unit_x, -old_unit_x)); 
+                    all_normals.push_back(get_normal_picture(new_from_2, now_obj_center, normal_im_h, normal_im_w, unit_x, unit_y, control_len_now));
+                    all_normals.push_back(get_normal_picture(new_from_3, now_obj_center, normal_im_h, normal_im_w, -unit_x, unit_y, control_len_now));
+                    all_normals.push_back(get_normal_picture(new_from_4, now_obj_center, normal_im_h, normal_im_w, unit_x, old_unit_x, control_len_now)); 
+                    all_normals.push_back(get_normal_picture(new_from_5, now_obj_center, normal_im_h, normal_im_w, -unit_x, -old_unit_x, control_len_now)); 
                     //cout << "Getting normal finished!" << endl;
 
                 }
