@@ -23,6 +23,9 @@ using namespace std;
 #include "../CommonInterfaces/CommonRigidBodyBase.h"
 #include "../CommonInterfaces/CommonParameterInterface.h"
 
+
+#include "../Importers/ImportURDFDemo/BulletUrdfImporter.h"
+
 #include "H5Cpp.h"
 
 short collisionFilterGroup = short(btBroadphaseProxy::CharacterFilter);
@@ -1011,6 +1014,10 @@ void TestHingeTorque::initPhysics(){
 
     all_force_data.clear();
     all_torque_data.clear();
+
+	//BulletURDFImporter u2b(m_guiHelper, 0);
+	
+	//bool loadOk = u2b.loadURDF("/Users/chengxuz/barrel/bullet/bullet3/data/teddy_vhacd_2.urdf");
 
     po::options_description desc("Allowed options");
     desc.add_options()

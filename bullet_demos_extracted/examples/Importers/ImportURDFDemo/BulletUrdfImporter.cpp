@@ -561,6 +561,7 @@ btCollisionShape* convertURDFToCollisionShape(const UrdfCollision* collision, co
 									std::vector<tinyobj::shape_t> shapes;
 									std::string err = tinyobj::LoadObj(shapes, fullPath, collisionPathPrefix);
 									//create a convex hull for each shape, and store it in a btCompoundShape
+                                    //std::cout << "In convex hulls" << std::endl;
 
 									shape = createConvexHullFromShapes(shapes, collision->m_geometry.m_meshScale);
 									return shape;
@@ -1180,7 +1181,7 @@ btCollisionShape* BulletURDFImporter::getAllocatedCollisionShape(int index)
 		
 		UrdfLink* link = *linkPtr;
 		
-			
+
 		for (int v=0;v<link->m_collisionArray.size();v++)
 		{
 			const UrdfCollision& col = link->m_collisionArray[v];

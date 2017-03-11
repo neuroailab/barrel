@@ -13,6 +13,18 @@ SET (OBJSOURCES
         ../Importers/ImportObjDemo/LoadMeshFromObj.cpp
         ../Importers/ImportObjDemo/Wavefront2GLInstanceGraphicsShape.cpp
         ../ThirdPartyLibs/Wavefront/tiny_obj_loader.cpp
+        ../Importers/ImportURDFDemo/BulletUrdfImporter.cpp
+        ../Importers/ImportURDFDemo/UrdfParser.cpp
+        ../Utils/b3ResourcePath.cpp
+        ../ThirdPartyLibs/tinyxml/tinystr.cpp
+        ../ThirdPartyLibs/tinyxml/tinyxml.cpp
+        ../ThirdPartyLibs/tinyxml/tinyxmlerror.cpp
+        ../ThirdPartyLibs/tinyxml/tinyxmlparser.cpp
+        ../Importers/ImportURDFDemo/urdfStringSplit.cpp
+        ../Importers/ImportURDFDemo/BulletUrdfImporter.cpp
+        ../Importers/ImportMeshUtility/b3ImportMeshUtility.cpp
+        ../Importers/ImportColladaDemo/LoadMeshFromCollada.cpp
+        ../ThirdPartyLibs/stb_image/stb_image.cpp
     )
 
 IF (WIN32)
