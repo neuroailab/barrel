@@ -6,14 +6,16 @@ import os
 #file_name = os.path.join('/Users/chengxuz/barrel/bullet/barrle_related_files/hdf5s', 'test_7579466178976215500_1_0_0_2.hdf5')
 #file_name = os.path.join('/Users/chengxuz/barrel/bullet/barrle_related_files/hdf5s', 'aftervhacd_-3199863574928696085_1_0_0_2.hdf5')
 #file_name = os.path.join('/Users/chengxuz/barrel/bullet/barrle_related_files/hdf5s', 'teddy_-7904248716561876032_1_0_0_2.hdf5')
-file_name = os.path.join('/Users/chengxuz/barrel/bullet/barrle_related_files/hdf5s', 'teddy_-7234480266557311556_1_3_0_2.hdf5')
+#file_name = os.path.join('/Users/chengxuz/barrel/bullet/barrle_related_files/hdf5s', 'teddy_-7234480266557311556_1_3_0_2.hdf5')
 #file_name = os.path.join('/Users/chengxuz/barrel/bullet/barrle_related_files/hdf5s', 'teddy_-7904248716561876032_1_0_0_2.hdf5')
+file_name = os.path.join('/Users/chengxuz/barrel/bullet/barrle_related_files/hdf5s', 'aftervhacd_4793304094075214567_1_3_0_2.hdf5')
+
 now_im_indx = 0
 
 fin = h5py.File(file_name, 'r')
 
 for now_im_indx in xrange(5):
-    save_im_name = 'teddy_mesh_2_%s.png' % now_im_indx
+    save_im_name = 'afterhat_%s.png' % now_im_indx
     #save_im_name = 'teddy_%s.png' % now_im_indx
     normal = np.asarray(fin['Data_normal'][now_im_indx])
 

@@ -148,13 +148,14 @@ struct TestHingeTorque : public CommonRigidBodyBase{
             btTransform base_transform);
     btJointFeedback* addFeedbackForSpring(btGeneric6DofSpring2Constraint* con);
     void loadParametersEveryWhisker(string curr_file_name, po::options_description desc_each);
-    btRigidBody* addObjasRigidBody(string fileName, float scaling[4], float orn[4], float pos[4] , float mass_want, float control_len_now );
+    btRigidBody* addObjasRigidBody(string fileName, float scaling[4], float orn[4], float pos[4] , float mass_want, float control_len_now, int indx_obj );
     void save_all_data();
     void cal_cent_whisker();
     vector< vector< vector<float> > > get_normal_picture(btVector3 from_p, btVector3 to_p, int image_h, int image_w, btVector3 unit_x, btVector3 unit_y);
     void set_initial_speed_all(btVector3 initial_speed);
     void set_initial_speed_baseballs(btVector3 initial_speed);
     void set_initial_speed_units(btVector3 initial_speed);
+    void set_speed_objs(btVector3 );
 	
 	virtual void resetCamera(){
         //float dist = 5;
@@ -167,6 +168,14 @@ struct TestHingeTorque : public CommonRigidBodyBase{
         m_guiHelper->resetCamera(dist,pitch,yaw,targetPos[0],targetPos[1],targetPos[2]);
 	}
 };
+
+void TestHingeTorque::set_speed_objs(btVector3 speed_want){
+    for (int i=0;i < m_allobjs.size();i++){
+        btRigidBody* curr_body = m_allobjs[i];
+        curr_body->setLinearVelocity(speed_want);
+        curr_body->setAngularVelocity(btVector3(0,0,0));
+    }
+}
 
 void TestHingeTorque::set_initial_speed_all(btVector3 initial_speed){
     set_initial_speed_baseballs(initial_speed);
@@ -485,8 +494,9 @@ void TestHingeTorque::stepSimulation(float deltaTime){
     curr_force  /= all_size_for_fb;
     curr_torque /= all_size_for_fb;
 
-    set_initial_speed_baseballs(btVector3(-obj_speed_list[0],-obj_speed_list[1],-obj_speed_list[2]));
+    //set_initial_speed_baseballs(btVector3(-obj_speed_list[0],-obj_speed_list[1],-obj_speed_list[2]));
     //cout << "Now state:" << curr_velo << " " << curr_angl << " " << curr_force << " " << curr_torque << " " << curr_dispos << endl;
+    set_speed_objs(btVector3(obj_speed_list[0],obj_speed_list[1],obj_speed_list[2]));
 
     if ((flag_time==2) && (pass_time > initial_stime)){
         if (((curr_velo < velo_ban_limit) && (curr_angl < angl_ban_limit) && (curr_force < force_limit) && (curr_torque < torque_limit) && (curr_dispos < dispos_limit)) || (pass_time > time_limit)){
@@ -606,8 +616,8 @@ void TestHingeTorque::addQuaUnits(float qua_a, float qua_b, float qua_c, int ind
 
     btRigidBody* pre_unit = 0;
         
-    //float baseMass = 0.f;
-    float baseMass = obj_mass_list[0];
+    float baseMass = 0.f;
+    //float baseMass = obj_mass_list[0];
     float linkMass = 1.f;
 
     btAlignedObjectArray< btRigidBody* > m_allbones;
@@ -854,7 +864,7 @@ void TestHingeTorque::loadParametersEveryWhisker(string curr_file_name, po::opti
 }
 
 btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
-    float scaling[4], float orn[4], float pos[4], float mass_want, float control_len_now ){
+    float scaling[4], float orn[4], float pos[4], float mass_want, float control_len_now , int indx_obj){
 
     GLInstanceGraphicsShape* glmesh = LoadMeshFromObj(fileName.c_str(), "");
     printf("[INFO] Obj loaded: Extracted %d verticed from obj file [%s]\n", glmesh->m_numvertices, fileName.c_str());
@@ -885,11 +895,12 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
         scaling[0] = desire_scale;
         scaling[1] = desire_scale;
         scaling[2] = desire_scale;
-        obj_scaling_list[0] = desire_scale;
-        obj_scaling_list[1] = desire_scale;
-        obj_scaling_list[2] = desire_scale;
+        obj_scaling_list[indx_obj*4] = desire_scale;
+        obj_scaling_list[indx_obj*4 + 1] = desire_scale;
+        obj_scaling_list[indx_obj*4 + 2] = desire_scale;
 
         mass_want = mass_want*pow((desire_scale/30), 3);
+        obj_mass_list[indx_obj] = mass_want;
     }
 
     btVector3 localScaling(scaling[0],scaling[1],scaling[2]);
@@ -908,9 +919,9 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
         btVector3 new_speed=cent_of_whisker_array - btVector3(pos[0], pos[1], pos[2]);
         new_speed.normalize();
         new_speed = new_speed*(btVector3(obj_speed_list[0], obj_speed_list[1], obj_speed_list[2]).norm());
-        obj_speed_list[0] = new_speed[0];
-        obj_speed_list[1] = new_speed[1];
-        obj_speed_list[2] = new_speed[2];
+        obj_speed_list[indx_obj*3] = new_speed[0];
+        obj_speed_list[indx_obj*3 + 1] = new_speed[1];
+        obj_speed_list[indx_obj*3 + 2] = new_speed[2];
     }
 
     if (reset_pos==1){
@@ -978,13 +989,20 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
 
     }
 
-    btTriangleMesh* meshInterface = new btTriangleMesh();
-    for (int i=0;i<num_point/3;i++)
-        meshInterface->addTriangle(shape->getScaledPoint(i*3), shape->getScaledPoint(i*3+1), shape->getScaledPoint(i*3+2));
-    btBvhTriangleMeshShape* trimesh = new btBvhTriangleMeshShape(meshInterface,true,true);
+    //btTriangleMesh* meshInterface = new btTriangleMesh();
+    //for (int i=0;i<num_point/3;i++)
+    //    meshInterface->addTriangle(shape->getScaledPoint(i*3), shape->getScaledPoint(i*3+1), shape->getScaledPoint(i*3+2));
+    //btBvhTriangleMeshShape* trimesh = new btBvhTriangleMeshShape(meshInterface,true,true);
 
     //btRigidBody* body = createRigidBody(mass,startTransform,shape);
-    btRigidBody* body = createRigidBody(0.f,startTransform,trimesh);
+    //btRigidBody* body = createRigidBody(0.f,startTransform,trimesh);
+
+    btCollisionShape* shape_compound = LoadShapesFromObj(fileName.c_str(), "", btVector3(scaling[0], scaling[1], scaling[2]));
+    btRigidBody* body = createRigidBody(mass_want, startTransform, shape_compound);
+
+    obj_pos_list[indx_obj*4] = startTransform.getOrigin()[0];
+    obj_pos_list[indx_obj*4+1] = startTransform.getOrigin()[1];
+    obj_pos_list[indx_obj*4+2] = startTransform.getOrigin()[2];
 
     int shapeId = m_guiHelper->registerGraphicsShape(&glmesh->m_vertices->at(0).xyzw[0], 
                                                                     glmesh->m_numvertices, 
@@ -1397,7 +1415,7 @@ void TestHingeTorque::initPhysics(){
 
                 float control_len_now = control_len[indx_obj];
 
-                m_allobjs.push_back(addObjasRigidBody(fileName, scaling, orn, pos, mass_want, control_len_now));
+                m_allobjs.push_back(addObjasRigidBody(fileName, scaling, orn, pos, mass_want, control_len_now, indx_obj));
 
 
                 if (get_normal==1){
@@ -1435,7 +1453,7 @@ void TestHingeTorque::initPhysics(){
                 }
             }
         }
-        set_initial_speed_all(btVector3(-obj_speed_list[0],-obj_speed_list[1],-obj_speed_list[2]));
+        //set_initial_speed_all(btVector3(-obj_speed_list[0],-obj_speed_list[1],-obj_speed_list[2]));
     }
 	
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
