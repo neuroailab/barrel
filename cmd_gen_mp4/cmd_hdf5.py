@@ -221,6 +221,9 @@ if __name__=="__main__":
     elif args.objindx==6:
         config_dict["obj_filename"]["value"] = [os.path.join(obj_path_prefix, "teddy2_VHACD_CHs.obj")]
         hdf5_prefix = "teddy"
+    elif args.objindx==7:
+        config_dict["obj_filename"]["value"] = [os.path.join(obj_path_prefix, "chair_aftervhacd.obj")]
+        hdf5_prefix = "chair"
 
     config_dict["add_objs"]["value"] = 1
     config_dict["time_limit"]["value"] = 11.0

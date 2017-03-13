@@ -6,70 +6,173 @@ import pymongo
 import time
 from bson.objectid import ObjectId
 import numpy as np
+from nltk.corpus import wordnet as wn
+import argparse
+import os
 
-conn = pymongo.MongoClient(port=22334)
-coll = conn['synthetic_generative']['3d_models']
+if __name__=='__main__':
+    parser = argparse.ArgumentParser(description='The script to get object category list')
+    parser.add_argument('--minobjnum', default = 60, type = int, action = 'store', help = 'Minimun number of one category')
 
-#test_coll_  = coll.find({'type': 'shapenetremat', 'has_texture': {'$exists': False}})
-test_coll  = coll.find({'type': 'shapenetremat', 'has_texture': True})
-#print(test_coll.count())
-print(test_coll[0])
+    args    = parser.parse_args()
 
-cached_coll     = list(test_coll)
+    conn = pymongo.MongoClient(port=22334)
+    coll = conn['synthetic_generative']['3d_models']
 
-synset_dict     = {}
-wanted_name     = 'synset'
+    #test_coll_  = coll.find({'type': 'shapenetremat', 'has_texture': {'$exists': False}})
+    #test_coll  = coll.find({'type': 'shapenetremat', 'has_texture': True})
+    test_coll  = coll.find({'type': 'shapenet', 'version': 2})
+    print(test_coll.count())
+    print(test_coll[0])
 
-for indx, item in enumerate(cached_coll):
-    if item[wanted_name][0] not in synset_dict:
-        synset_dict[item[wanted_name][0]] = []
-    synset_dict[item[wanted_name][0]].append(indx)
+    cached_coll     = list(test_coll)
 
-wanted_name     = 'shapenet_synset'
-shapenet_synset_dict = {}
+    synset_dict     = {}
+    wanted_name     = 'synset'
 
-for indx, item in enumerate(cached_coll):
-    if item[wanted_name] not in shapenet_synset_dict:
-        shapenet_synset_dict[item[wanted_name]] = {}
-        shapenet_synset_dict[item[wanted_name]]['listindx'] = []
-        shapenet_synset_dict[item[wanted_name]]['listname'] = []
+    for indx, item in enumerate(cached_coll):
+        if item[wanted_name][0] not in synset_dict:
+            synset_dict[item[wanted_name][0]] = []
+        synset_dict[item[wanted_name][0]].append(indx)
 
-    shapenet_synset_dict[item[wanted_name]]['listindx'].append(indx)
-    if item['synset'][0] not in shapenet_synset_dict[item[wanted_name]]['listname']:
-        shapenet_synset_dict[item[wanted_name]]['listname'].append(item['synset'][0])
+    wanted_name     = 'shapenet_synset'
+    shapenet_synset_dict = {}
 
-#for key_now in synset_dict:
-#    print key_now, len(synset_dict[key_now])
+    for indx, item in enumerate(cached_coll):
+        if item[wanted_name] not in shapenet_synset_dict:
+            shapenet_synset_dict[item[wanted_name]] = {}
+            shapenet_synset_dict[item[wanted_name]]['listindx'] = []
+            shapenet_synset_dict[item[wanted_name]]['listname'] = []
 
-for big_key in shapenet_synset_dict:
-    print big_key,
-    print len(shapenet_synset_dict[big_key]['listindx']),
-    for small_key in shapenet_synset_dict[big_key]['listname']:
-        print "%s %i" % (small_key, len(synset_dict[small_key])),
-    print
+        shapenet_synset_dict[item[wanted_name]]['listindx'].append(indx)
+        #if item['synset'][0] not in shapenet_synset_dict[item[wanted_name]]['listname']:
+        #    shapenet_synset_dict[item[wanted_name]]['listname'].append(item['synset'][0])
 
-print(cached_coll[synset_dict['n20000038'][0]])
+    #for key_now in synset_dict:
+    #    print key_now, len(synset_dict[key_now])
 
-'''
-obj_num     = len(synset_dict.keys())
-print(obj_num)
-len_of_obj  = [len(synset_dict[key_tmp]) for key_tmp in synset_dict]
-len_of_obj.sort()
-print(len_of_obj)
+    print(len(shapenet_synset_dict))
 
-all_sum     = 10000
-final_list  = []
-for indx_tmp, item_tmp in enumerate(len_of_obj):
-    if sum(final_list) + (obj_num - indx_tmp)*item_tmp > all_sum:
-        fill_num    = (all_sum - sum(final_list)) // (obj_num - indx_tmp)
-        for _not_used in xrange(indx_tmp, obj_num):
-            final_list.append(fill_num)
-        break
-    else:
-        final_list.append(item_tmp)
+    '''
+    for big_key in shapenet_synset_dict:
+        print big_key, wn._synset_from_pos_and_offset('n',int(big_key[1:])),
+        print len(shapenet_synset_dict[big_key]['listindx']),
+        for small_key in shapenet_synset_dict[big_key]['listname']:
+            print "%s %i" % (small_key, len(synset_dict[small_key])),
+        print
 
-print(len(final_list))
-print(final_list)
-print(sum(final_list))
-print(np.std(final_list))
-'''
+    print(cached_coll[synset_dict['n20000038'][0]])
+    '''
+
+    all_synset_dict = {}
+    deepest_synset_dict = {}
+    depth_delta_dict = {}
+
+    for indx, item in enumerate(cached_coll):
+        tmp_tree_synset = item['synset_tree']
+
+        tmp_deepest_synset = None
+        tmp_deepest_depth = None
+
+        tmp_depth_list  = []
+        tmp_exist_synset_list = []
+
+        for tmp_synset in tmp_tree_synset:
+            try:
+                curr_synset     = wn._synset_from_pos_and_offset('n', int(tmp_synset[1:]))
+                curr_depth      = curr_synset.min_depth()
+
+                if tmp_deepest_synset is None or tmp_deepest_depth < curr_depth:
+                    tmp_deepest_synset = tmp_synset
+                    tmp_deepest_depth = curr_depth
+                if tmp_synset not in all_synset_dict:
+                    all_synset_dict[tmp_synset] = {}
+                    all_synset_dict[tmp_synset]['list_indx'] = []
+                    all_synset_dict[tmp_synset]['exist_son'] = []
+                all_synset_dict[tmp_synset]['list_indx'].append(indx)
+
+                tmp_depth_list.append(curr_depth)
+                tmp_exist_synset_list.append(tmp_synset)
+            except:
+                pass
+
+        if tmp_deepest_synset not in deepest_synset_dict:
+            deepest_synset_dict[tmp_deepest_synset] = {}
+            deepest_synset_dict[tmp_deepest_synset]['list_indx'] = []
+
+        deepest_synset_dict[tmp_deepest_synset]['list_indx'].append(indx)
+
+        '''
+        sort_indx = [i[0] for i in sorted(enumerate(tmp_depth_list), key=lambda x:x[1])]
+        for depth_indx in xrange(len(sort_indx) - 1):
+            if not tmp_depth_list[sort_indx[depth_indx]]+1==tmp_depth_list[sort_indx[depth_indx+1]]:
+                print(tmp_depth_list, tmp_tree_synset)
+                break
+        '''
+
+        if item['shapenet_synset'] not in tmp_exist_synset_list:
+            print('Shapenet synset have problem!')
+            continue
+        curr_depth_delta = tmp_deepest_depth - tmp_depth_list[tmp_exist_synset_list.index(item['shapenet_synset'])]
+        if curr_depth_delta not in depth_delta_dict:
+            depth_delta_dict[curr_depth_delta] = []
+        depth_delta_dict[curr_depth_delta].append(indx)
+
+        if tmp_deepest_synset not in shapenet_synset_dict[item['shapenet_synset']]['listname']:
+            shapenet_synset_dict[item['shapenet_synset']]['listname'].append(tmp_deepest_synset)
+
+
+    print([len(depth_delta_dict[i]) for i in depth_delta_dict])
+
+    print(len(deepest_synset_dict))
+    len_of_obj = [len(deepest_synset_dict[key_tmp]['list_indx']) for key_tmp in deepest_synset_dict]
+    len_of_obj.sort()
+    print(len_of_obj)
+
+    final_len = len(shapenet_synset_dict)
+    final_synset = []
+    for big_key in shapenet_synset_dict:
+        print big_key, wn._synset_from_pos_and_offset('n',int(big_key[1:])),
+        curr_size = len(shapenet_synset_dict[big_key]['listindx'])
+        size_list = []
+        print curr_size,
+        for small_key in shapenet_synset_dict[big_key]['listname']:
+            size_list.append((small_key, len(deepest_synset_dict[small_key]['list_indx'])))
+            print "%s %i" % size_list[-1],
+        print
+
+        if big_key not in deepest_synset_dict:
+            print('Base cate not as deepest!')
+        if curr_size > args.minobjnum:
+            tmp_larger_sons = [i[0] for i in size_list if i[1]>args.minobjnum]
+            curr_split_len = len(tmp_larger_sons)
+            final_len = final_len + curr_split_len -1
+            final_synset.extend(tmp_larger_sons)
+        else:
+            final_synset.extend([big_key])
+
+    #print(final_len)
+    #print(len(final_synset))
+    final_synset = np.unique(final_synset)
+    obj_num = len(final_synset)
+    #print(len(np.unique(final_synset)))
+
+    len_of_obj  = [len(deepest_synset_dict[key_tmp]['list_indx']) for key_tmp in final_synset]
+    len_of_obj.sort()
+    print(len_of_obj)
+
+    all_sum     = 10000
+    final_list  = []
+    for indx_tmp, item_tmp in enumerate(len_of_obj):
+        if sum(final_list) + (obj_num - indx_tmp)*item_tmp > all_sum:
+            fill_num    = (all_sum - sum(final_list)) // (obj_num - indx_tmp)
+            for _not_used in xrange(indx_tmp, obj_num):
+                final_list.append(fill_num)
+            break
+        else:
+            final_list.append(item_tmp)
+
+    print(len(final_list))
+    print(final_list)
+    print(sum(final_list))
+    print(np.std(final_list))
