@@ -14,7 +14,8 @@
 #    sbatch --job-name=dhmonc${k} script_sbatch_monclient.sh 23333 test_db
 #done
 
-len=1025
+#len=1025
+len=410
 for k in $(seq 0 ${len} 51228)
 do
     sbatch --job-name=vhacd${k} script_vhacd.sh ${k} ${len}
