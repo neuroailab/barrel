@@ -263,6 +263,7 @@ def get_config_dict():
             "FILE_NAME":{"value":"Select.h5", "type":"string"},
             "num_unit_to_save":{"value":3, "type":"int"},
             "sample_rate":{"value":24, "type":"int"},
+            "group_name":{"value":"/Data", "type":"string"},
 
             "time_limit":{"value":60.0, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 
             #"time_limit":{"value":12.0, "help":"Time limit for recording", "type":"float", "dict_nu": {5: 20.0/4, 15: 35.0/4, 25:50.0/4}}, 

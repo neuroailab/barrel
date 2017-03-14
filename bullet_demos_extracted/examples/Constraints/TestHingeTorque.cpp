@@ -100,6 +100,7 @@ int do_save             = 0;
 H5std_string FILE_NAME( "Select.h5" );
 int num_unit_to_save    = 3;
 int sample_rate         = 24;
+string group_name       = "";
 
 struct TestHingeTorque : public CommonRigidBodyBase{
     bool m_once;
@@ -132,7 +133,7 @@ struct TestHingeTorque : public CommonRigidBodyBase{
 
     vector< vector< vector< vector<float> > > > all_force_data;
     vector< vector< vector< vector<float> > > > all_torque_data;
-    vector< vector< vector< vector<float> > > > all_normals;
+    vector< vector< vector< vector<unsigned char> > > > all_normals;
 
     btVector3 base_ball_location;
     btTransform base_ball_trans;
@@ -149,9 +150,9 @@ struct TestHingeTorque : public CommonRigidBodyBase{
     btJointFeedback* addFeedbackForSpring(btGeneric6DofSpring2Constraint* con);
     void loadParametersEveryWhisker(string curr_file_name, po::options_description desc_each);
     btRigidBody* addObjasRigidBody(string fileName, float scaling[4], float orn[4], float pos[4] , float mass_want, float control_len_now, int indx_obj );
-    void save_all_data();
+    void save_all_data(string );
     void cal_cent_whisker();
-    vector< vector< vector<float> > > get_normal_picture(btVector3 from_p, btVector3 to_p, int image_h, int image_w, btVector3 unit_x, btVector3 unit_y, float control_len_now);
+    vector< vector< vector<unsigned char> > > get_normal_picture(btVector3 from_p, btVector3 to_p, int image_h, int image_w, btVector3 unit_x, btVector3 unit_y, float control_len_now);
     void set_initial_speed_all(btVector3 initial_speed);
     void set_initial_speed_baseballs(btVector3 initial_speed);
     void set_initial_speed_units(btVector3 initial_speed);
@@ -241,6 +242,31 @@ void save_oned_array(H5::H5File* file, vector<float> array_to_save, string datas
     delete [] all_data_in_array;
 }
 
+void save_fourd_array(H5::H5File* file, vector< vector< vector< vector<unsigned char> > > > array_to_save, string dataset_name, H5::DSetCreatPropList plist){
+
+    hsize_t fdim[] = {array_to_save.size(), array_to_save[0].size(), array_to_save[0][0].size(), array_to_save[0][0][0].size()}; // dim sizes of ds (on disk)
+    H5::DataSpace fspace( 4, fdim );
+    unsigned char* all_data_in_array;
+    int whole_len = fdim[0]*fdim[1]*fdim[2]*fdim[3];
+    all_data_in_array = new unsigned char[whole_len];
+
+    H5::DataSet* dataset = new H5::DataSet(file->createDataSet(
+        dataset_name, H5::PredType::NATIVE_UCHAR, fspace, plist));
+
+    int now_indx = 0;
+    for (int i=0;i<fdim[0];i++)
+        for (int j=0;j<fdim[1];j++)
+            for (int k=0;k<fdim[2];k++)
+                for (int l=0;l<fdim[3];l++){
+                    all_data_in_array[now_indx] = array_to_save[i][j][k][l];
+                    now_indx++;
+                }
+
+    dataset->write( all_data_in_array, H5::PredType::NATIVE_UCHAR);
+    delete dataset;
+    delete [] all_data_in_array;
+}
+
 void save_fourd_array(H5::H5File* file, vector< vector< vector< vector<float> > > > array_to_save, string dataset_name, H5::DSetCreatPropList plist){
 
     hsize_t fdim[] = {array_to_save.size(), array_to_save[0].size(), array_to_save[0][0].size(), array_to_save[0][0][0].size()}; // dim sizes of ds (on disk)
@@ -266,21 +292,35 @@ void save_fourd_array(H5::H5File* file, vector< vector< vector< vector<float> > 
     delete [] all_data_in_array;
 }
 
-void TestHingeTorque::save_all_data(){
+void TestHingeTorque::save_all_data(string group_name = ""){
 
     H5::H5File* file = new H5::H5File( FILE_NAME, H5F_ACC_TRUNC );
     float fillvalue = 0;  
     H5::DSetCreatPropList plist;
     plist.setFillValue(H5::PredType::NATIVE_FLOAT, &fillvalue);
 
-    save_fourd_array(file, all_force_data, "Data_force", plist);
-    save_fourd_array(file, all_torque_data, "Data_torque", plist);
-    save_fourd_array(file, all_normals, "Data_normal", plist);
+    string group_prefix = group_name + "/";
+    H5::Group* group = 0;
 
-    save_oned_array(file, obj_scaling_list, "scale", plist);
-    save_oned_array(file, obj_pos_list, "position", plist);
-    save_oned_array(file, obj_orn_list, "orn", plist);
-    save_oned_array(file, obj_speed_list, "speed", plist);
+    if (group_name.length()>0)
+        group = new H5::Group( file->createGroup( group_name ));
+    else
+        group_prefix = "";
+
+    unsigned char fillvalue_uc = 0;  
+    H5::DSetCreatPropList plist_uc;
+    plist_uc.setFillValue(H5::PredType::NATIVE_UCHAR, &fillvalue_uc);
+
+    save_fourd_array(file, all_force_data, group_prefix + "Data_force", plist);
+    save_fourd_array(file, all_torque_data, group_prefix + "Data_torque", plist);
+    save_fourd_array(file, all_normals, group_prefix + "Data_normal", plist_uc);
+
+    save_oned_array(file, obj_scaling_list, group_prefix + "scale", plist);
+    save_oned_array(file, obj_pos_list, group_prefix + "position", plist);
+    save_oned_array(file, obj_orn_list, group_prefix + "orn", plist);
+    save_oned_array(file, obj_speed_list, group_prefix + "speed", plist);
+
+    if (group) delete group;
     delete file;
 
 }
@@ -297,8 +337,8 @@ TestHingeTorque::~ TestHingeTorque(){
     */
 }
 
-vector< vector< vector<float> > > TestHingeTorque::get_normal_picture(btVector3 from_p, btVector3 to_p, int image_h, int image_w, btVector3 unit_x, btVector3 unit_y, float control_len_now){
-    vector< vector< vector<float> > > normal_picture;
+vector< vector< vector<unsigned char> > > TestHingeTorque::get_normal_picture(btVector3 from_p, btVector3 to_p, int image_h, int image_w, btVector3 unit_x, btVector3 unit_y, float control_len_now){
+    vector< vector< vector<unsigned char> > > normal_picture;
     normal_picture.clear();
 
     if (control_len_now>0) {
@@ -310,11 +350,11 @@ vector< vector< vector<float> > > TestHingeTorque::get_normal_picture(btVector3 
     int sta_x = -image_h/2, sta_y = -image_w/2;
 
     for (int indx_x=sta_x;indx_x<sta_x+image_h;indx_x++){
-        vector< vector<float> > curr_row;
+        vector< vector<unsigned char> > curr_row;
         curr_row.clear();
 
         for (int indx_y=sta_y;indx_y<sta_y+image_w;indx_y++){
-            vector<float> curr_pos;
+            vector<unsigned char> curr_pos;
             curr_pos.clear();
 
             btVector3 new_from = from_p + indx_x*unit_x + indx_y*unit_y;
@@ -332,11 +372,14 @@ vector< vector< vector<float> > > TestHingeTorque::get_normal_picture(btVector3 
                 now_normal = closestResults.m_hitNormalWorld;
             }
 
+            now_normal.normalize();
+            now_normal = now_normal*0.5 + btVector3(0.5, 0.5, 0.5);
+            now_normal = 255*now_normal;
+
             for (int indx_tmp=0;indx_tmp<3;indx_tmp++)
-                curr_pos.push_back(now_normal[indx_tmp]);
+                curr_pos.push_back((unsigned char) now_normal[indx_tmp]);
 
             curr_row.push_back(curr_pos);
-
         }
         normal_picture.push_back(curr_row);
     }
@@ -350,7 +393,7 @@ void TestHingeTorque::stepSimulation(float deltaTime){
     pass_time   = pass_time + time_leap;
     if (flag_time==1){
         if (pass_time > time_limit){
-            save_all_data();
+            save_all_data(group_name);
             exit(0);
         }
     }
@@ -1088,6 +1131,7 @@ void TestHingeTorque::initPhysics(){
         ("FILE_NAME", po::value<string>(), "The filename for hdf5")
         ("num_unit_to_save", po::value<int>(), "The responses of string with starting index less than this number will be saved")
         ("sample_rate", po::value<int>(), "Sampling rate for saving, relative to time_leap")
+        ("group_name", po::value<string>(), "Name for the group of dataset")
 
         ("time_limit", po::value<float>(), "Time limit for recording")
         ("initial_str", po::value<float>(), "Initial strength of force applied")
@@ -1266,6 +1310,9 @@ void TestHingeTorque::initPhysics(){
         }
         if (vm.count("sample_rate")){
             sample_rate         = vm["sample_rate"].as<int>();
+        }
+        if (vm.count("group_name")){
+            group_name          = vm["group_name"].as<string>();
         }
 
         if (vm.count("time_limit")){
