@@ -49,7 +49,7 @@ if __name__=="__main__":
     #file_list = range(1000)
     file_list = os.listdir(args.path)
     indx_list = range(0, 7500, 25)
-    findx_list = [(x, y) for x in file_list for y in indx_list]
+    findx_list = [(int(x), y) for x in file_list for y in indx_list]
 
     np.random.seed(args.seed)
     findx_list = np.random.permutation(findx_list)
