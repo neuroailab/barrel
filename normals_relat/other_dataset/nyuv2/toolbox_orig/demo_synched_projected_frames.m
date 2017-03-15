@@ -1,8 +1,10 @@
 % The directory where you extracted the raw dataset.
-datasetDir = '[PATH TO THE NYU DEPTH V2 RAW DATASET]';
+% datasetDir = '[PATH TO THE NYU DEPTH V2 RAW DATASET]';
+datasetDir = '/Users/chengxuz/barrel/bullet/barrle_related_files/nyuv2/';
 
 % The name of the scene to demo.
-sceneName = '[NAME OF A SCENE YOU WANT TO VIEW]';
+% sceneName = '[NAME OF A SCENE YOU WANT TO VIEW]';
+sceneName = 'study_0005';
 
 % The absolute directory of the 
 sceneDir = sprintf('%s/%s', datasetDir, sceneName);
