@@ -21,6 +21,7 @@ function frameList = get_synched_frames(sceneDir)
   files(end) = [];
   
   files = sort(files);
+  %disp(files(11));
   
   % Count the number of files of each type found in the scene.
   numDepth = 0;
