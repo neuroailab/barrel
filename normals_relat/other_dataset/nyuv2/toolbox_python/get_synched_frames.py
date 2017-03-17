@@ -46,12 +46,14 @@ def get_synched_frames(sceneDir):
         frame_files.append((os.path.join(sceneDir, dep_file), os.path.join(sceneDir, rgb_files[rgb_indx])))
     return frame_files
 
-if __name__=='__main__':
+def main():
     sceneDir = '/Users/chengxuz/barrel/bullet/barrle_related_files/nyuv2/study_0005'
 
     host = os.uname()[1]
     if host =='kanefsky':
         sceneDir = '/home/chengxuz/barrel/barrel_github/dataset/nyuv2/nyuv2/study_0005'
+    elif host =='freud':
+        sceneDir = '/home/chengxuz/barrel/dataset/nyuv2/nyuv2/study_0005'
 
     frame_files = get_synched_frames(sceneDir)
 
@@ -65,3 +67,6 @@ if __name__=='__main__':
     dep_mapped = project_depth_map(dep_arr, rgb_arr)
 
     pass
+
+if __name__=='__main__':
+    main()
