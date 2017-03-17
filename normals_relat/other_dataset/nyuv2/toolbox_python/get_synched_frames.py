@@ -1,5 +1,8 @@
 import re
 import os
+from scipy import misc
+import numpy as np
+from project_depth_map import *
 
 def get_time_from_str(str_now):
     return float(str_now[2:].split('-')[0])
@@ -40,10 +43,25 @@ def get_synched_frames(sceneDir):
             t_diff          = t_diff_tmp
             rgb_indx        = rgb_indx + 1
 
-        frame_files.append((dep_file, rgb_files[rgb_indx]))
+        frame_files.append((os.path.join(sceneDir, dep_file), os.path.join(sceneDir, rgb_files[rgb_indx])))
     return frame_files
 
 if __name__=='__main__':
     sceneDir = '/Users/chengxuz/barrel/bullet/barrle_related_files/nyuv2/study_0005'
+
+    host = os.uname()[1]
+    if host =='kanefsky':
+        sceneDir = '/home/chengxuz/barrel/barrel_github/dataset/nyuv2/nyuv2/study_0005'
+
     frame_files = get_synched_frames(sceneDir)
+
+    depth_test, rgb_test = frame_files[0]
+    rgb_arr = misc.imread(rgb_test)
+
+    dep_arr = misc.imread(depth_test)
+    dep_arr = dep_arr.astype(np.uint16)
+    dep_arr = dep_arr.byteswap()
+
+    dep_mapped = project_depth_map(dep_arr, rgb_arr)
+
     pass
