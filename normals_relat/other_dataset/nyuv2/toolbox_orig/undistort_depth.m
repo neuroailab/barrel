@@ -136,4 +136,6 @@ function [Irec] = rect(I, R, f, c, k, alpha, KK_new, noiseMask)
 
   Irec = zeros(nr, nc);
   Irec(ind_new) = a1 .* I(ind_lu) + a2 .* I(ind_ru) + a3 .* I(ind_ld) + a4 .* I(ind_rd);
+  
+%   disp(sum(sum(Irec)))
 end

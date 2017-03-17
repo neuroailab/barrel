@@ -16,8 +16,10 @@ end;
 [m,n] = size(x);
 
 % Add distortion:
-
+% disp(x(1, 100))
+% disp(x(2, 100))
 r2 = x(1,:).^2 + x(2,:).^2;
+% disp(r2(100))
 
 r4 = r2.^2;
 
@@ -30,8 +32,12 @@ cdist = 1 + k(1) * r2 + k(2) * r4 + k(5) * r6;
 
 if nargout > 1,
 	dcdistdk = [ r2' r4' zeros(n,2) r6'];
+%     disp(size(dcdistdk))
+%     disp(dcdistdk(100,2))
+%     disp(r4(100))
 end;
 
+% disp(size(cdist))
 
 xd1 = x .* (ones(2,1)*cdist);
 
@@ -41,6 +47,11 @@ if nargout > 1,
 	dxd1dk = zeros(2*n,5);
 	dxd1dk(1:2:end,:) = (x(1,:)'*ones(1,5)) .* dcdistdk;
 	dxd1dk(2:2:end,:) = (x(2,:)'*ones(1,5)) .* dcdistdk;
+    
+%     disp(dxd1dk(1,1))
+%     disp(dxd1dk(3,1))
+%     disp(dxd1dk(2,1))
+%     disp(dxd1dk(4,1))
 end;
 
 
@@ -53,6 +64,8 @@ a3 = r2 + 2*x(2,:).^2;
 delta_x = [k(3)*a1 + k(4)*a2 ;
    k(3) * a3 + k(4)*a1];
 
+% disp(delta_x(1, 100))
+
 aa = (2*k(3)*x(2,:)+6*k(4)*x(1,:))'*ones(1,3);
 bb = (2*k(3)*x(1,:)+2*k(4)*x(2,:))'*ones(1,3);
 cc = (6*k(3)*x(2,:)+2*k(4)*x(1,:))'*ones(1,3);
@@ -64,6 +77,9 @@ if nargout > 1,
 	ddelta_xdk(2:2:end,3) = a3';
 	ddelta_xdk(2:2:end,4) = a1';
 end;
+
+% disp(xd1(:, 480:500))
+% disp(delta_x(:, 480:500))
 
 xd = xd1 + delta_x;
 

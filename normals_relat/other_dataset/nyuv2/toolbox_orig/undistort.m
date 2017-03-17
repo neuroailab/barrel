@@ -59,6 +59,8 @@ function [Irec] = rect(I,R,f,c,k,alpha,KK_new)
 
 
   [nr,nc] = size(I);
+  
+  % disp([nr, nc])
 
   Irec = 255*ones(nr,nc);
 
@@ -66,6 +68,10 @@ function [Irec] = rect(I,R,f,c,k,alpha,KK_new)
   px = reshape(mx',nc*nr,1);
   py = reshape(my',nc*nr,1);
 
+%   disp(KK_new)
+%   disp(px(1:100))
+%   disp(py(1:100))
+  
   rays = inv(KK_new)*[(px - 1)';(py - 1)';ones(1,length(px))];
 
 
@@ -73,12 +79,19 @@ function [Irec] = rect(I,R,f,c,k,alpha,KK_new)
 
   rays2 = R'*rays;
 
+%   disp(R)
+%   disp(rays(1, 100))
+%   disp(rays2(1, 100))
   x = [rays2(1,:)./rays2(3,:);rays2(2,:)./rays2(3,:)];
 
 
   % Add distortion:
-  xd = apply_distortion(x,k);
+  [xd,not_used] = apply_distortion(x,k);
+%   disp(xd(1,1:20))
 
+  
+  % disp(sum(sum(xd)))
+  % disp(xd(:, 480:500))
 
   % Reconvert in pixels:
 
@@ -88,10 +101,18 @@ function [Irec] = rect(I,R,f,c,k,alpha,KK_new)
 
   % Interpolate between the closest pixels:
 
+  % disp(sum(px2(1:1000)))
+  % disp(sum(px2(400:500)))
+  % disp(px2(480:500))
   px_0 = floor(px2);
 
   py_0 = floor(py2);
   py_1 = py_0 + 1;
+  
+%   disp(px_0(1:20))
+%   disp(py_0(1:20))
+  % disp(sum(px_0))
+  % disp(sum(abs(px_0)))
 
   good_points = find((px_0 >= 0) & (px_0 <= (nc-2)) & (py_0 >= 0) & (py_0 <= (nr-2)));
 
@@ -99,6 +120,9 @@ function [Irec] = rect(I,R,f,c,k,alpha,KK_new)
   py2 = py2(good_points);
   px_0 = px_0(good_points);
   py_0 = py_0(good_points);
+  
+  % disp(good_points(1:20))
+  % disp(size(good_points))
 
   alpha_x = px2 - px_0;
   alpha_y = py2 - py_0;
@@ -115,7 +139,11 @@ function [Irec] = rect(I,R,f,c,k,alpha,KK_new)
 
   ind_new = (px(good_points)-1)*nr + py(good_points);
 
-
+%   disp(good_points(1:20))
 
   Irec(ind_new) = a1 .* I(ind_lu) + a2 .* I(ind_ru) + a3 .* I(ind_ld) + a4 .* I(ind_rd);
+  
+%   disp(sum(sum(Irec)))
+%   disp(Irec(1:20))
+%   disp(Irec(1, 1:20))
 end

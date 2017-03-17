@@ -40,6 +40,10 @@ function [depthOut, rgbUndistorted] = project_depth_map(imgDepth, rgb)
   rgbUndistorted = uint8(rgbUndistorted);
 
   noiseMask = 255 * double(imgDepth == max(imgDepth(:)));
+  
+%   disp(sum(sum(noiseMask)));
+%   disp(noiseMask(1:20))
+%   disp(imgDepth(1:20))
 
   % Undistort the noise mask.
   noiseMask = undistort(noiseMask, fc_d, cc_d, kc_d, 0);

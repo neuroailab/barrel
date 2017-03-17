@@ -15,7 +15,11 @@ frameList = get_synched_frames(sceneDir);
 % Displays each pair of synchronized RGB and Depth frames.
 for ii = 1 : 15 : numel(frameList)
   imgRgb = imread([sceneDir '/' frameList(ii).rawRgbFilename]);
+  imgDepth_bs = imread([sceneDir '/' frameList(ii).rawDepthFilename]);
   imgDepthRaw = swapbytes(imread([sceneDir '/' frameList(ii).rawDepthFilename]));
+  
+  disp(frameList(ii).rawDepthFilename)
+  %disp(imgDepth_bs(1,1))
   
   figure(1);
   % Show the RGB image.
@@ -41,5 +45,5 @@ for ii = 1 : 15 : numel(frameList)
   axis equal;
   title('Projected Depth');
   
-  pause(0.01);
+  pause();
 end
