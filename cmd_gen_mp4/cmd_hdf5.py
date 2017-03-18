@@ -47,6 +47,15 @@ def qua_from_euler(euler):
 
     return [qua_0, qua_1, qua_2, qua_3]
 
+def q_mult(q1, q2):
+    w1, x1, y1, z1 = q1
+    w2, x2, y2, z2 = q2
+    w = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2
+    x = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2
+    y = w1 * y2 + y1 * w2 + z1 * x2 - x1 * z2
+    z = w1 * z2 + z1 * w2 + x1 * y2 - y1 * x2
+    return w, x, y, z
+
 def get_orn_list(mode=0):
     if mode==0:
         return [[0,0,0,1], [1,0,0,0], [0,1,1,1], [1,1,1,1]]
@@ -80,7 +89,7 @@ def get_orn_list(mode=0):
 
         return ret_val
     else:
-        return [[0,0,0,1], [1,0,0,0], [0,1,1,1], [1,1,1,1]]
+        return [[0,0,0,1], q_mult([0,0,0,1], qua_from_euler([0, 0, 2*np.pi/2])), [1,0,0,0], [0,1,1,1], [1,1,1,1]]
 
 
 def get_scale_list(mode=0):
