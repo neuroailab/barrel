@@ -55,11 +55,11 @@ function frameList = get_synched_frames(sceneDir)
     % Parse the timestamp.
     timePartsDepth = regexp(frameList(ii).rawDepthFilename(3:end), '-', 'split');
     timePartsRgb = regexp(rgbImages(jj).name(3:end), '-', 'split');
-    timePartsAccel = regexp(accelRecs(kk).name(3:end), '-', 'split');
+%     timePartsAccel = regexp(accelRecs(kk).name(3:end), '-', 'split');
     
     tDepth = str2double(timePartsDepth{1});
     tRgb = str2double(timePartsRgb{1});
-    tAccel = str2double(timePartsAccel{1});
+%     tAccel = str2double(timePartsAccel{1});
     
     tDiff = abs(tDepth-tRgb);
     % Advance the curInd until the difference in times gets worse.
@@ -78,27 +78,27 @@ function frameList = get_synched_frames(sceneDir)
     end
     
     %%%%%%% ACCEL %%%%%%
-    tDiff = abs(tDepth-tAccel);
-    % Advance the curInd until the difference in times gets worse.
-    while kk < numAccel
-      timePartsAccel = regexp(accelRecs(kk+1).name(3:end), '-', 'split');
-      tAccel = str2double(timePartsAccel{1});
-      
-      tmpDiff = abs(tDepth-tAccel);
-      if tmpDiff > tDiff
-        break;
-      end
-      tDiff = tmpDiff;
-      
-      % Otherwise, its better! and we should update kk
-      kk = kk + 1;
-    end
-    
-    fprintf('Matched depth %d to rgb %d and accel %d.\n', ii, jj, kk);
-    
+%     tDiff = abs(tDepth-tAccel);
+%     % Advance the curInd until the difference in times gets worse.
+%     while kk < numAccel
+%       timePartsAccel = regexp(accelRecs(kk+1).name(3:end), '-', 'split');
+%       tAccel = str2double(timePartsAccel{1});
+%       
+%       tmpDiff = abs(tDepth-tAccel);
+%       if tmpDiff > tDiff
+%         break;
+%       end
+%       tDiff = tmpDiff;
+%       
+%       % Otherwise, its better! and we should update kk
+%       kk = kk + 1;
+%     end
+%     
+%     fprintf('Matched depth %d to rgb %d and accel %d.\n', ii, jj, kk);
+%     
     % Now save the current RGB filename and ACCEL filename.
     frameList(ii).rawRgbFilename = rgbImages(jj).name;
-    frameList(ii).accelFilename = accelRecs(kk).name;
+%     frameList(ii).accelFilename = accelRecs(kk).name;
   end
   fprintf('\n');
 end

@@ -4,7 +4,8 @@ datasetDir = '/Users/chengxuz/barrel/bullet/barrle_related_files/nyuv2/';
 
 % The name of the scene to demo.
 % sceneName = '[NAME OF A SCENE YOU WANT TO VIEW]';
-sceneName = 'study_0005';
+% sceneName = 'study_0005';
+sceneName = 'kitchen_0004';
 
 % The absolute directory of the 
 sceneDir = sprintf('%s/%s', datasetDir, sceneName);
@@ -18,7 +19,7 @@ for ii = 1 : 15 : numel(frameList)
   imgDepth_bs = imread([sceneDir '/' frameList(ii).rawDepthFilename]);
   imgDepthRaw = swapbytes(imread([sceneDir '/' frameList(ii).rawDepthFilename]));
   
-  disp(frameList(ii).rawDepthFilename)
+%   disp(frameList(ii).rawDepthFilename)
   %disp(imgDepth_bs(1,1))
   
   figure(1);
@@ -44,6 +45,10 @@ for ii = 1 : 15 : numel(frameList)
   axis off;
   axis equal;
   title('Projected Depth');
+  
+%   imgDepthOrig = imgDepthProj;
+%   imgDepthOrig = imgDepthRaw;
+%   save('/Users/chengxuz/barrel/bullet/barrle_related_files/nyuv2/images_depth/depth_000001.mat', 'imgDepthOrig')
   
   pause();
 end

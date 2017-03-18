@@ -78,6 +78,18 @@ function [depthOut, rgbUndistorted] = project_depth_map(imgDepth, rgb)
         depthSorted(ii);
   end
   
+  depthOut = depth2;
+  
+%   
+%   imgDepthOrig = depth2;
+%   imgDepthOrig = fill_depth_cross_bf(rgb, double(imgDepthOrig));
+%   save('/Users/chengxuz/barrel/bullet/barrle_related_files/nyuv2/images_depth/depth_000001.mat', 'imgDepthOrig')
+% 
+%   figure(2)
+%   imagesc(imgDepthOrig)
+%   pause()
+%   figure(1)
+  
   % Fix weird values...
   depthOut(depthOut > maxDepth) = maxDepth;
   depthOut(depthOut < 0) = 0;

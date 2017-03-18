@@ -1,6 +1,6 @@
 % Demo's the in-painting function fill_depth_cross_bf.m
 
-DATASET_PATH = '~/data1/kinect/spatial_relations_data/labeled_data.mat';
+DATASET_PATH = '/Users/chengxuz/barrel/bullet/barrle_related_files/nyuv2/nyu_depth_v2_labeled.mat';
 
 load(DATASET_PATH, 'images', 'rawDepths');
 
@@ -11,8 +11,8 @@ imgRgb = images(:,:,:,imageInd);
 imgDepthAbs = rawDepths(:,:,imageInd);
 
 % Crop the images to include the areas where we have depth information.
-imgRgb = crop_image(imgRgb);
-imgDepthAbs = crop_image(imgDepthAbs);
+% imgRgb = crop_image(imgRgb);
+% imgDepthAbs = crop_image(imgDepthAbs);
 
 imgDepthFilled = fill_depth_cross_bf(imgRgb, double(imgDepthAbs));
 

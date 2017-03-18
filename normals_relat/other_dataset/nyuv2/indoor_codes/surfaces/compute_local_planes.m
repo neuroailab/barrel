@@ -70,5 +70,6 @@ function [imgPlanes, imgNormals, imgConfs] = ...
   imgPlanes = cat(3, nx, ny, nz, nd); % ./ repmat(len, [1 1 4]);
   len = sqrt(nx.^2 + ny.^2 + nz.^2);
   imgPlanes = imgPlanes ./ repmat(len+eps, [1 1 4]);
+  imgPlanes = imgPlanes*0.5 + 0.5;
   imgNormals = imgPlanes(:, :, 1:3);
 end

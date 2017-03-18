@@ -2,7 +2,7 @@
 consts = struct();
 
 % Where the labeled data is stored.
-consts.datasetDir = '~/data2/2012_eccv_support_inference/';
+consts.datasetDir = '/Users/chengxuz/barrel/bullet/barrle_related_files/nyuv2/';
 
 % Absolute path to the dataset.
 consts.datasetPath = [consts.datasetDir 'nyu_depth_v2_labeled.mat'];
@@ -26,10 +26,12 @@ consts.gurobiPath = '~/code1/gurobi/latest/linux64/matlab/';
 consts.supportLabels = [consts.datasetDir '/support_labels.mat'];
 
 % The total number of images in the dataset.
-consts.numImages = 1449;
+% consts.numImages = 1449;
+consts.numImages = 1;
 
 consts.useImages = false(consts.numImages, 1);
-consts.useImages(909:1200) = true;
+% consts.useImages(909:1200) = true;
+consts.useImages(1) = true;
 
 %%%%%%%%%%
 % Images %

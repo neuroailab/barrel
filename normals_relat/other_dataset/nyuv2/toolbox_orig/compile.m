@@ -1,4 +1,4 @@
-libFreenectIncludeDir = '[Path to LibFreenect Include directory]';
+libFreenectIncludeDir = '/Users/chengxuz/barrel/bullet/libfreenect/include';
 eval(sprintf('mex -I%s get_accel_data.cpp', libFreenectIncludeDir));
 
 % Use this for linux\mac.

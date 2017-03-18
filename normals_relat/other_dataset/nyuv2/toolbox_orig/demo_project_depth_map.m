@@ -1,10 +1,10 @@
 % Demos the use of project_depth_map.m
 
 % The location of the RAW dataset.
-CLIPS_DIR = '[]';
+CLIPS_DIR = '/Users/chengxuz/barrel/bullet/barrle_related_files/nyuv2';
 
 % The path to the labeled dataset.
-LABELED_DATASET_PATH = '[]';
+LABELED_DATASET_PATH = '/Users/chengxuz/barrel/bullet/barrle_related_files/nyuv2/nyu_depth_v2_labeled.mat';
 
 load(LABELED_DATASET_PATH, 'rawDepthFilenames', 'rawRgbFilenames');
 
