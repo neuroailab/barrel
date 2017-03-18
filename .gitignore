@@ -32,3 +32,4 @@ Makefile
 !ipython_note_anlys/dataset_test.ipynb
 *log*.txt
 *.mexmaci64
+*.mexa64

@@ -54,6 +54,8 @@ def main():
         sceneDir = '/home/chengxuz/barrel/barrel_github/dataset/nyuv2/nyuv2/study_0005'
     elif host =='freud':
         sceneDir = '/home/chengxuz/barrel/dataset/nyuv2/nyuv2/study_0005'
+    elif host =='openmind7' or 'node' in host:
+        sceneDir = '/om/user/chengxuz/Data/one_world_dataset/nyuv2/study_0005'
 
     frame_files = get_synched_frames(sceneDir)
 
