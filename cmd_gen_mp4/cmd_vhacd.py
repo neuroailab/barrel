@@ -42,6 +42,8 @@ if __name__=="__main__":
             continue
 
         if args.run==0:
+            if indx % 100==0:
+                print('Now indx %i' % indx)
             continue
 
         if not os.path.isdir(new_obj_dir):
