@@ -104,8 +104,11 @@ def get_scale_list(mode=0):
     elif mode==2:
         #return [[60], [70], [80]]
         ret_val = []
-        start_sc = 30
-        end_sc = 90
+        #start_sc = 30
+        start_sc = 25
+        #end_sc = 90
+        #end_sc = 91
+        end_sc = 136
         step_sc = 10
         for inter_sc in xrange(start_sc, end_sc, step_sc):
             ret_val.append([inter_sc])
@@ -243,7 +246,7 @@ def generate_iter_list(args):
                         now_add_dict = {}
 
                         now_add_dict['obj_pos_list'] = pos_list[indx_pos_now]
-                        now_add_dict['control_len'] = scale_list[indx_pos_now]
+                        now_add_dict['control_len'] = scale_list[indx_scale_now]
                         now_add_dict['obj_speed_list'] = speed_list[indx_speed_now]
                         now_add_dict['obj_orn_list'] = orn_list[indx_orn_now]
                         now_add_dict['obj_filename'] = obj_path
