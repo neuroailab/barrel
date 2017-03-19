@@ -148,17 +148,18 @@ if __name__=='__main__':
     final_len = len(shapenet_synset_dict)
     final_synset = []
     for big_key in shapenet_synset_dict:
-        print big_key, wn._synset_from_pos_and_offset('n',int(big_key[1:])),
+        #print big_key, wn._synset_from_pos_and_offset('n',int(big_key[1:])),
         curr_size = len(shapenet_synset_dict[big_key]['listindx'])
         size_list = []
-        print curr_size,
+        #print curr_size,
         for small_key in shapenet_synset_dict[big_key]['listname']:
             size_list.append((small_key, len(deepest_synset_dict[small_key]['list_indx'])))
-            print "%s %i" % size_list[-1],
-        print
+            #print "%s %i" % size_list[-1],
+        #print
 
         if big_key not in deepest_synset_dict:
-            print('Base cate not as deepest!')
+            #print('Base cate not as deepest!')
+            pass
         if curr_size > args.minobjnum:
             tmp_larger_sons = [i[0] for i in size_list if i[1]>args.minobjnum]
             curr_split_len = len(tmp_larger_sons)
@@ -169,17 +170,61 @@ if __name__=='__main__':
 
     #print(final_len)
     #print(len(final_synset))
-    final_synset = np.unique(final_synset)
+    final_synset = list(np.unique(final_synset))
+
+    '''
+    delete n04225987, n04524313, n03133538
+    combine n04502670, n04349401, n04599124
+    combine n02831724, n02920259, n02920083
+    combine n03595860, n02690373
+    combine n03676759, n03085219, n03085602
+    '''
+    # Some post-processing
+    final_synset.pop(final_synset.index('n03133538'))
+    final_synset.pop(final_synset.index('n04524313'))
+    final_synset.pop(final_synset.index('n04225987'))
+
+    final_synset.pop(final_synset.index('n04502670'))
+    final_synset.pop(final_synset.index('n04349401'))
+    final_synset.pop(final_synset.index('n04599124'))
+    final_synset.append(['n04502670', 'n04349401', 'n04599124'])
+
+    final_synset.pop(final_synset.index('n02831724'))
+    final_synset.pop(final_synset.index('n02920259'))
+    final_synset.pop(final_synset.index('n02920083'))
+    final_synset.append(['n02831724', 'n02920259', 'n02920083'])
+
+    final_synset.pop(final_synset.index('n03595860'))
+    final_synset.pop(final_synset.index('n02690373'))
+    final_synset.append(['n03595860', 'n02690373'])
+
+    final_synset.pop(final_synset.index('n03676759'))
+    final_synset.pop(final_synset.index('n03085219'))
+    final_synset.pop(final_synset.index('n03085602'))
+    final_synset.append(['n03676759', 'n03085219', 'n03085602'])
+
     obj_num = len(final_synset)
     #print(len(np.unique(final_synset)))
 
-    len_of_obj  = [len(deepest_synset_dict[key_tmp]['list_indx']) for key_tmp in final_synset]
+    def get_all_indx(key_tmp):
+        if not isinstance(key_tmp, list):
+            key_tmp = [key_tmp]
+
+        ret_set = set()
+        for inner_key in key_tmp:
+            ret_set = ret_set | set(deepest_synset_dict[inner_key]['list_indx'])
+
+        return ret_set
+
+    #len_of_obj  = [len(deepest_synset_dict[key_tmp]['list_indx']) for key_tmp in final_synset]
+    len_of_obj  = [(len(get_all_indx(key_tmp)), key_tmp) for key_tmp in final_synset]
     len_of_obj.sort()
     print(len_of_obj)
 
     all_sum     = 10000
     final_list  = []
-    for indx_tmp, item_tmp in enumerate(len_of_obj):
+    for indx_tmp, item_tmp_big in enumerate(len_of_obj):
+        item_tmp, key_tmp = item_tmp_big
         if sum(final_list) + (obj_num - indx_tmp)*item_tmp > all_sum:
             fill_num    = (all_sum - sum(final_list)) // (obj_num - indx_tmp)
             for _not_used in xrange(indx_tmp, obj_num):
@@ -188,23 +233,51 @@ if __name__=='__main__':
         else:
             final_list.append(item_tmp)
 
-    print(len(final_list))
-    print(final_list)
     print(sum(final_list))
     print(np.std(final_list))
+    final_list = [(i, j[1]) for i,j in zip(final_list, len_of_obj)]
+    print(len(final_list))
+    print(final_list)
+
+    def display(tmp_synset):
+        if not isinstance(tmp_synset, list):
+            tmp_synset = [tmp_synset]
+        for inner_key in tmp_synset:
+            print inner_key, wn._synset_from_pos_and_offset('n',int(inner_key[1:])),
+        print len(get_all_indx(tmp_synset)),
 
     for tmp_synset in final_synset:
-        print tmp_synset, wn._synset_from_pos_and_offset('n',int(tmp_synset[1:])), len(deepest_synset_dict[tmp_synset]['list_indx']),
-        for tmp_other_synset in deepest_synset_dict[tmp_synset]['connections']:
-            if tmp_other_synset in final_synset:
-                print tmp_other_synset, "%i/%i" % (deepest_synset_dict[tmp_synset]['connections'][tmp_other_synset], len(deepest_synset_dict[tmp_other_synset]['list_indx'])),
+        #print tmp_synset, wn._synset_from_pos_and_offset('n',int(tmp_synset[1:])), len(deepest_synset_dict[tmp_synset]['list_indx']),
+        display(tmp_synset)
+
+        now_indx = get_all_indx(tmp_synset)
+        all_inter_list = []
+        for other_synset in final_synset:
+            if other_synset is tmp_synset:
+                continue
+            other_indx = get_all_indx(other_synset)
+            and_len = len(now_indx & other_indx)
+            if and_len > 5:
+                all_inter_list.append((other_synset, and_len, len(other_indx)))
+                display(other_synset)
+                print '%i/%i' % (and_len, len(other_indx)),
+        #print len(all_inter_list),
+
         print
 
-'''
-delete n04225987, n04524313, n03133538
-combine n04502670, n04349401, n04599124
-combine n04576211, n04225987, n04524313
-combine n02831724, n02920259, n02920083
-combine n03595860, n02690373
-combine n03676759, n03085219, n03085602
-'''
+    np.random.seed(0)
+    sample_indx_set = set()
+    for sam_num, key_tmp in final_list:
+        indx_set = get_all_indx(key_tmp)
+        #print(len(indx_set))
+        indx_set = indx_set - sample_indx_set
+        #print(len(indx_set), sam_num)
+        sample_indx_set = sample_indx_set | set(np.random.choice(list(indx_set), min(sam_num, len(indx_set)), replace=False))
+
+    print(len(sample_indx_set))
+
+    output_file = 'obj_choice.txt'
+    fout = open(output_file, 'w')
+    for obj_indx in list(sample_indx_set):
+        fout.write('%s %s\n' % (cached_coll[obj_indx]['shapenet_synset'], cached_coll[obj_indx]['id']))
+    fout.close()

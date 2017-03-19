@@ -227,7 +227,7 @@ def generate_iter_list(args):
             obj_path = [os.path.join(obj_path_prefix, "chair_aftervhacd.obj")]
             hdf5_prefix = "chair"
     else:
-        obj_path = args.objindx
+        obj_path = [args.objindx]
         hdf5_prefix = "Data"
 
     if args.generatemode<=2:
