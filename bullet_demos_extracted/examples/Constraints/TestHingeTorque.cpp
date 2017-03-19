@@ -294,7 +294,14 @@ void save_fourd_array(H5::H5File* file, vector< vector< vector< vector<float> > 
 
 void TestHingeTorque::save_all_data(string group_name = ""){
 
-    H5::H5File* file = new H5::H5File( FILE_NAME, H5F_ACC_TRUNC );
+    //H5::H5File* file = new H5::H5File( FILE_NAME, H5F_ACC_TRUNC );
+    H5::H5File* file = 0;
+	try {
+		file = new H5::H5File(FILE_NAME, H5F_ACC_RDWR);
+	} catch(H5::FileIException &file_exists_err) {
+		file = new H5::H5File(FILE_NAME, H5F_ACC_TRUNC);
+	}
+
     float fillvalue = 0;  
     H5::DSetCreatPropList plist;
     plist.setFillValue(H5::PredType::NATIVE_FLOAT, &fillvalue);
@@ -343,9 +350,11 @@ vector< vector< vector<unsigned char> > > TestHingeTorque::get_normal_picture(bt
 
     if (control_len_now>0) {
         btVector3 diff_vec = from_p - to_p;
-        diff_vec = diff_vec/diff_vec.norm()*control_len_now;
+        diff_vec = diff_vec/diff_vec.norm()*control_len_now*3;
         from_p = to_p + diff_vec;
     }
+
+    to_p = 2*to_p - from_p;
 
     int sta_x = -image_h/2, sta_y = -image_w/2;
 
@@ -948,7 +957,7 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
         obj_scaling_list[indx_obj*4 + 1] = desire_scale;
         obj_scaling_list[indx_obj*4 + 2] = desire_scale;
 
-        mass_want = mass_want*pow((desire_scale/30), 3);
+        mass_want = mass_want*pow((desire_scale/10), 3);
         obj_mass_list[indx_obj] = mass_want;
     }
 
