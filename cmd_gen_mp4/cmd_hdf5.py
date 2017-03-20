@@ -115,7 +115,8 @@ def get_scale_list(mode=0):
         #return [[60], [70], [80]]
         return ret_val
     elif mode==3:
-        return [30 + 60*np.random.rand()]
+        #return [30 + 60*np.random.rand()]
+        return [25 + 110*np.random.rand()]
     else:
         return [[40], [30], [50]]
 
@@ -340,7 +341,7 @@ if __name__=="__main__":
     parser.add_argument('--pindxsta', default = 0, type = int, action = 'store', help = 'Start index of pos')
     parser.add_argument('--pindxlen', default = 1, type = int, action = 'store', help = 'Length index of pos')
 
-    parser.add_argument('--objindx', default = '0', type = str, action = 'store', help = 'Object index, 0 for duck, 1 for teddy, if it is string, then the parameter will be used as parameter directly')
+    parser.add_argument('--objindx', default = '0', type = str, action = 'store', help = 'Object index, 0 for duck, 1 for teddy, if it is a string, then it will be used as parameter directly')
 
     # Parameters used for dataset generating
     parser.add_argument('--bigsamnum', default = 1, type = int, action = 'store', help = 'The big sampling number, controlling how many different sampling settings will be drawn')

@@ -265,6 +265,7 @@ if __name__=='__main__':
 
         print
 
+    check_folder = '/om/user/chengxuz/threedworld_related/shapenet_onlyobj/after_vhacd/'
     np.random.seed(0)
     sample_indx_set = set()
     for sam_num, key_tmp in final_list:
@@ -272,11 +273,13 @@ if __name__=='__main__':
         #print(len(indx_set))
         indx_set = indx_set - sample_indx_set
         #print(len(indx_set), sam_num)
-        sample_indx_set = sample_indx_set | set(np.random.choice(list(indx_set), min(sam_num, len(indx_set)), replace=False))
+
+        indx_set = filter(lambda x: os.path.isfile(os.path.join(check_folder, cached_coll[x]['shapenet_synset'][1:], cached_coll[x]['id'], "%s.obj" % cached_coll[x]['id'])), list(indx_set))
+        sample_indx_set = sample_indx_set | set(np.random.choice(indx_set, min(sam_num, len(indx_set)), replace=False))
 
     print(len(sample_indx_set))
 
-    output_file = 'obj_choice.txt'
+    output_file = 'obj_choice_2.txt'
     fout = open(output_file, 'w')
     for obj_indx in list(sample_indx_set):
         fout.write('%s %s\n' % (cached_coll[obj_indx]['shapenet_synset'], cached_coll[obj_indx]['id']))

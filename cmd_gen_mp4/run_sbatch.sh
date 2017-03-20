@@ -15,8 +15,21 @@
 #done
 
 #len=1025
-len=410
-for k in $(seq 0 ${len} 51228)
+#len=410
+#for k in $(seq 0 ${len} 51228)
+#for k in 35260 14760
+#for k in 14760
+#do
+#    sbatch --job-name=vhacd${k} script_vhacd.sh ${k} ${len}
+#done
+
+len_data=25
+bigsamnum=12
+#for k in $(seq 0 ${len} 10000)
+#for k in 0
+#for k in $(seq ${len_data} ${len_data} 10000)
+for k in $(seq 6250 ${len_data} 9981)
 do
-    sbatch --job-name=vhacd${k} script_vhacd.sh ${k} ${len}
+    #sbatch --job-name=dataset${k} script_gendataset.sh ${k} ${len_data} ${bigsamnum}
+    sbatch --qos=use-everything --job-name=dataset${k} script_gendataset.sh ${k} ${len_data} ${bigsamnum}
 done
