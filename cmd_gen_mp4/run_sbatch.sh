@@ -23,13 +23,15 @@
 #    sbatch --job-name=vhacd${k} script_vhacd.sh ${k} ${len}
 #done
 
-len_data=25
+#len_data=25
+len_data=10
 bigsamnum=12
-#for k in $(seq 0 ${len} 10000)
+for k in $(seq 0 ${len_data} 9981)
 #for k in 0
 #for k in $(seq ${len_data} ${len_data} 10000)
-for k in $(seq 6250 ${len_data} 9981)
+#for k in $(seq 6250 ${len_data} 9981)
 do
     #sbatch --job-name=dataset${k} script_gendataset.sh ${k} ${len_data} ${bigsamnum}
-    sbatch --qos=use-everything --job-name=dataset${k} script_gendataset.sh ${k} ${len_data} ${bigsamnum}
+    #sbatch --qos=use-everything --job-name=dataset${k} script_gendataset.sh ${k} ${len_data} ${bigsamnum}
+    sbatch --job-name=dataset${k} script_gendataset_sher.sh ${k} ${len_data} ${bigsamnum}
 done
