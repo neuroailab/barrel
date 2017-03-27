@@ -43,13 +43,14 @@ def main():
     parser.add_argument('--savedir', default = '/om/user/chengxuz/Data/barrel_dataset/raw_hdf5', type = str, action = 'store', help = 'Directory to save the generated hdf5s')
     parser.add_argument('--loaddir', default = "/om/user/chengxuz/threedworld_related/shapenet_onlyobj/after_vhacd", type = str, action = 'store', help = 'Where to get the objects after vhacd')
     parser.add_argument('--objlist', default = 'obj_choice_2.txt', type = str, action = 'store', help = 'The file having the object information')
+    parser.add_argument('--checkmode', default = 1, type = int, action = 'store', help = '1 means that if the file already exists in the right size, then avoid running, 0 means generate it anyway')
 
     # Platform related parameters, default is for openmind7
     parser.add_argument('--pathexe', default = "/om/user/chengxuz/barrel/example_build/Constraints/App_TestHinge", type = str, action = 'store', help = 'Path to App_ExampleBrowser')
     parser.add_argument('--fromcfg', default = "/om/user/chengxuz/barrel/barrel/cmd_gen_mp4/opt_results/para_", type = str, action = 'store', help = 'None means no, if the path of file sent, then get config from the file')
     parser.add_argument('--pathconfig', default = "/om/user/chengxuz/barrel/configs_2", type = str, action = 'store', help = 'Path to config folder')
 
-    cmd_str = "python cmd_hdf5.py --pathhdf5 %s --pathexe %s --fromcfg %s --pathconfig %s --objindx %s --generatemode 3 --testmode 2 --hdf5suff %s --smallolen 4 --smallplen 3 --randseed %i --bigsamnum %i"
+    cmd_str = "python cmd_hdf5.py --pathhdf5 %s --pathexe %s --fromcfg %s --pathconfig %s --objindx %s --generatemode 3 --testmode 2 --hdf5suff %s --smallolen 4 --smallplen 3 --randseed %i --bigsamnum %i --checkmode %i"
 
     args    = parser.parse_args()
 
@@ -59,7 +60,7 @@ def main():
         now_hdf5suff, now_objindx = obj_list[obj_indx]
         now_randseed = args.seedbas + obj_indx
 
-        now_cmd = cmd_str % (args.savedir, args.pathexe, args.fromcfg, args.pathconfig, now_objindx, now_hdf5suff, now_randseed, args.bigsamnum)
+        now_cmd = cmd_str % (args.savedir, args.pathexe, args.fromcfg, args.pathconfig, now_objindx, now_hdf5suff, now_randseed, args.bigsamnum, args.checkmode)
 
         os.system(now_cmd)
 

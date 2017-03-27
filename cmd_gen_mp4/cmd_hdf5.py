@@ -364,14 +364,12 @@ if __name__=="__main__":
     for now_add_dict in now_add_dicts:
         config_dict = update_config_dict(config_dict, now_add_dict)
 
-        if (args.checkmode>=1):
-            if (os.path.exists(config_dict["FILE_NAME"]["value"])):
+        if (args.checkmode==1):
+            if (os.path.exists(config_dict["FILE_NAME"]["value"]) and (os.path.getsize(config_dict["FILE_NAME"]["value"])==14792976)):
                 exist_num = exist_num + 1
+                continue
             else:
                 not_exist = not_exist + 1
-
-            if args.checkmode==1:
-                continue
 
         now_config_fn   = os.path.join(args.pathconfig, "test_%s.cfg" % now_add_dict["_hash_value"])
 

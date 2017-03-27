@@ -265,6 +265,7 @@ if __name__=='__main__':
 
         print
 
+    '''
     check_folder = '/om/user/chengxuz/threedworld_related/shapenet_onlyobj/after_vhacd/'
     np.random.seed(0)
     sample_indx_set = set()
@@ -284,3 +285,4 @@ if __name__=='__main__':
     for obj_indx in list(sample_indx_set):
         fout.write('%s %s\n' % (cached_coll[obj_indx]['shapenet_synset'], cached_coll[obj_indx]['id']))
     fout.close()
+    '''
