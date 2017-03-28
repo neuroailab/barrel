@@ -265,24 +265,54 @@ if __name__=='__main__':
 
         print
 
-    '''
     check_folder = '/om/user/chengxuz/threedworld_related/shapenet_onlyobj/after_vhacd/'
     np.random.seed(0)
     sample_indx_set = set()
+
+    category_indx = 0
+    category_dict = {}
+    indx_which_cate = {}
+
     for sam_num, key_tmp in final_list:
+        category_dict[category_indx] = key_tmp
+
+        '''
         indx_set = get_all_indx(key_tmp)
         #print(len(indx_set))
+        print category_indx, len(indx_set)
         indx_set = indx_set - sample_indx_set
         #print(len(indx_set), sam_num)
 
         indx_set = filter(lambda x: os.path.isfile(os.path.join(check_folder, cached_coll[x]['shapenet_synset'][1:], cached_coll[x]['id'], "%s.obj" % cached_coll[x]['id'])), list(indx_set))
-        sample_indx_set = sample_indx_set | set(np.random.choice(indx_set, min(sam_num, len(indx_set)), replace=False))
+
+        add_set = set(np.random.choice(indx_set, min(sam_num, len(indx_set)), replace=False))
+
+        for add_indx in list(add_set):
+            indx_which_cate[add_indx] = category_indx
+
+        sample_indx_set = sample_indx_set | add_set
+        '''
+
+        category_indx = category_indx + 1
 
     print(len(sample_indx_set))
 
+    '''
     output_file = 'obj_choice_2.txt'
     fout = open(output_file, 'w')
     for obj_indx in list(sample_indx_set):
         fout.write('%s %s\n' % (cached_coll[obj_indx]['shapenet_synset'], cached_coll[obj_indx]['id']))
     fout.close()
+
+    output_file = 'obj_category.txt'
+    fout = open(output_file, 'w')
+    for obj_indx in indx_which_cate:
+        fout.write('%s %i\n' % (cached_coll[obj_indx]['id'], indx_which_cate[obj_indx]))
+    fout.close()
     '''
+
+    output_file = 'category_info.txt'
+    fout = open(output_file, 'w')
+    for cat_indx in category_dict:
+        fout.write('%i %s\n' % (cat_indx, category_dict[cat_indx]))
+    fout.close()

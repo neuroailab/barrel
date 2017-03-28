@@ -5,4 +5,7 @@
 
 source activate env_torch_2
 #ssh -f -N -L 22334:localhost:22334 chengxuz@dicarlo5.mit.edu
-python cmd_dataset.py --objsta ${1} --objlen ${2} --bigsamnum ${3}
+#python cmd_dataset.py --objsta ${1} --objlen ${2} --bigsamnum ${3}
+
+# Change to write the information
+python cmd_dataset.py --objsta ${1} --objlen ${2} --bigsamnum ${3} --checkmode 2

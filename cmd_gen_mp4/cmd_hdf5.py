@@ -328,7 +328,7 @@ if __name__=="__main__":
     parser.add_argument('--indxend', default = 31, type = int, action = 'store', help = 'End index of whisker needed')
     parser.add_argument('--testmode', default = 1, type = int, action = 'store', help = 'Whether run the test command or not')
     parser.add_argument('--generatemode', default = 0, type = int, action = 'store', help = 'Control the parameter sampling method, >2 means dataset generation method, 3*4 sweeps')
-    parser.add_argument('--checkmode', default = 0, type = int, action = 'store', help = 'Whether run the check first before running')
+    parser.add_argument('--checkmode', default = 0, type = int, action = 'store', help = 'Whether run the check first before running. 0 (default) for no, 1 for yes, 2 for write the information to some file')
     parser.add_argument('--mp4flag', default = None, type = str, action = 'store', help = 'Whether generate mp4 files, if not None, will be used as mp4 name')
 
     # Original parameters, not used for actual dataset generation
@@ -364,12 +364,22 @@ if __name__=="__main__":
     for now_add_dict in now_add_dicts:
         config_dict = update_config_dict(config_dict, now_add_dict)
 
-        if (args.checkmode==1):
+        if args.checkmode==1:
             if (os.path.exists(config_dict["FILE_NAME"]["value"]) and (os.path.getsize(config_dict["FILE_NAME"]["value"])==14792976)):
                 exist_num = exist_num + 1
                 continue
             else:
                 not_exist = not_exist + 1
+        elif args.checkmode==2:
+            info_filename = config_dict["FILE_NAME"]["value"]
+            info_filename = info_filename.replace('raw_hdf5', 'raw_info')
+            info_filename = info_filename[:-4] + 'txt'
+
+            fout = open(info_filename, 'a')
+            fout.write("%s\n" % str(now_add_dict))
+            fout.close()
+
+            continue
 
         now_config_fn   = os.path.join(args.pathconfig, "test_%s.cfg" % now_add_dict["_hash_value"])
 
