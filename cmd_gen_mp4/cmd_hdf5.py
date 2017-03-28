@@ -366,6 +366,8 @@ if __name__=="__main__":
 
         #if not 'Data9160_6_7c078d8ceed96b2a115a312301bdd286.hdf5' in config_dict["FILE_NAME"]["value"]:
         #    continue
+        #if not 'Data15554_10_da92c8d35fabe4093a67185d75524e9c.hdf5' in config_dict["FILE_NAME"]["value"]:
+        #    continue
 
         if args.checkmode==1:
             if (os.path.exists(config_dict["FILE_NAME"]["value"]) and (os.path.getsize(config_dict["FILE_NAME"]["value"])==14792976)):

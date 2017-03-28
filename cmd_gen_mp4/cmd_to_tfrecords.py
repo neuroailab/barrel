@@ -112,9 +112,9 @@ def main():
     # Write other organized things
 
     key_list =[
-        #u'Data_force',
-        #u'Data_normal',
-        #u'Data_torque',
+        u'Data_force',
+        u'Data_normal',
+        u'Data_torque',
         u'orn',
         u'position',
         u'speed'

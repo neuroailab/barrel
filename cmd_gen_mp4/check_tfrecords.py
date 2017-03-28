@@ -1,7 +1,8 @@
 import os
 import numpy as np
 
-savedir = '/om/user/chengxuz/Data/barrel_dataset/tfrecords'
+#savedir = '/om/user/chengxuz/Data/barrel_dataset/tfrecords'
+savedir = '/scratch/users/chengxuz/barrel/barrel_relat_files/dataset/tfrecords'
 
 key_list =[
     u'category',
