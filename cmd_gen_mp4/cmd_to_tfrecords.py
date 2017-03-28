@@ -80,7 +80,7 @@ def main():
 
                 example = tf.train.Example(features=tf.train.Features(feature={
                     key_now: _float_feature(all_scales[group_indx])}))
-                print all_scales[group_indx]
+                #print all_scales[group_indx]
 
                 writer.write(example.SerializeToString())
     writer.close()
