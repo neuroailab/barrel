@@ -39,10 +39,9 @@ def write_it(ind):
             
         img_raw = img.tostring()
 
-	example = tf.train.Example(features=tf.train.Features(feature={
-	    'image_raw': _bytes_feature(img_raw)}))
-	
-	writer.write(example.SerializeToString())
+        example = tf.train.Example(features=tf.train.Features(feature={
+            'image_raw': _bytes_feature(img_raw)}))
+        writer.write(example.SerializeToString())
 
     writer.close()
 
