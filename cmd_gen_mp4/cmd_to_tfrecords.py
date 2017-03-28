@@ -49,6 +49,7 @@ def main():
 
     obj_list = get_list(args.objcat)
 
+    '''
     # Write the scales
     key_now = 'scale'
     dir_now = os.path.join(args.savedir, key_now)
@@ -106,13 +107,14 @@ def main():
 
                 writer.write(example.SerializeToString())
     writer.close()
+    '''
 
     # Write other organized things
 
     key_list =[
-        u'Data_force',
-        u'Data_normal',
-        u'Data_torque',
+        #u'Data_force',
+        #u'Data_normal',
+        #u'Data_torque',
         u'orn',
         u'position',
         u'speed'
@@ -156,6 +158,8 @@ def main():
         for obj_indx in xrange(args.objsta, min(args.objsta + args.objlen, len(obj_list))):
             for sam_indx in xrange(args.bigsamnum):
                 hdf5_name = "Data%i_%i_%s.hdf5" % (args.seedbas + obj_indx, sam_indx, obj_list[obj_indx][0])
+
+                print(hdf5_name)
 
                 hdf5_path = os.path.join(args.loaddir, hdf5_name)
                 fin_now = h5py.File(hdf5_path, 'r')
