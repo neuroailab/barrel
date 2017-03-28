@@ -36,5 +36,7 @@ do
     #sbatch --qos=use-everything --job-name=dataset${k} script_gendataset.sh ${k} ${len_data} ${bigsamnum}
     #sbatch --job-name=dataset${k} script_gendataset_sher.sh ${k} ${len_data} ${bigsamnum}
     #sbatch --job-name=dataset${k} script_gendataset_sher.sh ${k} 1 ${bigsamnum}
-    sbatch --job-name=dataset${k} script_gendataset.sh ${k} ${len_data} ${bigsamnum}
+    #sbatch --job-name=dataset${k} script_gendataset.sh ${k} ${len_data} ${bigsamnum}
+    sbatch --job-name=tfrecs${k} script_to_tfrecs.sh ${k} ${len_data}
+
 done
