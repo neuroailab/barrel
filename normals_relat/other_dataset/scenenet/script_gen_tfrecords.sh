@@ -1,5 +1,5 @@
-loaddir=/mnt/data2/chengxuz/train
-savedir=/mnt/data2/chengxuz/train_tfrecords
+loaddir=/mnt/data2/chengxuz/scenenet/train
+savedir=/mnt/data2/chengxuz/scenenet/train_tfrecords
 
 for k in $(seq 0 16)
 do
