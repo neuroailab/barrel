@@ -46,20 +46,57 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
         self.force = 'Data_force'
         self.torque = 'Data_torque'
         self.label = 'category'
+        self.batch_size = batch_size
 
         super(WhiskerWorld, self).__init__(
             source_dirs = [data_path["%s/%s" % (group, self.force)] , data_path["%s/%s" % (group, self.torque)] , data_path["%s/%s" % (group, self.label)]],
+            #postprocess = postprocess,
             batch_size=batch_size,
             n_threads=n_threads,
             shuffle = True,
             *args, **kwargs)
 
-    def init_threads(self):
-        self.input_ops, self.dtypes, self.shapes = \
-                super(Threedworld, self).init_threads()
+    def set_data_shapes(self, data):
+        for i in range(len(data)):
+            for k in data[i]:
+                # set shape[0] to batch size for all entries
+                shape = data[i][k].get_shape().as_list()
+                shape[0] = self.batch_size
+                data[i][k].set_shape(shape)
+        return data
 
-        return [self.input_ops, self.dtypes, self.shapes]
+    def slice_concat(self, data, curr_key, new_key):
+        #print(data[curr_key].get_shape().as_list())
+        slice0 = tf.strided_slice( data[curr_key], [0,0,0,0,0], [0,0,0,0,0], [3, 1, 1, 1, 1], end_mask = 31)
+        slice1 = tf.strided_slice( data[curr_key], [1,0,0,0,0], [0,0,0,0,0], [3, 1, 1, 1, 1], end_mask = 31)
+        slice2 = tf.strided_slice( data[curr_key], [2,0,0,0,0], [0,0,0,0,0], [3, 1, 1, 1, 1], end_mask = 31)
+        #slice1 = tf.strided_slice( data[curr_key], [1], [2], [3])
+        #slice2 = tf.strided_slice( data[curr_key], [2], [3], [3])
+        #print(slice0.get_shape().as_list())
+        data[new_key] = tf.concat([slice0, slice1, slice2], 1)
+        #print(data[new_key].get_shape().as_list())
 
+        return data
+
+    def slice_label(self, data, curr_key, new_key):
+        #print(data[curr_key].get_shape().as_list())
+        slice0 = tf.strided_slice( data[curr_key], [0], [0], [3], end_mask = 1)
+        data[new_key] = slice0
+
+        return data
+
+    def init_ops(self):
+        self.input_ops = super(WhiskerWorld, self).init_ops()
+
+        # make sure batch size shapes of tensors are set
+        self.input_ops = self.set_data_shapes(self.input_ops)
+
+        for i in range(len(self.input_ops)):
+            self.input_ops[i] = self.slice_concat(self.input_ops[i], 'Data_force', 'Data_force')
+            self.input_ops[i] = self.slice_concat(self.input_ops[i], 'Data_torque', 'Data_torque')
+            self.input_ops[i] = self.slice_label(self.input_ops[i], 'category', 'category')
+
+        return self.input_ops
 
 def main():
     parser = argparse.ArgumentParser(description='The script to train the catenet for barrel')
@@ -106,15 +143,15 @@ def main():
 
     train_queue_params = {
             'queue_type': 'random',
-            'batch_size': BATCH_SIZE,
+            'batch_size': BATCH_SIZE//3,
             'seed': 0,
-            'capacity': queue_capa,
+            'capacity': queue_capa//3,
         }
     val_queue_params = {
                 'queue_type': 'fifo',
-                'batch_size': BATCH_SIZE,
+                'batch_size': BATCH_SIZE//3,
                 'seed': 0,
-                'capacity': BATCH_SIZE*10,
+                'capacity': BATCH_SIZE*10//3,
             }
     val_target          = 'category'
 
@@ -127,7 +164,7 @@ def main():
     loss_func = tf.nn.sparse_softmax_cross_entropy_with_logits
     learning_rate_params = {
             'func': tf.train.exponential_decay,
-            'learning_rate': .01,
+            'learning_rate': .0001,
             'decay_rate': .95,
             'decay_steps': NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
             'staircase': True
@@ -174,7 +211,7 @@ def main():
             'validate_first': False,
             'data_params': train_data_param,
             'queue_params': train_queue_params,
-            'thres_loss': 1000,
+            'thres_loss': 100000,
             'num_steps': 90 * NUM_BATCHES_PER_EPOCH  # number of steps to train
         },
 
@@ -209,6 +246,20 @@ def main():
     }
     #base.get_params()
     base.train_from_params(**params)
+
+    '''
+    'optimizer_params': {
+        'func': optimizer.ClipOptimizer,
+        'optimizer_class': optimizer_class,
+        'clip': True,
+        'momentum': .9
+    },
+        'optimizer_params': {
+            'func': optimizer.ClipOptimizer,
+            'optimizer_class': tf.train.AdamOptimizer,
+            'clip': True,
+        },
+    '''
 
 if __name__ == '__main__':
     main()

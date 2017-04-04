@@ -7,43 +7,6 @@ import tensorflow as tf
 
 from tfutils import model
 
-class CateNetfromConv(model.ConvNet):
-    def __init__(self, seed=None, **kwargs):
-        super(CateNetfromConv, self).__init__(seed=seed, **kwargs)
-
-    @tf.contrib.framework.add_arg_scope
-    def pool(self,
-             ksize=3,
-             stride=2,
-             padding='SAME',
-             in_layer=None):
-        if in_layer is None:
-            in_layer = self.output
-
-        if isinstance(ksize, int):
-            ksize1 = ksize
-            ksize2 = ksize
-        else:
-            ksize1, ksize2 = ksize
-
-        if isinstance(stride, int):
-            stride1 = stride
-            stride2 = stride
-        else:
-            stride1, stride2 = stride
-
-        self.output = tf.nn.max_pool(in_layer,
-                                     ksize=[1, ksize1, ksize2, 1],
-                                     strides=[1, stride1, stride2, 1],
-                                     padding=padding,
-                                     name='pool')
-        self.params = {'input': in_layer.name,
-                       'type': 'maxpool',
-                       'kernel_size': (ksize1, ksize2),
-                       'stride': (stride1, stride2),
-                       'padding': padding}
-        return self.output
-
 def getEncodeConvFilterSize(i, cfg):
     tmp_dict = cfg["alllayer"]["l%i" % i]["conv"]
     if "filter_size1" in tmp_dict:
@@ -55,6 +18,7 @@ def getEncodeConvNumFilters(i, cfg):
     tmp_dict = cfg["alllayer"]["l%i" % i]["conv"]
     return tmp_dict["num_filters"]
 
+'''
 def catenet(inputs, cfg_initial, train=True, seed = None, **kwargs):
     """The Model definition."""
 
@@ -165,7 +129,92 @@ def catenet(inputs, cfg_initial, train=True, seed = None, **kwargs):
                 print('Decode conv %d with size %d numfilters %d for shape' % (i, cfs, nf), decode.get_shape().as_list())
 
     return m
+'''
 
+def catenet(cfg_initial = None, train=True, seed=0, **kwargs):
+    defaults = {'conv': {'batch_norm': False,
+                         'kernel_init': 'xavier',
+                         'kernel_init_kwargs': {'seed': seed}},
+                         'weight_decay': .0005,
+                'max_pool': {'padding': 'SAME'},
+                'fc': {'batch_norm': False,
+                       'kernel_init': 'truncated_normal',
+                       'kernel_init_kwargs': {'stddev': .01, 'seed': seed},
+                       'weight_decay': .0005,
+                       'dropout_seed': 0}}
+    m = model.ConvNet(defaults=defaults)
+    dropout = .5 if train else None
+
+    m.conv(96, (9, 3), 1, padding='VALID', layer='conv1')
+
+    m.max_pool((3,1), (3,1), layer='conv1')
+
+    m.conv(256, 3, 1, layer='conv2')
+    m.max_pool(3, 2, layer='conv2')
+
+    m.conv(384, 3, 1, layer='conv3')
+    m.conv(384, 3, 1, layer='conv4')
+
+    m.conv(256, 3, 1, layer='conv5')
+    m.max_pool(3, 2, layer='conv5')
+
+    m.fc(4096, dropout=dropout, bias=.1, layer='fc6')
+    m.fc(1024, dropout=dropout, bias=.1, layer='fc7')
+
+    m_add = model.ConvNet(defaults=defaults)
+    m_add.fc(117, activation=None, dropout=None, bias=0, layer='fc8')
+
+    return m, m_add
+
+def catenet_add(cfg_initial = None, train=True, seed=0, **kwargs):
+    defaults = {'conv': {'batch_norm': False,
+                         'kernel_init': 'xavier',
+                         'kernel_init_kwargs': {'seed': seed}},
+                         'weight_decay': .0005,
+                'max_pool': {'padding': 'SAME'},
+                'fc': {'batch_norm': False,
+                       'kernel_init': 'truncated_normal',
+                       'kernel_init_kwargs': {'stddev': .01, 'seed': seed},
+                       'weight_decay': .0005,
+                       'dropout_seed': 0}}
+    m_add = model.ConvNet(defaults=defaults)
+    m_add.fc(117, activation=None, dropout=None, bias=0, layer='fc8')
+    return m_add
+'''
 def catenet_tfutils(inputs, **kwargs):
     m = catenet((inputs['Data_force'], inputs['Data_torque']), **kwargs)
     return m.output, m.params
+'''
+
+def catenet_tfutils(inputs, **kwargs):
+
+    # Deal with inputs
+    input_force, input_torque = (inputs['Data_force'], inputs['Data_torque'])
+    shape_list = input_force.get_shape().as_list()
+    input_force_rs = tf.reshape(input_force, [shape_list[0], shape_list[1], shape_list[2], -1])
+    input_torque_rs = tf.reshape(input_torque, [shape_list[0], shape_list[1], shape_list[2], -1])
+    input_con = tf.concat([input_force_rs, input_torque_rs], 3)
+    print(input_con.get_shape().as_list())
+    input1,input2,input3 = tf.split(input_con, 3, 1)
+
+    with tf.variable_scope("cate_root"):
+        # Building the network
+
+        with tf.variable_scope("create"):
+            m1, m_add_tmp = catenet(**kwargs)
+            output_1 = m1(input1)
+            output_tmp = m_add_tmp(tf.concat([output_1, output_1, output_1], 1))
+
+        #tf.get_variable_scope().reuse_variables()
+        with tf.variable_scope("create", reuse=True):
+
+            m2, m_add = catenet(**kwargs)
+            output_2 = m2(input2)
+
+            m3, m_add = catenet(**kwargs)
+            output_3 = m3(input3)
+
+            output_t = m_add(tf.concat([output_1, output_2, output_3], 1))
+            #output_t = m_add(m1(input1))
+
+        return output_t, m1.params
