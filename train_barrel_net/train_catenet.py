@@ -47,10 +47,11 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
         self.torque = 'Data_torque'
         self.label = 'category'
         self.batch_size = batch_size
+        postprocess = {self.force: [(self.postprocess_images, (), {})], self.torque: [(self.postprocess_images, (), {})]}
 
         super(WhiskerWorld, self).__init__(
             source_dirs = [data_path["%s/%s" % (group, self.force)] , data_path["%s/%s" % (group, self.torque)] , data_path["%s/%s" % (group, self.label)]],
-            #postprocess = postprocess,
+            postprocess = postprocess,
             batch_size=batch_size,
             n_threads=n_threads,
             shuffle = True,
@@ -98,6 +99,13 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
 
         return self.input_ops
 
+    def postprocess_images(self, ims):
+        def _postprocess_images(im):
+            im = tf.decode_raw(im, np.float32)
+            im = tf.reshape(im, [110, 31, 3, 3])
+            return im
+        return tf.map_fn(lambda im: _postprocess_images(im), ims, dtype=tf.float32)
+
 def main():
     parser = argparse.ArgumentParser(description='The script to train the catenet for barrel')
     parser.add_argument('--nport', default = 29101, type = int, action = 'store', help = 'Port number of mongodb')
@@ -105,9 +113,10 @@ def main():
     parser.add_argument('--expId', default = "catenet", type = str, action = 'store', help = 'Name of experiment id')
     parser.add_argument('--seed', default = 0, type = int, action = 'store', help = 'Random seed for model')
     parser.add_argument('--gpu', default = -1, type = int, action = 'store', help = 'Index of gpu, currently only one gpu is allowed')
-    parser.add_argument('--cacheDirPrefix', default = "/home/chengxuz", type = str, action = 'store', help = 'Prefix of cache directory')
+    parser.add_argument('--cacheDirPrefix', default = "/media/data2/chengxuz", type = str, action = 'store', help = 'Prefix of cache directory')
     parser.add_argument('--namefunc', default = "catenet_tfutils", type = str, action = 'store', help = 'Name of function to build the network')
     parser.add_argument('--valinum', default = -1, type = int, action = 'store', help = 'Number of validation steps, default is -1, which means all the validation')
+    parser.add_argument('--whichopt', default = 0, type = int, action = 'store', help = 'Choice of the optimizer, 0 means momentum, 1 means Adam')
 
     args    = parser.parse_args()
 
@@ -178,6 +187,20 @@ def main():
             'cfg_initial': cfg_initial
         }
 
+    optimizer_params = {
+            'func': optimizer.ClipOptimizer,
+            'optimizer_class': optimizer_class,
+            'clip': True,
+            'momentum': .9
+        }
+
+    if args.whichopt==1:
+        optimizer_params = {
+            'func': optimizer.ClipOptimizer,
+            'optimizer_class': tf.train.AdamOptimizer,
+            'clip': True,
+        }
+
     params = {
         'save_params': {
             'host': 'localhost',
@@ -223,12 +246,8 @@ def main():
 
         'learning_rate_params': learning_rate_params,
 
-        'optimizer_params': {
-            'func': optimizer.ClipOptimizer,
-            'optimizer_class': optimizer_class,
-            'clip': True,
-            'momentum': .9
-        },
+        'optimizer_params': optimizer_params,
+
         'log_device_placement': False,  # if variable placement has to be logged
         'validation_params': {
             'topn': {
