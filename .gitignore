@@ -33,3 +33,4 @@ Makefile
 *log*.txt
 *.mexmaci64
 *.mexa64
+!train*/*.cfg
