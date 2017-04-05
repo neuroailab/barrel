@@ -1,6 +1,8 @@
 import os
 import numpy as np
+import tensorflow as tf
 
+'''
 #savedir = '/om/user/chengxuz/Data/barrel_dataset/tfrecords'
 savedir = '/scratch/users/chengxuz/barrel/barrel_relat_files/dataset/tfrecords'
 
@@ -24,3 +26,31 @@ for key_now in key_list:
 
         if not os.path.isfile(path_now):
             print path_now
+'''
+
+tfrecords_filename = '/media/data3/chengxuz/whisker/tfrecords/category/Data0_25.tfrecords'
+reconstructed_images = []
+
+record_iterator = tf.python_io.tf_record_iterator(path=tfrecords_filename)
+diff_name = []
+diff_len = 144
+now_len = 0
+
+for string_record in record_iterator:
+    
+    example = tf.train.Example()
+    example.ParseFromString(string_record)
+    
+    img_string = (example.features.feature['category']
+                                  .int64_list
+                                  .value[0])
+    
+    #print(img_string)
+    if now_len % diff_len==0:
+        diff_name.append(img_string)
+    else:
+        if not diff_name[-1]==img_string:
+            print('Error!')
+    now_len = now_len + 1
+
+print(diff_name)

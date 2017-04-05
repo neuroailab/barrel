@@ -117,6 +117,7 @@ def main():
     parser.add_argument('--namefunc', default = "catenet_tfutils", type = str, action = 'store', help = 'Name of function to build the network')
     parser.add_argument('--valinum', default = -1, type = int, action = 'store', help = 'Number of validation steps, default is -1, which means all the validation')
     parser.add_argument('--whichopt', default = 0, type = int, action = 'store', help = 'Choice of the optimizer, 0 means momentum, 1 means Adam')
+    parser.add_argument('--initlr', default = 0.0001, type = float, action = 'store', help = 'Initial learning rate')
 
     args    = parser.parse_args()
 
@@ -173,7 +174,7 @@ def main():
     loss_func = tf.nn.sparse_softmax_cross_entropy_with_logits
     learning_rate_params = {
             'func': tf.train.exponential_decay,
-            'learning_rate': .0001,
+            'learning_rate': args.initlr,
             'decay_rate': .95,
             'decay_steps': NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
             'staircase': True
@@ -234,7 +235,7 @@ def main():
             'validate_first': False,
             'data_params': train_data_param,
             'queue_params': train_queue_params,
-            'thres_loss': 100000,
+            'thres_loss': 1000000,
             'num_steps': 90 * NUM_BATCHES_PER_EPOCH  # number of steps to train
         },
 
@@ -265,20 +266,6 @@ def main():
     }
     #base.get_params()
     base.train_from_params(**params)
-
-    '''
-    'optimizer_params': {
-        'func': optimizer.ClipOptimizer,
-        'optimizer_class': optimizer_class,
-        'clip': True,
-        'momentum': .9
-    },
-        'optimizer_params': {
-            'func': optimizer.ClipOptimizer,
-            'optimizer_class': tf.train.AdamOptimizer,
-            'clip': True,
-        },
-    '''
 
 if __name__ == '__main__':
     main()
