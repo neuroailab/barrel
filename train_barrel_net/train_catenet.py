@@ -12,12 +12,19 @@ import argparse
 
 import cate_network_builder
 
+host = os.uname()[1]
+
 DATA_PATH = {}
 DATA_PATH['train/Data_force'] = '/media/data3/chengxuz/whisker/tfrecords/Data_force/'
 DATA_PATH['train/Data_torque'] = '/media/data3/chengxuz/whisker/tfrecords/Data_torque/'
 DATA_PATH['train/category'] = '/media/data3/chengxuz/whisker/tfrecords/category/'
 #DATA_PATH['val/images'] = '/media/data2/one_world_dataset/tfvaldata/images/'
 #DATA_PATH['val/normals'] = '/media/data2/one_world_dataset/tfvaldata/normals/'
+
+if 'neuroaicluster' in host:
+    DATA_PATH['train/Data_force'] = '/mnt/fs0/chengxuz/Data/whisker/tfrecs_om/tfrecords/Data_force/'
+    DATA_PATH['train/Data_torque'] = '/mnt/fs0/chengxuz/Data/whisker/tfrecs_om/tfrecords/Data_torque/'
+    DATA_PATH['train/category'] = '/mnt/fs0/chengxuz/Data/whisker/tfrecs_om/tfrecords/category/'
 
 def online_agg(agg_res, res, step):
     if agg_res is None:
@@ -201,6 +208,22 @@ def main():
             'optimizer_class': tf.train.AdamOptimizer,
             'clip': True,
         }
+
+    if args.whichopt==2:
+        optimizer_params = {
+            'func': optimizer.ClipOptimizer,
+            'optimizer_class': tf.train.AdagradOptimizer,
+            'clip': True,
+        }
+
+    if args.whichopt==3:
+        optimizer_params = {
+                'func': optimizer.ClipOptimizer,
+                'optimizer_class': optimizer_class,
+                'clip': True,
+                'momentum': .9,
+                'use_nesterov': True
+            }
 
     params = {
         'save_params': {
