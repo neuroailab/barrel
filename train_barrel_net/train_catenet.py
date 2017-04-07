@@ -4,7 +4,7 @@ import numpy as np
 
 import tensorflow as tf
 
-from tfutils import base, data, model, optimizer
+from tfutils import base, data, optimizer
 
 import json
 import copy
@@ -25,9 +25,11 @@ if 'neuroaicluster' in host:
     DATA_PATH['train/Data_force'] = '/mnt/fs0/chengxuz/Data/whisker/tfrecs_all/tfrecords/Data_force/'
     DATA_PATH['train/Data_torque'] = '/mnt/fs0/chengxuz/Data/whisker/tfrecs_all/tfrecords/Data_torque/'
     DATA_PATH['train/category'] = '/mnt/fs0/chengxuz/Data/whisker/tfrecs_all/tfrecords/category/'
+    DATA_PATH['train/trainflag'] = '/mnt/fs0/chengxuz/Data/whisker/tfrecs_all/tfrecords/trainflag/'
     DATA_PATH['val/Data_force'] = '/mnt/fs0/chengxuz/Data/whisker/val_tfrecs/tfrecords_val/Data_force/'
     DATA_PATH['val/Data_torque'] = '/mnt/fs0/chengxuz/Data/whisker/val_tfrecs/tfrecords_val/Data_torque/'
     DATA_PATH['val/category'] = '/mnt/fs0/chengxuz/Data/whisker/val_tfrecs/tfrecords_val/category/'
+    DATA_PATH['val/trainflag'] = '/mnt/fs0/chengxuz/Data/whisker/val_tfrecs/tfrecords_val/trainflag/'
 
 def online_agg(agg_res, res, step):
     if agg_res is None:
@@ -56,11 +58,12 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
         self.force = 'Data_force'
         self.torque = 'Data_torque'
         self.label = 'category'
+        self.trainflag = 'trainflag'
         self.batch_size = batch_size
         postprocess = {self.force: [(self.postprocess_images, (), {})], self.torque: [(self.postprocess_images, (), {})]}
 
         super(WhiskerWorld, self).__init__(
-            source_dirs = [data_path["%s/%s" % (group, self.force)] , data_path["%s/%s" % (group, self.torque)] , data_path["%s/%s" % (group, self.label)]],
+            source_dirs = [data_path["%s/%s" % (group, self.force)] , data_path["%s/%s" % (group, self.torque)] , data_path["%s/%s" % (group, self.label)], data_path["%s/%s" % (group, self.trainflag)]],
             postprocess = postprocess,
             batch_size=batch_size,
             n_threads=n_threads,
@@ -106,6 +109,7 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
             self.input_ops[i] = self.slice_concat(self.input_ops[i], 'Data_force', 'Data_force')
             self.input_ops[i] = self.slice_concat(self.input_ops[i], 'Data_torque', 'Data_torque')
             self.input_ops[i] = self.slice_label(self.input_ops[i], 'category', 'category')
+            self.input_ops[i] = self.slice_label(self.input_ops[i], 'trainflag', 'trainflag')
 
         return self.input_ops
 
@@ -156,7 +160,7 @@ def main():
     val_data_param = {
                     'func': WhiskerWorld,
                     'data_path': DATA_PATH,
-                    'group': 'train',
+                    'group': 'val',
                     'n_threads': n_threads,
                     'batch_size': BATCH_SIZE,
                 }

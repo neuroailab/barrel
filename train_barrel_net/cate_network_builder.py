@@ -5,7 +5,8 @@ from __future__ import print_function
 import numpy as np
 import tensorflow as tf
 
-from tfutils import model
+#from tfutils import model
+import model
 
 def getWhetherConv(i, cfg, key_want = "subnet"):
     tmp_dict = cfg[key_want]["l%i" % i]
@@ -53,6 +54,12 @@ def getFcNumFilters(i, cfg, key_want = "subnet"):
     tmp_dict = cfg[key_want]["l%i" % i]["fc"]
     return tmp_dict["num_features"]
 
+def getWhetherBn(i, cfg, key_want = "subnet"):
+    tmp_dict = cfg[key_want]["l%i" % i]
+    return 'bn' in tmp_dict
+
+'''
+# Old implementation using Convnet in model.py of tfutils
 def catenet(cfg_initial = None, train=True, seed=0, **kwargs):
     defaults = {'conv': {'batch_norm': False,
                          'kernel_init': 'xavier',
@@ -92,6 +99,55 @@ def catenet(cfg_initial = None, train=True, seed=0, **kwargs):
     m_add.fc(117, activation=None, dropout=None, bias=0, layer='fc8')
 
     return m, m_add
+'''
+
+def catenet(inputs, input_flag, cfg_initial = None, train=True, **kwargs):
+    m = model.ConvNet(**kwargs)
+
+    cfg = cfg_initial
+
+    dropout_default = 0.5
+    if 'dropout' in cfg:
+        dropout_default = cfg['dropout']
+
+    dropout = dropout_default if train else None
+
+    layernum_sub = cfg['layernum_sub']
+    for indx_layer in xrange(layernum_sub):
+        do_conv = getWhetherConv(indx_layer, cfg)
+        if do_conv:
+            layer_name = "conv%i" % (1 + indx_layer)
+            with tf.variable_scope(layer_name):
+                if indx_layer==0:
+                    m.conv(getConvNumFilters(indx_layer, cfg), getConvFilterSize(indx_layer, cfg), getConvStride(indx_layer, cfg),
+                           padding='VALID', in_layer = inputs)
+                else:
+                    m.conv(getConvNumFilters(indx_layer, cfg), getConvFilterSize(indx_layer, cfg), getConvStride(indx_layer, cfg))
+
+                do_pool = getWhetherPool(indx_layer, cfg)
+                if do_pool:
+                    m.pool(getPoolFilterSize(indx_layer, cfg), getPoolStride(indx_layer, cfg))
+
+                if getWhetherBn(indx_layer, cfg):
+                    m.batchnorm(input_flag)
+
+        else:
+            layer_name = "fc%i" % (1 + indx_layer)
+            with tf.variable_scope(layer_name):
+                m.fc(getFcNumFilters(indx_layer, cfg), init='trunc_norm', dropout=dropout, bias=.1)
+
+                if getWhetherBn(indx_layer, cfg):
+                    m.batchnorm(input_flag)
+
+    return m
+
+def catenet_add(inputs, cfg_initial = None, train=True, **kwargs):
+
+    m_add = model.ConvNet(**kwargs)
+    with tf.variable_scope('fc_add'):
+        m_add.fc(117, init='trunc_norm', activation=None, dropout=None, bias=0, in_layer=inputs)
+
+    return m_add
 
 def catenet_tfutils(inputs, **kwargs):
 
@@ -104,24 +160,26 @@ def catenet_tfutils(inputs, **kwargs):
     print(input_con.get_shape().as_list())
     input1,input2,input3 = tf.split(input_con, 3, 1)
 
+    input_flag = tf.equal(inputs['trainflag'][0], tf.constant(1, dtype=tf.int64))
+
     with tf.variable_scope("cate_root"):
         # Building the network
 
         with tf.variable_scope("create"):
-            m1, m_add_tmp = catenet(**kwargs)
-            output_1 = m1(input1)
-            output_tmp = m_add_tmp(tf.concat([output_1, output_1, output_1], 1))
+            m1 = catenet(input1, input_flag, **kwargs)
+            output_1 = m1.output
 
         #tf.get_variable_scope().reuse_variables()
         with tf.variable_scope("create", reuse=True):
 
-            m2, m_add = catenet(**kwargs)
-            output_2 = m2(input2)
+            m2 = catenet(input2, input_flag, **kwargs)
+            output_2 = m2.output
 
-            m3, m_add = catenet(**kwargs)
-            output_3 = m3(input3)
+            m3 = catenet(input3, input_flag, **kwargs)
+            output_3 = m3.output
 
-            output_t = m_add(tf.concat([output_1, output_2, output_3], 1))
-            #output_t = m_add(m1(input1))
+        with tf.variable_scope("create"):
+            input_t = tf.concat([output_1, output_2, output_3], 1)
+            m_final = catenet_add(input_t, **kwargs)
 
-        return output_t, m1.params
+        return m_final.output, m_final.params
