@@ -189,7 +189,7 @@ def main():
     learning_rate_params = {
             'func': tf.train.exponential_decay,
             'learning_rate': args.initlr,
-            'decay_rate': .95,
+            'decay_rate': .5,
             'decay_steps': NUM_BATCHES_PER_EPOCH*10,  # exponential decay each epoch
             'staircase': True
         }

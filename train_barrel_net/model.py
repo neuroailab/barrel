@@ -46,6 +46,8 @@ class ConvNet(object):
             raise ValueError('Please provide an appropriate initialization '
                              'method: xavier or trunc_norm')
         return init
+
+    '''
     @tf.contrib.framework.add_arg_scope
     def batchnorm(self, input_flag, center=True, scale=True, in_layer = None):
         if in_layer is None:
@@ -53,6 +55,32 @@ class ConvNet(object):
 
         self.output = tf.contrib.layers.batch_norm(in_layer, center=center, scale=scale, is_training=input_flag, scope='bn')
         return self.output
+    '''
+
+    @tf.contrib.framework.add_arg_scope
+    def batchnorm(self, is_training, inputs = None, decay = 0.999, epsilon = 1e-3):
+        if inputs==None:
+            inputs = self.output
+
+	scale = tf.Variable(tf.ones([inputs.get_shape()[-1]]))
+	beta = tf.Variable(tf.zeros([inputs.get_shape()[-1]]))
+	pop_mean = tf.Variable(tf.zeros([inputs.get_shape()[-1]]), trainable=False)
+	pop_var = tf.Variable(tf.ones([inputs.get_shape()[-1]]), trainable=False)
+
+	if is_training:
+	    batch_mean, batch_var = tf.nn.moments(inputs, list(range(inputs.get_shape().ndims - 1)))
+	    train_mean = tf.assign(pop_mean,
+				   pop_mean * decay + batch_mean * (1 - decay))
+	    train_var = tf.assign(pop_var,
+				  pop_var * decay + batch_var * (1 - decay))
+	    with tf.control_dependencies([train_mean, train_var]):
+                self.output = tf.nn.batch_normalization(inputs,
+		    batch_mean, batch_var, beta, scale, epsilon)
+	else:
+	    self.output = tf.nn.batch_normalization(inputs,
+		pop_mean, pop_var, beta, scale, epsilon)
+        return self.output
+
 
     @tf.contrib.framework.add_arg_scope
     def conv(self,
