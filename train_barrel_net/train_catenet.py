@@ -22,9 +22,12 @@ DATA_PATH['train/category'] = '/media/data3/chengxuz/whisker/tfrecords/category/
 #DATA_PATH['val/normals'] = '/media/data2/one_world_dataset/tfvaldata/normals/'
 
 if 'neuroaicluster' in host:
-    DATA_PATH['train/Data_force'] = '/mnt/fs0/chengxuz/Data/whisker/tfrecs_om/tfrecords/Data_force/'
-    DATA_PATH['train/Data_torque'] = '/mnt/fs0/chengxuz/Data/whisker/tfrecs_om/tfrecords/Data_torque/'
-    DATA_PATH['train/category'] = '/mnt/fs0/chengxuz/Data/whisker/tfrecs_om/tfrecords/category/'
+    DATA_PATH['train/Data_force'] = '/mnt/fs0/chengxuz/Data/whisker/tfrecs_all/tfrecords/Data_force/'
+    DATA_PATH['train/Data_torque'] = '/mnt/fs0/chengxuz/Data/whisker/tfrecs_all/tfrecords/Data_torque/'
+    DATA_PATH['train/category'] = '/mnt/fs0/chengxuz/Data/whisker/tfrecs_all/tfrecords/category/'
+    DATA_PATH['val/Data_force'] = '/mnt/fs0/chengxuz/Data/whisker/val_tfrecs/tfrecords_val/Data_force/'
+    DATA_PATH['val/Data_torque'] = '/mnt/fs0/chengxuz/Data/whisker/val_tfrecs/tfrecords_val/Data_torque/'
+    DATA_PATH['val/category'] = '/mnt/fs0/chengxuz/Data/whisker/val_tfrecs/tfrecords_val/category/'
 
 def online_agg(agg_res, res, step):
     if agg_res is None:
@@ -172,8 +175,8 @@ def main():
             }
     val_target          = 'category'
 
-    val_step_num = 500
-    NUM_BATCHES_PER_EPOCH = 5000
+    val_step_num = 12*2*9981//BATCH_SIZE
+    NUM_BATCHES_PER_EPOCH = 12*24*9981//BATCH_SIZE
 
     if args.valinum>-1:
         val_step_num = args.valinum
@@ -183,7 +186,7 @@ def main():
             'func': tf.train.exponential_decay,
             'learning_rate': args.initlr,
             'decay_rate': .95,
-            'decay_steps': NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
+            'decay_steps': NUM_BATCHES_PER_EPOCH*10,  # exponential decay each epoch
             'staircase': True
         }
 
