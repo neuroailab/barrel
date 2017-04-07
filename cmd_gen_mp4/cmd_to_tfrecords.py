@@ -49,7 +49,6 @@ def main():
 
     obj_list = get_list(args.objcat)
 
-    '''
     # Write the scales
     key_now = 'scale'
     dir_now = os.path.join(args.savedir, key_now)
@@ -107,7 +106,6 @@ def main():
 
                 writer.write(example.SerializeToString())
     writer.close()
-    '''
 
     # Write other organized things
 
