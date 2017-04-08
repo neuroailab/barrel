@@ -51,6 +51,7 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
                  batch_size=1,
                  n_threads=4,
                  crop_size=None,
+                 expand_spatial=False,
                  *args,
                  **kwargs):
 
@@ -60,6 +61,7 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
         self.label = 'category'
         self.trainflag = 'trainflag'
         self.batch_size = batch_size
+        self.expand_spatial = expand_spatial
         postprocess = {self.force: [(self.postprocess_images, (), {})], self.torque: [(self.postprocess_images, (), {})]}
 
         super(WhiskerWorld, self).__init__(
@@ -92,6 +94,23 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
 
         return data
 
+    def spatial_slice_concat(self, data, curr_key, new_key):
+        shape_now = data[curr_key].get_shape().as_list()
+        slice0 = tf.slice(data[curr_key], [0, 0, 0, 0, 0], [-1, -1, 5, -1, -1])
+        slice1 = tf.slice(data[curr_key], [0, 0, 5, 0, 0], [-1, -1, 6, -1, -1])
+        slice2 = tf.slice(data[curr_key], [0, 0, 11, 0, 0], [-1, -1, 14, -1, -1])
+        slice3 = tf.slice(data[curr_key], [0, 0, 25, 0, 0], [-1, -1, 6, -1, -1])
+
+        pad_ten0 = tf.zeros([shape_now[0], shape_now[1], 1, shape_now[3], shape_now[4]])
+        pad_ten1 = tf.zeros([shape_now[0], shape_now[1], 1, shape_now[3], shape_now[4]])
+        pad_ten2 = tf.zeros([shape_now[0], shape_now[1], 1, shape_now[3], shape_now[4]])
+        pad_ten3 = tf.zeros([shape_now[0], shape_now[1], 1, shape_now[3], shape_now[4]])
+
+        data[new_key] = tf.concat([slice0, pad_ten0, pad_ten1, slice1, pad_ten2, slice2, pad_ten3, slice3], 2)
+        #data[new_key] = tf.concat([slice0, slice1, slice2, slice3], 2)
+
+        return data
+
     def slice_label(self, data, curr_key, new_key):
         #print(data[curr_key].get_shape().as_list())
         slice0 = tf.strided_slice( data[curr_key], [0], [0], [3], end_mask = 1)
@@ -107,7 +126,11 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
 
         for i in range(len(self.input_ops)):
             self.input_ops[i] = self.slice_concat(self.input_ops[i], 'Data_force', 'Data_force')
+            if self.expand_spatial:
+                self.input_ops[i] = self.spatial_slice_concat(self.input_ops[i], 'Data_force', 'Data_force')
             self.input_ops[i] = self.slice_concat(self.input_ops[i], 'Data_torque', 'Data_torque')
+            if self.expand_spatial:
+                self.input_ops[i] = self.spatial_slice_concat(self.input_ops[i], 'Data_torque', 'Data_torque')
             self.input_ops[i] = self.slice_label(self.input_ops[i], 'category', 'category')
             self.input_ops[i] = self.slice_label(self.input_ops[i], 'trainflag', 'trainflag')
 
@@ -133,6 +156,7 @@ def main():
     parser.add_argument('--whichopt', default = 0, type = int, action = 'store', help = 'Choice of the optimizer, 0 means momentum, 1 means Adam')
     parser.add_argument('--initlr', default = 0.0001, type = float, action = 'store', help = 'Initial learning rate')
     parser.add_argument('--loadque', default = 0, type = int, action = 'store', help = 'Special setting for load query')
+    parser.add_argument('--expand', default = 0, type = int, action = 'store', help = 'Whether do the spatial padding')
 
     args    = parser.parse_args()
 
@@ -156,15 +180,21 @@ def main():
                 'data_path': DATA_PATH,
                 'group': 'train',
                 'n_threads': n_threads,
-                'batch_size': BATCH_SIZE,
+                #'batch_size': BATCH_SIZE,
+                'batch_size': 12,
             }
     val_data_param = {
                     'func': WhiskerWorld,
                     'data_path': DATA_PATH,
                     'group': 'val',
                     'n_threads': n_threads,
-                    'batch_size': BATCH_SIZE,
+                    #'batch_size': BATCH_SIZE,
+                    'batch_size': 12,
                 }
+    
+    if args.expand==1:
+        train_data_param['expand_spatial'] = True
+        val_data_param['expand_spatial'] = True
 
     train_queue_params = {
             'queue_type': 'random',
