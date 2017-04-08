@@ -58,7 +58,7 @@ class ConvNet(object):
     '''
 
     @tf.contrib.framework.add_arg_scope
-    def batchnorm(self, is_training, inputs = None, decay = 0.999, epsilon = 1e-3):
+    def batchnorm(self, is_training, batchnorm_mode = 1, inputs = None, decay = 0.999, epsilon = 1e-3):
         if inputs==None:
             inputs = self.output
 
@@ -67,18 +67,23 @@ class ConvNet(object):
 	pop_mean = tf.Variable(tf.zeros([inputs.get_shape()[-1]]), trainable=False)
 	pop_var = tf.Variable(tf.ones([inputs.get_shape()[-1]]), trainable=False)
 
-	if is_training:
-	    batch_mean, batch_var = tf.nn.moments(inputs, list(range(inputs.get_shape().ndims - 1)))
-	    train_mean = tf.assign(pop_mean,
-				   pop_mean * decay + batch_mean * (1 - decay))
-	    train_var = tf.assign(pop_var,
-				  pop_var * decay + batch_var * (1 - decay))
-	    with tf.control_dependencies([train_mean, train_var]):
+        if batchnorm_mode == 1:
+            if is_training:
+                batch_mean, batch_var = tf.nn.moments(inputs, list(range(inputs.get_shape().ndims - 1)))
+                train_mean = tf.assign(pop_mean,
+                                       pop_mean * decay + batch_mean * (1 - decay))
+                train_var = tf.assign(pop_var,
+                                      pop_var * decay + batch_var * (1 - decay))
+                with tf.control_dependencies([train_mean, train_var]):
+                    self.output = tf.nn.batch_normalization(inputs,
+                        batch_mean, batch_var, beta, scale, epsilon)
+            else:
                 self.output = tf.nn.batch_normalization(inputs,
-		    batch_mean, batch_var, beta, scale, epsilon)
-	else:
-	    self.output = tf.nn.batch_normalization(inputs,
-		pop_mean, pop_var, beta, scale, epsilon)
+                    pop_mean, pop_var, beta, scale, epsilon)
+        else:
+            batch_mean, batch_var = tf.nn.moments(inputs, list(range(inputs.get_shape().ndims - 1)))
+            self.output = tf.nn.batch_normalization(inputs,
+                batch_mean, batch_var, beta, scale, epsilon)
         return self.output
 
 

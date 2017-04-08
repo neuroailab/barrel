@@ -132,6 +132,7 @@ def main():
     parser.add_argument('--valinum', default = -1, type = int, action = 'store', help = 'Number of validation steps, default is -1, which means all the validation')
     parser.add_argument('--whichopt', default = 0, type = int, action = 'store', help = 'Choice of the optimizer, 0 means momentum, 1 means Adam')
     parser.add_argument('--initlr', default = 0.0001, type = float, action = 'store', help = 'Initial learning rate')
+    parser.add_argument('--loadque', default = 0, type = int, action = 'store', help = 'Special setting for load query')
 
     args    = parser.parse_args()
 
@@ -189,7 +190,8 @@ def main():
     learning_rate_params = {
             'func': tf.train.exponential_decay,
             'learning_rate': args.initlr,
-            'decay_rate': .5,
+            #'decay_rate': .5,
+            'decay_rate': 1,
             'decay_steps': NUM_BATCHES_PER_EPOCH*10,  # exponential decay each epoch
             'staircase': True
         }
@@ -232,6 +234,44 @@ def main():
                 'use_nesterov': True
             }
 
+    if args.whichopt==4:
+        optimizer_params = {
+            'func': optimizer.ClipOptimizer,
+            'optimizer_class': tf.train.AdadeltaOptimizer,
+            'clip': True,
+        }
+
+    if args.whichopt==5:
+        optimizer_params = {
+            'func': optimizer.ClipOptimizer,
+            'optimizer_class': tf.train.RMSPropOptimizer,
+            'clip': True,
+        }
+
+    load_query = None
+    load_params = {
+            'host': 'localhost',
+            'port': args.nport,
+            'dbname': 'whisker_net',
+            'collname': 'catenet',
+            'exp_id': exp_id,
+            'do_restore': True,
+            'query': load_query 
+    }
+
+    if args.loadque==1:
+        load_query = {'saved_filters': True, 'step': 70000}
+        load_params = {
+                'host': 'localhost',
+                'port': args.nport,
+                'dbname': 'whisker_net',
+                'collname': 'catenet',
+                'exp_id': 'catenet_adag_flv_slac_2',
+                'do_restore': True,
+                'query': load_query 
+        }
+        #print(load_query)
+
     params = {
         'save_params': {
             'host': 'localhost',
@@ -249,15 +289,7 @@ def main():
             'cache_dir': cache_dir,
         },
 
-        'load_params': {
-            'host': 'localhost',
-            'port': args.nport,
-            'dbname': 'whisker_net',
-            'collname': 'catenet',
-            'exp_id': exp_id,
-            'do_restore': True,
-            'load_query': None
-        },
+        'load_params': load_params,
 
         'model_params': model_params,
 

@@ -58,48 +58,9 @@ def getWhetherBn(i, cfg, key_want = "subnet"):
     tmp_dict = cfg[key_want]["l%i" % i]
     return 'bn' in tmp_dict
 
-'''
-# Old implementation using Convnet in model.py of tfutils
-def catenet(cfg_initial = None, train=True, seed=0, **kwargs):
-    defaults = {'conv': {'batch_norm': False,
-                         'kernel_init': 'xavier',
-                         'kernel_init_kwargs': {'seed': seed}},
-                         'weight_decay': .0005,
-                'max_pool': {'padding': 'SAME'},
-                'fc': {'batch_norm': False,
-                       'kernel_init': 'truncated_normal',
-                       'kernel_init_kwargs': {'stddev': .01, 'seed': seed},
-                       'weight_decay': .0005,
-                       'dropout_seed': 0}}
-    m = model.ConvNet(defaults=defaults)
-    dropout = .5 if train else None
-
-    cfg = cfg_initial
-
-    layernum_sub = cfg['layernum_sub']
-    for indx_layer in xrange(layernum_sub):
-        do_conv = getWhetherConv(indx_layer, cfg)
-        if do_conv:
-            layer_name = "conv%i" % (1 + indx_layer)
-            if indx_layer==0:
-                m.conv(getConvNumFilters(indx_layer, cfg), getConvFilterSize(indx_layer, cfg), getConvStride(indx_layer, cfg),
-                       padding='VALID', layer= layer_name)
-            else:
-                m.conv(getConvNumFilters(indx_layer, cfg), getConvFilterSize(indx_layer, cfg), getConvStride(indx_layer, cfg),
-                       layer= layer_name)
-
-            do_pool = getWhetherPool(indx_layer, cfg)
-            if do_pool:
-                m.max_pool(getPoolFilterSize(indx_layer, cfg), getPoolStride(indx_layer, cfg), layer = layer_name)
-        else:
-            layer_name = "fc%i" % (1 + indx_layer)
-            m.fc(getFcNumFilters(indx_layer, cfg), dropout=dropout, bias=.1, layer=layer_name)
-
-    m_add = model.ConvNet(defaults=defaults)
-    m_add.fc(117, activation=None, dropout=None, bias=0, layer='fc8')
-
-    return m, m_add
-'''
+def getBnMode(i, cfg, key_want = "subnet"):
+    tmp_dict = cfg[key_want]["l%i" % i]
+    return tmp_dict['bn']
 
 def catenet(inputs, input_flag, cfg_initial = None, train=True, **kwargs):
     m = model.ConvNet(**kwargs)
@@ -111,6 +72,9 @@ def catenet(inputs, input_flag, cfg_initial = None, train=True, **kwargs):
         dropout_default = cfg['dropout']
 
     dropout = dropout_default if train else None
+
+    if dropout==0:
+        dropout = None
 
     layernum_sub = cfg['layernum_sub']
     for indx_layer in xrange(layernum_sub):
@@ -125,7 +89,7 @@ def catenet(inputs, input_flag, cfg_initial = None, train=True, **kwargs):
                     m.conv(getConvNumFilters(indx_layer, cfg), getConvFilterSize(indx_layer, cfg), getConvStride(indx_layer, cfg))
 
                 if getWhetherBn(indx_layer, cfg):
-                    m.batchnorm(train)
+                    m.batchnorm(train, getBnMode(indx_layer, cfg))
 
                 do_pool = getWhetherPool(indx_layer, cfg)
                 if do_pool:
@@ -137,7 +101,7 @@ def catenet(inputs, input_flag, cfg_initial = None, train=True, **kwargs):
                 m.fc(getFcNumFilters(indx_layer, cfg), init='trunc_norm', dropout=dropout, bias=.1)
 
                 if getWhetherBn(indx_layer, cfg):
-                    m.batchnorm(train)
+                    m.batchnorm(train, getBnMode(indx_layer, cfg))
 
     return m
 
