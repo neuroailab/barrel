@@ -3,6 +3,7 @@ import os, sys
 import numpy as np
 
 import tensorflow as tf
+import cPickle
 
 from tfutils import base, data, optimizer
 
@@ -30,6 +31,8 @@ if 'neuroaicluster' in host:
     DATA_PATH['val/Data_torque'] = '/mnt/fs0/chengxuz/Data/whisker/val_tfrecs/tfrecords_val/Data_torque/'
     DATA_PATH['val/category'] = '/mnt/fs0/chengxuz/Data/whisker/val_tfrecs/tfrecords_val/category/'
     DATA_PATH['val/trainflag'] = '/mnt/fs0/chengxuz/Data/whisker/val_tfrecs/tfrecords_val/trainflag/'
+    DATA_PATH['Data_force_stat'] = '/mnt/fs0/chengxuz/Data/whisker/tfrecs_all/tfrecords/Data_force/Data_force_combined.pkl'
+    DATA_PATH['Data_torque_stat'] = '/mnt/fs0/chengxuz/Data/whisker/tfrecs_all/tfrecords/Data_torque/Data_torque_combined.pkl'
 
 def online_agg(agg_res, res, step):
     if agg_res is None:
@@ -52,6 +55,7 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
                  n_threads=4,
                  crop_size=None,
                  expand_spatial=False,
+                 norm_flag = False,
                  *args,
                  **kwargs):
 
@@ -62,6 +66,11 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
         self.trainflag = 'trainflag'
         self.batch_size = batch_size
         self.expand_spatial = expand_spatial
+        self.norm_flag = norm_flag
+        if norm_flag:
+            self.stat_path = {}
+            self.stat_path['Data_force'] = data_path['Data_force_stat']
+            self.stat_path['Data_torque'] = data_path['Data_torque_stat']
         postprocess = {self.force: [(self.postprocess_images, (), {})], self.torque: [(self.postprocess_images, (), {})]}
 
         super(WhiskerWorld, self).__init__(
@@ -118,6 +127,15 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
 
         return data
 
+    def normalize_data(self, data, curr_key):
+        stat_dict = cPickle.load(open(self.stat_path[curr_key], 'r'))
+        mean_tf = tf.constant(stat_dict['mean'], dtype = data[curr_key].dtype)
+        var_tf = tf.constant(stat_dict['std'], dtype = data[curr_key].dtype)
+
+        data[curr_key] = tf.divide(tf.subtract(data[curr_key], mean_tf), var_tf)
+
+        return data
+
     def init_ops(self):
         self.input_ops = super(WhiskerWorld, self).init_ops()
 
@@ -128,9 +146,13 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
             self.input_ops[i] = self.slice_concat(self.input_ops[i], 'Data_force', 'Data_force')
             if self.expand_spatial:
                 self.input_ops[i] = self.spatial_slice_concat(self.input_ops[i], 'Data_force', 'Data_force')
+            if self.norm_flag:
+                self.input_ops[i] = self.normalize_data(self.input_ops[i], 'Data_force')
             self.input_ops[i] = self.slice_concat(self.input_ops[i], 'Data_torque', 'Data_torque')
             if self.expand_spatial:
                 self.input_ops[i] = self.spatial_slice_concat(self.input_ops[i], 'Data_torque', 'Data_torque')
+            if self.norm_flag:
+                self.input_ops[i] = self.normalize_data(self.input_ops[i], 'Data_torque')
             self.input_ops[i] = self.slice_label(self.input_ops[i], 'category', 'category')
             self.input_ops[i] = self.slice_label(self.input_ops[i], 'trainflag', 'trainflag')
 
@@ -157,6 +179,7 @@ def main():
     parser.add_argument('--initlr', default = 0.0001, type = float, action = 'store', help = 'Initial learning rate')
     parser.add_argument('--loadque', default = 0, type = int, action = 'store', help = 'Special setting for load query')
     parser.add_argument('--expand', default = 0, type = int, action = 'store', help = 'Whether do the spatial padding')
+    parser.add_argument('--norm', default = 0, type = int, action = 'store', help = 'Whether do the normalization, default is no')
 
     args    = parser.parse_args()
 
@@ -195,6 +218,10 @@ def main():
     if args.expand==1:
         train_data_param['expand_spatial'] = True
         val_data_param['expand_spatial'] = True
+
+    if args.norm==1:
+        train_data_param['norm_flag'] = True
+        val_data_param['norm_flag'] = True
 
     train_queue_params = {
             'queue_type': 'random',
