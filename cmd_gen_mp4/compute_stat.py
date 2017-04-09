@@ -27,6 +27,9 @@ def main():
     for tf_indx in xrange(args.tflen):
         tf_filename = os.path.join(args.tfdir, args.tfkey, name_pat % ((args.tfstart + tf_indx)*obj_len, obj_len))
 
+        if 'Data4025_25.tfrecords' in tf_filename:
+            continue
+
         record_iterator = tf.python_io.tf_record_iterator(path=tf_filename)
 
         #print(tf_filename, os.path.isfile(tf_filename))
@@ -52,10 +55,14 @@ def main():
 
             max_array = np.maximum(max_array, reconstructed_img)
             min_array = np.minimum(min_array, reconstructed_img)
+
+            tmp_mean = np.mean(reconstructed_img)
+            tmp_std = np.std(reconstructed_img)
+            if tmp_std>10000000:
+                print('Error data here!')
         #print(num_add)
         #print(sum_array.shape)
         #break
-        '''
         tmp_array = sum_array.reshape([110*31, 3, 3])
         mean_now = np.mean(tmp_array, 0)/num_add
         print(mean_now)
@@ -63,11 +70,12 @@ def main():
         std_now = np.sqrt(np.mean(tmp_sq_array, 0)/num_add - mean_now**2)
         print(std_now)
 
-        tmp_max = max_array.reshape([110*31, 3, 3])
-        print(np.max(tmp_max, 0))
-        tmp_min = min_array.reshape([110*31, 3, 3])
-        print(np.min(tmp_min, 0))
-        '''
+        print(tf_filename)
+
+        #tmp_max = max_array.reshape([110*31, 3, 3])
+        #print(np.max(tmp_max, 0))
+        #tmp_min = min_array.reshape([110*31, 3, 3])
+        #print(np.min(tmp_min, 0))
 
     save_dict = {}
     save_dict['num_add'] = num_add
