@@ -62,7 +62,7 @@ def getBnMode(i, cfg, key_want = "subnet"):
     tmp_dict = cfg[key_want]["l%i" % i]
     return tmp_dict['bn']
 
-def catenet(inputs, input_flag, cfg_initial = None, train=True, **kwargs):
+def catenet(inputs, cfg_initial = None, train=True, **kwargs):
     m = model.ConvNet(**kwargs)
 
     cfg = cfg_initial
@@ -113,7 +113,45 @@ def catenet_add(inputs, cfg_initial = None, train=True, **kwargs):
 
     return m_add
 
-def catenet_tfutils(inputs, **kwargs):
+def catenet_from_3s(input_con, **kwargs):
+    input1,input2,input3 = tf.split(input_con, 3, 1)
+
+    with tf.variable_scope("cate_root"):
+        # Building the network
+
+        with tf.variable_scope("create"):
+            m1 = catenet(input1, **kwargs)
+            output_1 = m1.output
+
+        #tf.get_variable_scope().reuse_variables()
+        with tf.variable_scope("create", reuse=True):
+
+            m2 = catenet(input2, **kwargs)
+            output_2 = m2.output
+
+            m3 = catenet(input3, **kwargs)
+            output_3 = m3.output
+
+        input_t = tf.concat([output_1, output_2, output_3], 1)
+
+        return input_t
+
+def catenet_from_12s(input_con, **kwargs):
+    input0,input1,input2,input3 = tf.split(input_con, 4, 1)
+
+    with tf.variable_scope("create_big"):
+        input_t0 = catenet_from_3s(input0, **kwargs)
+
+    with tf.variable_scope("create_big", reuse=True):
+        input_t1 = catenet_from_3s(input1, **kwargs)
+        input_t2 = catenet_from_3s(input2, **kwargs)
+        input_t3 = catenet_from_3s(input3, **kwargs)
+
+    input_t = tf.concat([input_t0, input_t1, input_t2, input_t3], 1)
+
+    return input_t
+
+def catenet_tfutils(inputs, split_12 = False, **kwargs):
 
     # Deal with inputs
     input_force, input_torque = (inputs['Data_force'], inputs['Data_torque'])
@@ -121,29 +159,12 @@ def catenet_tfutils(inputs, **kwargs):
     input_force_rs = tf.reshape(input_force, [shape_list[0], shape_list[1], shape_list[2], -1])
     input_torque_rs = tf.reshape(input_torque, [shape_list[0], shape_list[1], shape_list[2], -1])
     input_con = tf.concat([input_force_rs, input_torque_rs], 3)
-    print(input_con.get_shape().as_list())
-    input1,input2,input3 = tf.split(input_con, 3, 1)
+    #print(input_con.get_shape().as_list())
 
-    input_flag = tf.equal(inputs['trainflag'][0], tf.constant(1, dtype=tf.int64))
+    if not split_12:
+        input_t = catenet_from_3s(input_con, **kwargs)
+    else:
+        input_t = catenet_from_12s(input_con, **kwargs)
 
-    with tf.variable_scope("cate_root"):
-        # Building the network
-
-        with tf.variable_scope("create"):
-            m1 = catenet(input1, input_flag, **kwargs)
-            output_1 = m1.output
-
-        #tf.get_variable_scope().reuse_variables()
-        with tf.variable_scope("create", reuse=True):
-
-            m2 = catenet(input2, input_flag, **kwargs)
-            output_2 = m2.output
-
-            m3 = catenet(input3, input_flag, **kwargs)
-            output_3 = m3.output
-
-        with tf.variable_scope("create"):
-            input_t = tf.concat([output_1, output_2, output_3], 1)
-            m_final = catenet_add(input_t, **kwargs)
-
-        return m_final.output, m_final.params
+    m_final = catenet_add(input_t, **kwargs)
+    return m_final.output, m_final.params

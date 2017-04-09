@@ -56,6 +56,7 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
                  crop_size=None,
                  expand_spatial=False,
                  norm_flag = False,
+                 split_12 = False,
                  *args,
                  **kwargs):
 
@@ -63,10 +64,10 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
         self.force = 'Data_force'
         self.torque = 'Data_torque'
         self.label = 'category'
-        self.trainflag = 'trainflag'
         self.batch_size = batch_size
         self.expand_spatial = expand_spatial
         self.norm_flag = norm_flag
+        self.split_12 = split_12
         if norm_flag:
             self.stat_path = {}
             self.stat_path['Data_force'] = data_path['Data_force_stat']
@@ -74,7 +75,7 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
         postprocess = {self.force: [(self.postprocess_images, (), {})], self.torque: [(self.postprocess_images, (), {})]}
 
         super(WhiskerWorld, self).__init__(
-            source_dirs = [data_path["%s/%s" % (group, self.force)] , data_path["%s/%s" % (group, self.torque)] , data_path["%s/%s" % (group, self.label)], data_path["%s/%s" % (group, self.trainflag)]],
+            source_dirs = [data_path["%s/%s" % (group, self.force)] , data_path["%s/%s" % (group, self.torque)] , data_path["%s/%s" % (group, self.label)]],
             postprocess = postprocess,
             batch_size=batch_size,
             n_threads=n_threads,
@@ -103,6 +104,19 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
 
         return data
 
+    def slice_concat_12(self, data, curr_key, new_key):
+        slice0 = tf.strided_slice( data[curr_key], [0,0,0,0,0], [0,0,0,0,0], [3, 1, 1, 1, 1], end_mask = 31)
+        slice1 = tf.strided_slice( data[curr_key], [1,0,0,0,0], [0,0,0,0,0], [3, 1, 1, 1, 1], end_mask = 31)
+        slice2 = tf.strided_slice( data[curr_key], [2,0,0,0,0], [0,0,0,0,0], [3, 1, 1, 1, 1], end_mask = 31)
+        data[new_key] = tf.concat([slice0, slice1, slice2], 1)
+
+        slice0_ = tf.strided_slice( data[curr_key], [0,0,0,0,0], [0,0,0,0,0], [4, 1, 1, 1, 1], end_mask = 31)
+        slice1_ = tf.strided_slice( data[curr_key], [1,0,0,0,0], [0,0,0,0,0], [4, 1, 1, 1, 1], end_mask = 31)
+        slice2_ = tf.strided_slice( data[curr_key], [2,0,0,0,0], [0,0,0,0,0], [4, 1, 1, 1, 1], end_mask = 31)
+        slice3_ = tf.strided_slice( data[curr_key], [3,0,0,0,0], [0,0,0,0,0], [4, 1, 1, 1, 1], end_mask = 31)
+        data[new_key] = tf.concat([slice0_, slice1_, slice2_, slice3_], 1) 
+        return data
+
     def spatial_slice_concat(self, data, curr_key, new_key):
         shape_now = data[curr_key].get_shape().as_list()
         slice0 = tf.slice(data[curr_key], [0, 0, 0, 0, 0], [-1, -1, 5, -1, -1])
@@ -127,6 +141,13 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
 
         return data
 
+    def slice_label_12(self, data, curr_key, new_key):
+        #print(data[curr_key].get_shape().as_list())
+        slice0 = tf.strided_slice( data[curr_key], [0], [0], [12], end_mask = 1)
+        data[new_key] = slice0
+
+        return data
+
     def normalize_data(self, data, curr_key):
         stat_dict = cPickle.load(open(self.stat_path[curr_key], 'r'))
         mean_tf = tf.constant(stat_dict['mean'], dtype = data[curr_key].dtype)
@@ -143,18 +164,30 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
         self.input_ops = self.set_data_shapes(self.input_ops)
 
         for i in range(len(self.input_ops)):
-            self.input_ops[i] = self.slice_concat(self.input_ops[i], 'Data_force', 'Data_force')
+            if not self.split_12:
+                self.input_ops[i] = self.slice_concat(self.input_ops[i], 'Data_force', 'Data_force')
+            else:
+                self.input_ops[i] = self.slice_concat_12(self.input_ops[i], 'Data_force', 'Data_force')
+
             if self.expand_spatial:
                 self.input_ops[i] = self.spatial_slice_concat(self.input_ops[i], 'Data_force', 'Data_force')
+
             if self.norm_flag:
                 self.input_ops[i] = self.normalize_data(self.input_ops[i], 'Data_force')
-            self.input_ops[i] = self.slice_concat(self.input_ops[i], 'Data_torque', 'Data_torque')
+
+            if not self.split_12:
+                self.input_ops[i] = self.slice_concat(self.input_ops[i], 'Data_torque', 'Data_torque')
+            else:
+                self.input_ops[i] = self.slice_concat_12(self.input_ops[i], 'Data_torque', 'Data_torque')
             if self.expand_spatial:
                 self.input_ops[i] = self.spatial_slice_concat(self.input_ops[i], 'Data_torque', 'Data_torque')
             if self.norm_flag:
                 self.input_ops[i] = self.normalize_data(self.input_ops[i], 'Data_torque')
-            self.input_ops[i] = self.slice_label(self.input_ops[i], 'category', 'category')
-            self.input_ops[i] = self.slice_label(self.input_ops[i], 'trainflag', 'trainflag')
+
+            if not self.split_12:
+                self.input_ops[i] = self.slice_label(self.input_ops[i], 'category', 'category')
+            else:
+                self.input_ops[i] = self.slice_label_12(self.input_ops[i], 'category', 'category')
 
         return self.input_ops
 
@@ -180,6 +213,7 @@ def main():
     parser.add_argument('--loadque', default = 0, type = int, action = 'store', help = 'Special setting for load query')
     parser.add_argument('--expand', default = 0, type = int, action = 'store', help = 'Whether do the spatial padding')
     parser.add_argument('--norm', default = 0, type = int, action = 'store', help = 'Whether do the normalization, default is no')
+    parser.add_argument('--split12', default = 0, type = int, action = 'store', help = 'Whether do the 12 swipes spliting, default is no')
 
     args    = parser.parse_args()
 
@@ -260,6 +294,15 @@ def main():
             'seed': args.seed,
             'cfg_initial': cfg_initial
         }
+
+    if args.split12==1:
+        model_params['split_12'] = True
+        train_data_param['split_12'] = True
+        val_data_param['split_12'] = True
+        train_queue_params['batch_size'] = BATCH_SIZE//12
+        val_queue_params['batch_size'] = BATCH_SIZE//12
+        train_queue_params['capacity'] = queue_capa//12
+        val_queue_params['capacity'] = BATCH_SIZE*10//12
 
     optimizer_params = {
             'func': optimizer.ClipOptimizer,
