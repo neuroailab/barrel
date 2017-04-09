@@ -57,6 +57,7 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
                  expand_spatial=False,
                  norm_flag = False,
                  split_12 = False,
+                 norm_std = 1,
                  *args,
                  **kwargs):
 
@@ -67,6 +68,7 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
         self.batch_size = batch_size
         self.expand_spatial = expand_spatial
         self.norm_flag = norm_flag
+        self.norm_std = norm_std
         self.split_12 = split_12
         if norm_flag:
             self.stat_path = {}
@@ -153,7 +155,7 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
         mean_tf = tf.constant(stat_dict['mean'], dtype = data[curr_key].dtype)
         var_tf = tf.constant(stat_dict['std'], dtype = data[curr_key].dtype)
 
-        data[curr_key] = tf.divide(tf.subtract(data[curr_key], mean_tf), var_tf)
+        data[curr_key] = tf.multiply(tf.divide(tf.subtract(data[curr_key], mean_tf), var_tf), tf.constant(self.norm_std, dtype = data[curr_key].dtype))
 
         return data
 
@@ -214,6 +216,7 @@ def main():
     parser.add_argument('--expand', default = 0, type = int, action = 'store', help = 'Whether do the spatial padding')
     parser.add_argument('--norm', default = 0, type = int, action = 'store', help = 'Whether do the normalization, default is no')
     parser.add_argument('--split12', default = 0, type = int, action = 'store', help = 'Whether do the 12 swipes spliting, default is no')
+    parser.add_argument('--norm_std', default = 1, type = float, action = 'store', help = 'Std of new input, default is 1')
 
     args    = parser.parse_args()
 
@@ -256,6 +259,9 @@ def main():
     if args.norm==1:
         train_data_param['norm_flag'] = True
         val_data_param['norm_flag'] = True
+
+        train_data_param['norm_std'] = args.norm_std
+        val_data_param['norm_std'] = args.norm_std
 
     train_queue_params = {
             'queue_type': 'random',
