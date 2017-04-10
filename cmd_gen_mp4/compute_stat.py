@@ -27,8 +27,8 @@ def main():
     for tf_indx in xrange(args.tflen):
         tf_filename = os.path.join(args.tfdir, args.tfkey, name_pat % ((args.tfstart + tf_indx)*obj_len, obj_len))
 
-        if 'Data4025_25.tfrecords' in tf_filename:
-            continue
+        #if 'Data4025_25.tfrecords' in tf_filename:
+        #    continue
 
         record_iterator = tf.python_io.tf_record_iterator(path=tf_filename)
 
