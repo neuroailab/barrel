@@ -53,7 +53,6 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
                  group='train',
                  batch_size=1,
                  n_threads=4,
-                 crop_size=None,
                  expand_spatial=False,
                  norm_flag = False,
                  split_12 = False,

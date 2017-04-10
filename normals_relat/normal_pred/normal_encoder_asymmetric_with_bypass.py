@@ -4,8 +4,11 @@ from __future__ import print_function
 
 import numpy as np
 import tensorflow as tf
+import os, sys
 
-from tfutils import model
+#from tfutils import model
+sys.path.append('../../train_barrel_net/')
+import model
 
 IMAGE_SIZE = 224
 NUM_CHANNELS = 3
@@ -72,7 +75,7 @@ class NoramlNetfromConv(model.ConvNet):
         ds = in_layer.get_shape().as_list()[1]
         if bypass_shape[1] != ds:
             bypass_layer = tf.image.resize_images(bypass_layer, [ds, ds])
-        self.output = tf.concat(3, [in_layer, bypass_layer])
+        self.output = tf.concat([in_layer, bypass_layer], 3)
 
         return self.output
 

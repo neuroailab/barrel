@@ -4,7 +4,6 @@ from collections import OrderedDict
 import numpy as np
 import tensorflow as tf
 
-
 class ConvNet(object):
     """Basic implementation of ConvNet class compatible with tfutils.
     """
@@ -46,16 +45,6 @@ class ConvNet(object):
             raise ValueError('Please provide an appropriate initialization '
                              'method: xavier or trunc_norm')
         return init
-
-    '''
-    @tf.contrib.framework.add_arg_scope
-    def batchnorm(self, input_flag, center=True, scale=True, in_layer = None):
-        if in_layer is None:
-            in_layer = self.output
-
-        self.output = tf.contrib.layers.batch_norm(in_layer, center=center, scale=scale, is_training=input_flag, scope='bn')
-        return self.output
-    '''
 
     @tf.contrib.framework.add_arg_scope
     def batchnorm(self, is_training, batchnorm_mode = 1, inputs = None, decay = 0.999, epsilon = 1e-3):
