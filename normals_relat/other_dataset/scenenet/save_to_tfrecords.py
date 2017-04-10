@@ -72,8 +72,8 @@ def main():
 
     nproc = 5
     pool = multiprocessing.Pool(processes=nproc)
-    #r = pool.map_async(write_it, range(min(file_list), max(file_list))) # should be max(file_list)+1, use next line to fix
-    r = pool.map_async(write_it, [max(file_list)])
+    r = pool.map_async(write_it, range(min(file_list), max(file_list))) # should be max(file_list)+1, use next line to fix
+    #r = pool.map_async(write_it, [max(file_list)])
     #r = pool.map_async(write_it, range(min(file_list), min(file_list) + 5))
     r.get()
     print('Done!')
