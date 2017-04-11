@@ -48,6 +48,7 @@ class ConvNet(object):
 
     @tf.contrib.framework.add_arg_scope
     def batchnorm(self, is_training, batchnorm_mode = 1, inputs = None, decay = 0.999, epsilon = 1e-3):
+        # I did the wrong thing to calculate the pop_mean, pop_var (they should be created using get_variable)
         if inputs==None:
             inputs = self.output
 
@@ -75,6 +76,30 @@ class ConvNet(object):
                 batch_mean, batch_var, beta, scale, epsilon)
         return self.output
 
+    @tf.contrib.framework.add_arg_scope
+    def batchnorm_corr(self, is_training, inputs = None, decay = 0.999, epsilon = 1e-3):
+        if inputs==None:
+            inputs = self.output
+
+	scale = tf.Variable(tf.ones([inputs.get_shape()[-1]]))
+	beta = tf.Variable(tf.zeros([inputs.get_shape()[-1]]))
+	pop_mean = tf.get_variable(name = 'bn_mean', shape = [inputs.get_shape()[-1]], initializer = tf.zeros_initializer(), trainable=False)
+	pop_var = tf.get_variable(name = 'bn_var', shape = [inputs.get_shape()[-1]], initializer = tf.ones_initializer(), trainable=False)
+
+        if is_training:
+            batch_mean, batch_var = tf.nn.moments(inputs, list(range(inputs.get_shape().ndims - 1)))
+            train_mean = tf.assign(pop_mean,
+                                   pop_mean * decay + batch_mean * (1 - decay))
+            train_var = tf.assign(pop_var,
+                                  pop_var * decay + batch_var * (1 - decay))
+            with tf.control_dependencies([train_mean, train_var]):
+                self.output = tf.nn.batch_normalization(inputs,
+                    batch_mean, batch_var, beta, scale, epsilon)
+        else:
+            self.output = tf.nn.batch_normalization(inputs,
+                pop_mean, pop_var, beta, scale, epsilon)
+
+        return self.output
 
     @tf.contrib.framework.add_arg_scope
     def conv(self,

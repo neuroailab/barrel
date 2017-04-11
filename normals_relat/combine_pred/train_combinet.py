@@ -22,9 +22,15 @@ DATA_PATH = {}
 if 'neuroaicluster' in host:
     DATA_PATH['threed/train/images'] = '/mnt/fs0/datasets/one_world_dataset/tfdata/images'
     DATA_PATH['threed/train/normals'] = '/mnt/fs0/datasets/one_world_dataset/tfdata/normals'
+    
+    DATA_PATH['threed/val/images'] = '/mnt/fs0/datasets/one_world_dataset/tfvaldata/images'
+    DATA_PATH['threed/val/normals'] = '/mnt/fs0/datasets/one_world_dataset/tfvaldata/normals'
 
-    DATA_PATH['scenenet/train/images'] = '/mnt/fs1/Dataset/scenenet/photo'
-    DATA_PATH['scenenet/train/normals'] = '/mnt/fs1/Dataset/scenenet/normal'
+    DATA_PATH['scenenet/train/images'] = '/mnt/fs1/Dataset/scenenet_combine/photo'
+    DATA_PATH['scenenet/train/normals'] = '/mnt/fs1/Dataset/scenenet_combine/normal'
+
+    DATA_PATH['scenenet/val/images'] = '/mnt/fs1/Dataset/scenenet_combine_val/photo'
+    DATA_PATH['scenenet/val/normals'] = '/mnt/fs1/Dataset/scenenet_combine_val/normal'
 
 def online_agg(agg_res, res, step):
     if agg_res is None:
@@ -264,7 +270,7 @@ def main():
                 'func': Combine_world,
                 #'func': train_normalnet_hdf5.Threedworld,
                 'data_path': DATA_PATH,
-                'group': 'train',
+                'group': 'val',
                 'n_threads': n_threads,
                 'batch_size': 2,
             }

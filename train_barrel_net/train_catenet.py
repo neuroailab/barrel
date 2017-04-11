@@ -22,17 +22,20 @@ DATA_PATH['train/category'] = '/media/data3/chengxuz/whisker/tfrecords/category/
 #DATA_PATH['val/images'] = '/media/data2/one_world_dataset/tfvaldata/images/'
 #DATA_PATH['val/normals'] = '/media/data2/one_world_dataset/tfvaldata/normals/'
 
+#train_data_path_prefix = '/mnt/fs0/chengxuz/Data/whisker/tfrecs_all/tfrecords'
+#val_data_path_prefix = '/mnt/fs0/chengxuz/Data/whisker/val_tfrecs/tfrecords_val'
+train_data_path_prefix = '/data/chengxuz/whisker/tfrecs_all/tfrecords'
+val_data_path_prefix = '/data/chengxuz/whisker/val_tfrecs/tfrecords_val'
+
 if 'neuroaicluster' in host:
-    DATA_PATH['train/Data_force'] = '/mnt/fs0/chengxuz/Data/whisker/tfrecs_all/tfrecords/Data_force/'
-    DATA_PATH['train/Data_torque'] = '/mnt/fs0/chengxuz/Data/whisker/tfrecs_all/tfrecords/Data_torque/'
-    DATA_PATH['train/category'] = '/mnt/fs0/chengxuz/Data/whisker/tfrecs_all/tfrecords/category/'
-    DATA_PATH['train/trainflag'] = '/mnt/fs0/chengxuz/Data/whisker/tfrecs_all/tfrecords/trainflag/'
-    DATA_PATH['val/Data_force'] = '/mnt/fs0/chengxuz/Data/whisker/val_tfrecs/tfrecords_val/Data_force/'
-    DATA_PATH['val/Data_torque'] = '/mnt/fs0/chengxuz/Data/whisker/val_tfrecs/tfrecords_val/Data_torque/'
-    DATA_PATH['val/category'] = '/mnt/fs0/chengxuz/Data/whisker/val_tfrecs/tfrecords_val/category/'
-    DATA_PATH['val/trainflag'] = '/mnt/fs0/chengxuz/Data/whisker/val_tfrecs/tfrecords_val/trainflag/'
-    DATA_PATH['Data_force_stat'] = '/mnt/fs0/chengxuz/Data/whisker/tfrecs_all/tfrecords/Data_force/Data_force_combined.pkl'
-    DATA_PATH['Data_torque_stat'] = '/mnt/fs0/chengxuz/Data/whisker/tfrecs_all/tfrecords/Data_torque/Data_torque_combined.pkl'
+    DATA_PATH['train/Data_force'] = train_data_path_prefix + '/Data_force/'
+    DATA_PATH['train/Data_torque'] = train_data_path_prefix + '/Data_torque/'
+    DATA_PATH['train/category'] = train_data_path_prefix + '/category/'
+    DATA_PATH['val/Data_force'] = val_data_path_prefix + '/Data_force/'
+    DATA_PATH['val/Data_torque'] = val_data_path_prefix + '/Data_torque/'
+    DATA_PATH['val/category'] = val_data_path_prefix + '/category/'
+    DATA_PATH['Data_force_stat'] = train_data_path_prefix + '/Data_force/Data_force_combined.pkl'
+    DATA_PATH['Data_torque_stat'] = train_data_path_prefix + '/Data_torque/Data_torque_combined.pkl'
 
 def online_agg(agg_res, res, step):
     if agg_res is None:

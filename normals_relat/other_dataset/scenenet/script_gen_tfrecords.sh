@@ -14,12 +14,14 @@ savedir=/mnt/data2/chengxuz/scenenet_val/val_tfrecords
     #sbatch --job-name=tfrecs${k} script_normal_tfrecs.sh
 #done
 
-file_len=30
+#file_len=30
+file_len=10
 
 for key in photo instance depth normal
 #for key in photo
 do
-    for indx_sta in $(seq 0 ${file_len} 843)
+    #for indx_sta in $(seq 0 ${file_len} 843)
+    for indx_sta in $(seq 0 ${file_len} 50)
     #for indx_sta in 0
     do
         sbatch  --job-name=tfrecs${indx_sta} script_combine_tfrecs.sh ${key} ${indx_sta} ${file_len}
