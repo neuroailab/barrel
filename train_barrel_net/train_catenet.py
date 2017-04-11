@@ -22,10 +22,10 @@ DATA_PATH['train/category'] = '/media/data3/chengxuz/whisker/tfrecords/category/
 #DATA_PATH['val/images'] = '/media/data2/one_world_dataset/tfvaldata/images/'
 #DATA_PATH['val/normals'] = '/media/data2/one_world_dataset/tfvaldata/normals/'
 
-#train_data_path_prefix = '/mnt/fs0/chengxuz/Data/whisker/tfrecs_all/tfrecords'
-#val_data_path_prefix = '/mnt/fs0/chengxuz/Data/whisker/val_tfrecs/tfrecords_val'
-train_data_path_prefix = '/data/chengxuz/whisker/tfrecs_all/tfrecords'
-val_data_path_prefix = '/data/chengxuz/whisker/val_tfrecs/tfrecords_val'
+train_data_path_prefix = '/mnt/fs0/chengxuz/Data/whisker/tfrecs_all/tfrecords'
+val_data_path_prefix = '/mnt/fs0/chengxuz/Data/whisker/val_tfrecs/tfrecords_val'
+#train_data_path_prefix = '/data/chengxuz/whisker/tfrecs_all/tfrecords'
+#val_data_path_prefix = '/data/chengxuz/whisker/val_tfrecs/tfrecords_val'
 
 if 'neuroaicluster' in host:
     DATA_PATH['train/Data_force'] = train_data_path_prefix + '/Data_force/'
