@@ -35,6 +35,9 @@ def normal_vgg16_forcombine(inputs, cfg_initial, train=True, seed = None, center
         encode_depth = getEncodeDepth(cfg)
         print('Encode depth: %d' % encode_depth)
 
+        #with tf.variable_scope('encode_bn0%s' % batch_name, reuse=reuse_batch):
+        #    inputs = m.batchnorm_corr(train, inputs = inputs)
+
         for i in range(1, encode_depth + 1):
             with tf.variable_scope('encode%i' % i, reuse=reuse_flag):
                 cfs = getEncodeConvFilterSize(i, cfg)

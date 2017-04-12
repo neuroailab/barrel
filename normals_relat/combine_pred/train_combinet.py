@@ -27,10 +27,12 @@ if 'neuroaicluster' in host:
     DATA_PATH['threed/val/normals'] = '/mnt/fs0/datasets/one_world_dataset/tfvaldata/normals'
 
     DATA_PATH['scenenet/train/images'] = '/mnt/fs1/Dataset/scenenet_combine/photo'
-    DATA_PATH['scenenet/train/normals'] = '/mnt/fs1/Dataset/scenenet_combine/normal'
+    DATA_PATH['scenenet/train/normals'] = '/mnt/fs1/Dataset/scenenet_combine/normal_new'
 
-    DATA_PATH['scenenet/val/images'] = '/mnt/fs1/Dataset/scenenet_combine_val/photo'
-    DATA_PATH['scenenet/val/normals'] = '/mnt/fs1/Dataset/scenenet_combine_val/normal'
+    #DATA_PATH['scenenet/val/images'] = '/mnt/fs1/Dataset/scenenet_combine_val/photo'
+    #DATA_PATH['scenenet/val/normals'] = '/mnt/fs1/Dataset/scenenet_combine_val/normal'
+    DATA_PATH['scenenet/val/images'] = '/mnt/fs1/Dataset/scenenet_combine/photo'
+    DATA_PATH['scenenet/val/normals'] = '/mnt/fs1/Dataset/scenenet_combine/normal_new'
 
 def online_agg(agg_res, res, step):
     if agg_res is None:
@@ -86,54 +88,36 @@ class Combine_world(data.TFRecordsParallelByFileProvider):
         norm = tf.cast(images, tf.float32)
         norm = tf.div(norm, tf.constant(255, dtype=tf.float32))
 
-        return self.postproc_flag(norm, 0)
+        return self.postproc_flag(norm, 1)
 
     def postproc_t(self, images):
 
         norm = tf.cast(images, tf.float32)
         norm = tf.div(norm, tf.constant(255, dtype=tf.float32))
 
-        return self.postproc_flag(norm, 1)
+        return self.postproc_flag(norm, 0)
 
     def postproc_flag(self, norm, flag):
 
         if flag==0:
             NOW_SIZE1 = 256
             NOW_SIZE2 = 256
+            seed_random = 0
 
         if flag==1:
             NOW_SIZE1 = 240
             NOW_SIZE2 = 320
+            seed_random = 1
 
         if self.group=='train':
-            if flag==0:
-                curr_num = self.now_num_t
 
-            if flag==1:
-                curr_num = self.now_num_s
+            shape_tensor = norm.get_shape().as_list()
+            crop_images = tf.random_crop(norm, [self.batch_size, self.crop_size, self.crop_size, shape_tensor[3]], seed=seed_random)
 
-            if curr_num==0:
-                off = np.zeros(shape = [self.batch_size, 4])
-                off[:, 0] = np.random.randint(0, NOW_SIZE1 - self.crop_size, size=[self.batch_size])
-                off[:, 1] = np.random.randint(0, NOW_SIZE2 - self.crop_size, size=[self.batch_size])
-                off[:, 2:4] = off[:, :2] + self.crop_size
-                off[:, 0] = off[:, 0]*1.0/(NOW_SIZE1 - 1)
-                off[:, 2] = off[:, 2]*1.0/(NOW_SIZE1 - 1)
-
-                off[:, 1] = off[:, 1]*1.0/(NOW_SIZE2 - 1)
-                off[:, 3] = off[:, 3]*1.0/(NOW_SIZE2 - 1)
-                
-                if flag==0:
-                    self.off_t = off
-                if flag==1:
-                    self.off_s = off
-            else:
-                if flag==0:
-                    off = self.off_t
-                if flag==1:
-                    off = self.off_s
+            return crop_images
 
         else:
+
             off = np.zeros(shape = [self.batch_size, 4])
             off[:, 0] = int((NOW_SIZE1 - self.crop_size)/2)
             off[:, 1] = int((NOW_SIZE2 - self.crop_size)/2)
@@ -144,19 +128,12 @@ class Combine_world(data.TFRecordsParallelByFileProvider):
             off[:, 1] = off[:, 1]*1.0/(NOW_SIZE2 - 1)
             off[:, 3] = off[:, 3]*1.0/(NOW_SIZE2 - 1)
 
-        images_batch = tf.image.crop_and_resize(norm, off, self.box_ind, tf.constant([self.crop_size, self.crop_size]))
-        if flag==0:
-            if self.now_num_t==0:
-                self.now_num_t = 1
-            else:
-                self.now_num_t = 0
-        if flag==1:
-            if self.now_num_s==0:
-                self.now_num_s = 1
-            else:
-                self.now_num_s = 0
+            box_ind    = tf.constant(range(self.batch_size))
 
-        return images_batch
+            images_batch = tf.image.crop_and_resize(norm, off, box_ind, tf.constant([self.crop_size, self.crop_size]))
+
+            return images_batch
+        
 
 BATCH_SIZE = 32
 IMAGE_SIZE_CROP = 224
@@ -300,7 +277,7 @@ def main():
             'func': tf.train.exponential_decay,
             'learning_rate': .01,
             'decay_rate': .95,
-            'decay_steps': NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
+            'decay_steps': 2*NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
             'staircase': True
         }
 
@@ -338,11 +315,11 @@ def main():
             'do_save': True,
             'save_initial_filters': True,
             'save_metrics_freq': 2000,  # keeps loss from every SAVE_LOSS_FREQ steps.
-            'save_valid_freq': 10000,
-            'save_filters_freq': 30000,
-            'cache_filters_freq': 10000,
+            'save_valid_freq': 5000,
+            'save_filters_freq': 5000,
+            'cache_filters_freq': 5000,
             'cache_dir': cache_dir,  # defaults to '~/.tfutils'
-            'save_to_gfs': ['images_fea', 'normals_fea', 'outputs_fea'], 
+            #'save_to_gfs': ['images_fea', 'normals_fea', 'outputs_fea'], 
         },
 
         'load_params': {
