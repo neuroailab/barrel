@@ -405,7 +405,7 @@ def main():
             'validate_first': False,
             'data_params': train_data_param,
             'queue_params': train_queue_params,
-            'thres_loss': 1000000,
+            'thres_loss': 1000000000,
             'num_steps': 90 * NUM_BATCHES_PER_EPOCH  # number of steps to train
         },
 

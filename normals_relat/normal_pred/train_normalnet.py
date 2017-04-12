@@ -64,8 +64,10 @@ else:
 DATA_PATH_SCENE = {}
 DATA_PATH_SCENE['train/images'] = '/mnt/fs1/Dataset/scenenet_combine/photo'
 DATA_PATH_SCENE['train/normals'] = '/mnt/fs1/Dataset/scenenet_combine/normal'
-DATA_PATH_SCENE['val/images'] = '/mnt/fs1/Dataset/scenenet_combine_val/photo'
-DATA_PATH_SCENE['val/normals'] = '/mnt/fs1/Dataset/scenenet_combine_val/normal'
+#DATA_PATH_SCENE['val/images'] = '/mnt/fs1/Dataset/scenenet_combine_val/photo'
+#DATA_PATH_SCENE['val/normals'] = '/mnt/fs1/Dataset/scenenet_combine_val/normal'
+DATA_PATH_SCENE['val/images'] = '/mnt/fs1/Dataset/scenenet_combine/photo'
+DATA_PATH_SCENE['val/normals'] = '/mnt/fs1/Dataset/scenenet_combine/normal'
 
 
 def online_agg(agg_res, res, step):
@@ -179,7 +181,8 @@ class Threedworld_hdf5(data.ParallelBySliceProvider):
 class SceneNet(data.TFRecordsParallelByFileProvider):
 
     N_TRAIN = 5100000 
-    N_VAL = 300000
+    #N_VAL = 300000
+    N_VAL = 6400
 
     def __init__(self,
                  data_path,
@@ -478,6 +481,8 @@ def main(args):
     #queue_capa = BATCH_SIZE*120
     #queue_capa = BATCH_SIZE*500
     BATCH_SIZE  = normal_encoder_asymmetric_with_bypass.getBatchSize(cfg_initial)
+    if args.batchsize:
+        BATCH_SIZE = args.batchsize
     queue_capa  = normal_encoder_asymmetric_with_bypass.getQueueCap(cfg_initial)
     n_threads   = 4
 
@@ -602,11 +607,11 @@ def main(args):
             #'do_save': False,
             'save_initial_filters': True,
             'save_metrics_freq': 2000,  # keeps loss from every SAVE_LOSS_FREQ steps.
-            'save_valid_freq': 10000,
+            'save_valid_freq': 5000,
             #'save_metrics_freq': 100,  # keeps loss from every SAVE_LOSS_FREQ steps.
             #'save_valid_freq': 100,
-            'save_filters_freq': 30000,
-            'cache_filters_freq': 10000,
+            'save_filters_freq': 5000,
+            'cache_filters_freq': 5000,
             'cache_dir': cache_dir,  # defaults to '~/.tfutils'
             'save_to_gfs': ['images_fea', 'normals_fea', 'outputs_fea'], 
             #'save_intermediate_freq': 1,
@@ -631,7 +636,7 @@ def main(args):
         'model_params': model_params,
 
         'train_params': {
-            'validate_first': False,
+            'validate_first': True,
             'data_params': train_data_param,
             'queue_params': train_queue_params,
             'thres_loss': 1000,
@@ -695,6 +700,7 @@ if __name__ == '__main__':
     parser.add_argument('--valinum', default = -1, type = int, action = 'store', help = 'Number of validation steps, default is -1, which means all the validation')
     parser.add_argument('--whichloss', default = 0, type = int, action = 'store', help = 'Whether to use new loss')
     parser.add_argument('--whichdataset', default = 0, type = int, action = 'store', help = '0 for threedworld, 1 for scenenet')
+    parser.add_argument('--batchsize', default = None, type = int, action = 'store', help = 'None for default')
 
     args    = parser.parse_args()
 
