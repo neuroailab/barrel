@@ -240,8 +240,7 @@ class SceneNet(data.TFRecordsParallelByFileProvider):
 
         else:
             norm = tf.cast(images, tf.float32)
-            #norm = tf.div(norm, tf.constant(255, dtype=tf.float32))
-            norm = tf.nn.l2_normalize(norm, 3)
+            norm = tf.div(norm, tf.constant(255, dtype=tf.float32))
 
             NOW_SIZE1 = 240
             NOW_SIZE2 = 320
@@ -556,12 +555,17 @@ def main(args):
             'staircase': True
         }
 
-    optimizer_class = tf.train.MomentumOptimizer
-
     model_params = {
             'func': func_net,
             'seed': args.seed,
             'cfg_initial': cfg_initial
+        }
+
+    optim_params = {
+            'func': optimizer.ClipOptimizer,
+            'optimizer_class': tf.train.MomentumOptimizer,
+            'clip': True,
+            'momentum': .9
         }
 
     if args.whichloss==1:
@@ -570,13 +574,18 @@ def main(args):
                 'func': tf.train.exponential_decay,
                 'learning_rate': .001,
                 'decay_rate': .5,
-                'decay_steps': 5*NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
+                'decay_steps': NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
                 'staircase': True
             }
         #optimizer_class     = tf.train.RMSPropOptimizer
         #train_data_param['center_im'] = True
         #val_data_param['center_im'] = True
         model_params['center_im']   = True
+        optim_params = {
+                'func': optimizer.ClipOptimizer,
+                'optimizer_class': tf.train.RMSPropOptimizer,
+                'clip': True,
+            }
 
     params = {
         'save_params': {
@@ -638,12 +647,7 @@ def main(args):
 
         'learning_rate_params': learning_rate_params,
 
-        'optimizer_params': {
-            'func': optimizer.ClipOptimizer,
-            'optimizer_class': optimizer_class,
-            'clip': True,
-            'momentum': .9
-        },
+        'optimizer_params': optim_params,
         'log_device_placement': False,  # if variable placement has to be logged
         'validation_params': {
             'topn': {
