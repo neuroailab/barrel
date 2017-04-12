@@ -12,6 +12,7 @@ import copy
 import argparse
 
 import cate_network_builder
+import h5py
 
 host = os.uname()[1]
 
@@ -26,6 +27,8 @@ train_data_path_prefix = '/mnt/fs0/chengxuz/Data/whisker/tfrecs_all/tfrecords'
 val_data_path_prefix = '/mnt/fs0/chengxuz/Data/whisker/val_tfrecs/tfrecords_val'
 #train_data_path_prefix = '/data/chengxuz/whisker/tfrecs_all/tfrecords'
 #val_data_path_prefix = '/data/chengxuz/whisker/val_tfrecs/tfrecords_val'
+
+save_num_now = None
 
 if 'neuroaicluster' in host:
     DATA_PATH['train/Data_force'] = train_data_path_prefix + '/Data_force/'
@@ -202,6 +205,35 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
             return im
         return tf.map_fn(lambda im: _postprocess_images(im), ims, dtype=tf.float32)
 
+def save_features(inputs, outputs, target, hdf5path):
+    global save_num_now
+
+    if save_num_now is None:
+        save_num_now = 0
+
+    fout = None
+    if not os.path.isfile(hdf5path):
+        fout = h5py.File(hdf5path, 'w')
+    else:
+        fout = h5py.File(hdf5path, 'a')
+
+    all_name_list = [n.name for n in tf.get_default_graph().as_graph_def().node]
+
+    all_name_list = filter(lambda name_now: 'fc_add' in name_now, all_name_list)
+    all_name_list = filter(lambda name_now: 'validation/topn' in name_now, all_name_list)
+    print(all_name_list)
+    output_now = tf.get_default_graph().get_tensor_by_name('validation/topn%sfc:0' % target)
+    output_shape = output_now.get_shape().as_list()
+    dim_0_final = 4*2*9981
+    if 'data' not in fout:
+        dset = fout.create_dataset("data", [dim_0_final] + output_shape[1:], dtype='f')
+    else:
+        dset = fout["data"]
+
+    dset[save_num_now:min(save_num_now + output_shape[0], dim_0_final)] = output_now[:min(output_shape[0], dim_0_final - save_num_now)]
+    save_num_now = save_num_now + output_shape[0]
+    return {}
+
 def main():
     parser = argparse.ArgumentParser(description='The script to train the catenet for barrel')
     parser.add_argument('--nport', default = 29101, type = int, action = 'store', help = 'Port number of mongodb')
@@ -219,6 +251,11 @@ def main():
     parser.add_argument('--norm', default = 0, type = int, action = 'store', help = 'Whether do the normalization, default is no')
     parser.add_argument('--split12', default = 0, type = int, action = 'store', help = 'Whether do the 12 swipes spliting, default is no')
     parser.add_argument('--norm_std', default = 1, type = float, action = 'store', help = 'Std of new input, default is 1')
+
+    # Feature extraction related parameters
+    parser.add_argument('--gen_feature', default = 0, type = int, action = 'store', help = 'Whether to generate features, default is 0, None')
+    parser.add_argument('--layer_gen', default = "/cate_root/create_2/fc_add/", type = str, action = 'store', help = 'Name of layer to generate the output')
+    parser.add_argument('--hdf5path', default = "/mnt/fs1/chengxuz/barrel_response/test.hdf5", type = str, action = 'store', help = 'Name of layer to generate the output')
 
     args    = parser.parse_args()
 
@@ -380,8 +417,7 @@ def main():
         }
         #print(load_query)
 
-    params = {
-        'save_params': {
+    save_params = {
             'host': 'localhost',
             'port': args.nport,
             'dbname': 'whisker_net',
@@ -395,32 +431,23 @@ def main():
             'save_filters_freq': 5000,
             'cache_filters_freq': 5000,
             'cache_dir': cache_dir,
-        },
+        }
 
-        'load_params': load_params,
-
-        'model_params': model_params,
-
-        'train_params': {
+    train_params = {
             'validate_first': False,
             'data_params': train_data_param,
             'queue_params': train_queue_params,
             'thres_loss': 1000000000,
             'num_steps': 90 * NUM_BATCHES_PER_EPOCH  # number of steps to train
-        },
+        }
 
-        'loss_params': {
+    loss_params = {
             'targets': val_target,
             'agg_func': tf.reduce_mean,
             'loss_per_case_func': loss_func,
-        },
+        }
 
-        'learning_rate_params': learning_rate_params,
-
-        'optimizer_params': optimizer_params,
-
-        'log_device_placement': False,  # if variable placement has to be logged
-        'validation_params': {
+    validation_params = {
             'topn': {
                 'data_params': val_data_param,
                 'queue_params': val_queue_params,
@@ -432,7 +459,36 @@ def main():
                 'agg_func': lambda x: {k:np.mean(v) for k,v in x.items()},
                 'online_agg_func': online_agg
             }
-        },
+        }
+
+    if args.gen_feature==1:
+        train_params['validate_first'] = True
+        train_params['num_steps'] = 1
+        
+        validation_params['topn']['targets'] = {
+                'func': save_features,
+                'target': args.layer_gen,
+                'hdf5path': args.hdf5path
+            }
+
+
+    params = {
+        'save_params': save_params,
+
+        'load_params': load_params,
+
+        'model_params': model_params,
+
+        'train_params': train_params,
+
+        'loss_params': loss_params,
+
+        'learning_rate_params': learning_rate_params,
+
+        'optimizer_params': optimizer_params,
+
+        'log_device_placement': False,  # if variable placement has to be logged
+        'validation_params': validation_params,
     }
     #base.get_params()
     base.train_from_params(**params)

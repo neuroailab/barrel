@@ -63,11 +63,11 @@ else:
 
 DATA_PATH_SCENE = {}
 DATA_PATH_SCENE['train/images'] = '/mnt/fs1/Dataset/scenenet_combine/photo'
-DATA_PATH_SCENE['train/normals'] = '/mnt/fs1/Dataset/scenenet_combine/normal'
+DATA_PATH_SCENE['train/normals'] = '/mnt/fs1/Dataset/scenenet_combine/normal_new'
 #DATA_PATH_SCENE['val/images'] = '/mnt/fs1/Dataset/scenenet_combine_val/photo'
 #DATA_PATH_SCENE['val/normals'] = '/mnt/fs1/Dataset/scenenet_combine_val/normal'
 DATA_PATH_SCENE['val/images'] = '/mnt/fs1/Dataset/scenenet_combine/photo'
-DATA_PATH_SCENE['val/normals'] = '/mnt/fs1/Dataset/scenenet_combine/normal'
+DATA_PATH_SCENE['val/normals'] = '/mnt/fs1/Dataset/scenenet_combine/normal_new'
 
 
 def online_agg(agg_res, res, step):
@@ -636,6 +636,7 @@ def main(args):
         'model_params': model_params,
 
         'train_params': {
+            #'validate_first': False,
             'validate_first': True,
             'data_params': train_data_param,
             'queue_params': train_queue_params,
