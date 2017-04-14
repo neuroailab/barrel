@@ -13,6 +13,7 @@ import argparse
 
 import cate_network_builder
 import h5py
+import time
 
 host = os.uname()[1]
 
@@ -47,6 +48,12 @@ def online_agg(agg_res, res, step):
         agg_res[k].append(np.mean(v))
     return agg_res
 
+def online_agg_genfeautre(agg_res, res, step):
+    if agg_res is None:
+        agg_res = {k: [] for k in res}
+    for k, v in res.items():
+        agg_res[k].append(1)
+    return agg_res
 
 def in_top_k(inputs, outputs, target):
     return {'top1': tf.nn.in_top_k(outputs, inputs[target], 1),
@@ -205,34 +212,51 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
             return im
         return tf.map_fn(lambda im: _postprocess_images(im), ims, dtype=tf.float32)
 
-def save_features(inputs, outputs, target, hdf5path):
-    global save_num_now
+# Change to a combined version
+#key_list = ['fc_add', 'fc7', 'fc6', 'conv5', 'conv4', 'conv3', 'conv2', 'conv1']
+key_list = ['fc_add', 'fc7', 'fc6', 'conv5', 'conv4', 'conv3', 'conv2', 'conv1']
+def save_features(inputs, outputs):
 
-    if save_num_now is None:
-        save_num_now = 0
+    ret_dict = {}
+    ret_dict['label'] = inputs['category']
+    for target in key_list:
+        all_name_list = [n.name for n in tf.get_default_graph().as_graph_def().node]
 
-    fout = None
-    if not os.path.isfile(hdf5path):
-        fout = h5py.File(hdf5path, 'w')
-    else:
-        fout = h5py.File(hdf5path, 'a')
+        all_name_list = filter(lambda name_now: 'validation/topn' in name_now, all_name_list)
+        all_name_list = filter(lambda name_now: target in name_now, all_name_list)
+        tmp_name_list = filter(lambda name_now: 'pool' in name_now, all_name_list)
+        if len(tmp_name_list) > 0:
+            all_name_list = tmp_name_list
+        else:
+            tmp_name_list = filter(lambda name_now: 'relu' in name_now, all_name_list)
+            if len(tmp_name_list) > 0:
+                all_name_list = tmp_name_list
+            else:
+                tmp_name_list = filter(lambda name_now: name_now.endswith('/fc'), all_name_list)
+                all_name_list = tmp_name_list
 
-    all_name_list = [n.name for n in tf.get_default_graph().as_graph_def().node]
+        output_now_tmp = [tf.get_default_graph().get_tensor_by_name("%s:0" % tmp_name) for tmp_name in all_name_list]
 
-    all_name_list = filter(lambda name_now: 'fc_add' in name_now, all_name_list)
-    all_name_list = filter(lambda name_now: 'validation/topn' in name_now, all_name_list)
-    print(all_name_list)
-    output_now = tf.get_default_graph().get_tensor_by_name('validation/topn%sfc:0' % target)
-    output_shape = output_now.get_shape().as_list()
-    dim_0_final = 4*2*9981
-    if 'data' not in fout:
-        dset = fout.create_dataset("data", [dim_0_final] + output_shape[1:], dtype='f')
-    else:
-        dset = fout["data"]
+        for len_rep in xrange(3):
+            gfs_key = '%s_%i' % (target, len_rep)
+            ret_dict[gfs_key] = []
 
-    dset[save_num_now:min(save_num_now + output_shape[0], dim_0_final)] = output_now[:min(output_shape[0], dim_0_final - save_num_now)]
-    save_num_now = save_num_now + output_shape[0]
-    return {}
+        for len_have in xrange(len(output_now_tmp)):
+            gfs_key = '%s_%i' % (target, len_have)
+            ret_dict[gfs_key] = output_now_tmp[len_have]
+
+    return ret_dict
+
+def mean_losses_keep_rest(step_results):
+    retval = {}
+    keys = step_results[0].keys()
+    for k in keys:
+        plucked = [d[k] for d in step_results]
+        if 'loss' in k:
+            retval[k] = np.mean(plucked)
+        else:
+            retval[k] = plucked
+    return retval
 
 def main():
     parser = argparse.ArgumentParser(description='The script to train the catenet for barrel')
@@ -254,8 +278,7 @@ def main():
 
     # Feature extraction related parameters
     parser.add_argument('--gen_feature', default = 0, type = int, action = 'store', help = 'Whether to generate features, default is 0, None')
-    parser.add_argument('--layer_gen', default = "/cate_root/create_2/fc_add/", type = str, action = 'store', help = 'Name of layer to generate the output')
-    parser.add_argument('--hdf5path', default = "/mnt/fs1/chengxuz/barrel_response/test.hdf5", type = str, action = 'store', help = 'Name of layer to generate the output')
+    parser.add_argument('--hdf5path', default = "/mnt/fs1/chengxuz/barrel_response/response.hdf5", type = str, action = 'store', help = 'Where to save the output')
 
     args    = parser.parse_args()
 
@@ -463,35 +486,110 @@ def main():
 
     if args.gen_feature==1:
         train_params['validate_first'] = True
-        train_params['num_steps'] = 1
+        train_params['num_steps'] = 305005
+        val_data_param['n_threads'] = 1
         
         validation_params['topn']['targets'] = {
                 'func': save_features,
-                'target': args.layer_gen,
-                'hdf5path': args.hdf5path
             }
+        validation_params['topn']['online_agg_func'] = online_agg_genfeautre
+        validation_params['topn']['num_steps'] = 10
+        val_queue_params['capacity'] = val_queue_params['batch_size'] 
+
+        save_to_gfs = ['label']
+        for key_now in key_list:
+            for len_rep in xrange(3):
+                gfs_key = '%s_%i' % (key_now, len_rep)
+                save_to_gfs.append(gfs_key)
+
+        print(save_to_gfs)
+        save_params['save_to_gfs'] = save_to_gfs
+        save_params['save_valid_freq'] = 305004
+        save_params['save_intermediate_freq'] = 1
+        save_params['port'] = 27017
+        save_params = {'exp_id': exp_id,
+                       'save_intermediate_freq': 1,
+                       'save_to_gfs': save_to_gfs}
+
+        #load_query = {'saved_filters': True, 'step': 305000}
+        load_params = {
+                'host': 'localhost',
+                'port': args.nport,
+                'dbname': 'whisker_net',
+                'collname': 'catenet',
+                'exp_id': 'catenet_adag_flv_slac_3',
+                'do_restore': True,
+                'query': load_query 
+        }
 
 
-    params = {
-        'save_params': save_params,
-
-        'load_params': load_params,
-
-        'model_params': model_params,
-
-        'train_params': train_params,
-
-        'loss_params': loss_params,
-
-        'learning_rate_params': learning_rate_params,
-
-        'optimizer_params': optimizer_params,
-
-        'log_device_placement': False,  # if variable placement has to be logged
-        'validation_params': validation_params,
-    }
     #base.get_params()
-    base.train_from_params(**params)
+    if args.gen_feature==1:
+        params = {
+            'load_params': load_params,
+            'model_params': model_params,
+            'validation_params': validation_params,
+            'log_device_placement': False,  # if variable placement has to be logged
+            'save_params': save_params,
+            'dont_run': True,
+        }
+        #base.test_from_params(**params)
+        sess, queues, dbinterface, valid_targets_dict = base.test_from_params(**params)
+        print(valid_targets_dict.keys())
+        coord, threads = base.start_queues(sess)
+
+        fout = h5py.File(args.hdf5path, 'w')
+        over_num = 9981*2*4
+        #over_num = 256
+        #over_num = 1280
+        now_num = 0
+        for indx_tmp in xrange(val_step_num):
+            start_time = time.time()
+            res = sess.run(valid_targets_dict['topn']['targets'])
+            #print(res.keys())
+            end_num = min(now_num + res['label'].size, over_num)
+
+            for key_tmp in res:
+                #print(res[key_tmp].shape)
+                now_data = res[key_tmp]
+                if isinstance(now_data, list):
+                    continue
+                if key_tmp not in fout:
+                    new_shape = list(now_data.shape)
+                    new_shape[0] = over_num
+                    dataset_tmp = fout.create_dataset(key_tmp, new_shape, dtype='f')
+                else:
+                    dataset_tmp = fout[key_tmp]
+                dataset_tmp[now_num:end_num] = now_data[:(end_num - now_num)]
+                
+            #print(res['label'])
+            now_num = end_num
+            end_time = time.time()
+            print('Batch %i takes time %f' % (indx_tmp, end_time - start_time))
+
+        base.stop_queues(sess, queues, coord, threads)
+        fout.close()
+        sess.close()
+    else:
+        params = {
+            'save_params': save_params,
+
+            'load_params': load_params,
+
+            'model_params': model_params,
+
+            'train_params': train_params,
+
+            'loss_params': loss_params,
+
+            'learning_rate_params': learning_rate_params,
+
+            'optimizer_params': optimizer_params,
+
+            'log_device_placement': False,  # if variable placement has to be logged
+            'validation_params': validation_params,
+        }
+        base.train_from_params(**params)
 
 if __name__ == '__main__':
     main()
