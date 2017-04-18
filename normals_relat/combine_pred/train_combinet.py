@@ -202,19 +202,32 @@ def rep_loss(inputs, outputs, target):
     return {'loss': loss, 'loss_2': loss_2}
 
 def save_features(inputs, outputs, num_to_save, **loss_params):
-    curr_input      = inputs['images'][:num_to_save]
-    curr_input      = tf.multiply(curr_input, tf.constant(255, dtype=tf.float32))
-    curr_input      = tf.cast(curr_input, tf.uint8)
+    curr_input_t      = inputs['image_t'][:num_to_save]
+    curr_input_t      = tf.multiply(curr_input_t, tf.constant(255, dtype=tf.float32))
+    curr_input_t      = tf.cast(curr_input_t, tf.uint8)
 
-    curr_output     = outputs[:num_to_save]
-    curr_output     = tf.multiply(curr_output, tf.constant(255, dtype=tf.float32))
-    curr_output     = tf.cast(curr_output, tf.uint8)
+    curr_input_s      = inputs['image_s'][:num_to_save]
+    curr_input_s      = tf.multiply(curr_input_s, tf.constant(255, dtype=tf.float32))
+    curr_input_s      = tf.cast(curr_input_s, tf.uint8)
 
-    curr_label      = inputs['normals'][:num_to_save]
-    curr_label      = tf.multiply(curr_label, tf.constant(255, dtype=tf.float32))
-    curr_label      = tf.cast(curr_label, tf.uint8)
+    curr_output_0     = outputs[0][:num_to_save]
+    curr_output_0     = tf.multiply(curr_output_0, tf.constant(255, dtype=tf.float32))
+    curr_output_0     = tf.cast(curr_output_0, tf.uint8)
 
-    return {'images_fea': curr_input, 'normals_fea': curr_label, 'outputs_fea': curr_output}
+    curr_output_1     = outputs[1][:num_to_save]
+    curr_output_1     = tf.multiply(curr_output_1, tf.constant(255, dtype=tf.float32))
+    curr_output_1     = tf.cast(curr_output_1, tf.uint8)
+
+    curr_label_t      = inputs['normal_t'][:num_to_save]
+    curr_label_t      = tf.multiply(curr_label_t, tf.constant(255, dtype=tf.float32))
+    curr_label_t      = tf.cast(curr_label_t, tf.uint8)
+
+    curr_label_s      = inputs['normal_s'][:num_to_save]
+    curr_label_s      = tf.multiply(curr_label_s, tf.constant(255, dtype=tf.float32))
+    curr_label_s      = tf.cast(curr_label_s, tf.uint8)
+
+    return {'images_fea_t': curr_input_t, 'normals_fea_t': curr_label_t, 'outputs_fea_t': curr_output_0, 
+            'images_fea_s': curr_input_s, 'normals_fea_s': curr_label_s, 'outputs_fea_s': curr_output_1}
 
 def mean_losses_keep_rest(step_results):
     retval = {}
@@ -358,7 +371,8 @@ def main():
             'save_filters_freq': 5000,
             'cache_filters_freq': 5000,
             'cache_dir': cache_dir,  # defaults to '~/.tfutils'
-            #'save_to_gfs': ['images_fea', 'normals_fea', 'outputs_fea'], 
+            'save_to_gfs': ['images_fea_t', 'normals_fea_t', 'outputs_fea_t', 
+                'images_fea_s', 'normals_fea_s', 'outputs_fea_s'],
         },
 
         'load_params': {
@@ -397,24 +411,6 @@ def main():
             'momentum': .9
         },
         'log_device_placement': False,  # if variable placement has to be logged
-    }
-    base.train_from_params(**params)
-
-if __name__ == '__main__':
-    main()
-
-'''
-            'feats':{
-                'data_params': val_data_param,
-                'queue_params': val_queue_params,
-                'targets': {
-                    'func': save_features,
-                    'num_to_save': 5,
-                    'targets' : [],
-                },
-                'num_steps': 10,
-                'agg_func': mean_losses_keep_rest,
-            },
         'validation_params': {
             'topn': {
                 'data_params': val_data_param,
@@ -427,5 +423,23 @@ if __name__ == '__main__':
                 'agg_func': lambda x: {k:np.mean(v) for k,v in x.items()},
                 'online_agg_func': online_agg
             },
+            'feats':{
+                'data_params': val_data_param,
+                'queue_params': val_queue_params,
+                'targets': {
+                    'func': save_features,
+                    'num_to_save': 5,
+                    'targets' : [],
+                },
+                'num_steps': 10,
+                'agg_func': mean_losses_keep_rest,
+            },
         },
+    }
+    base.train_from_params(**params)
+
+if __name__ == '__main__':
+    main()
+
+'''
 '''
