@@ -6,9 +6,11 @@ import cPickle
 def main():
     parser = argparse.ArgumentParser(description='Combine the statistics')
     #parser.add_argument('--saveprefix', default = '/om/user/chengxuz/Data/barrel_dataset/statistics/Data_force_', type = str, action = 'store', help = 'Name prefix for the saved pkl')
-    parser.add_argument('--saveprefix', default = '/om/user/chengxuz/Data/barrel_dataset/statistics/Data_torque_', type = str, action = 'store', help = 'Name prefix for the saved pkl')
+    #parser.add_argument('--saveprefix', default = '/om/user/chengxuz/Data/barrel_dataset/statistics/Data_torque_', type = str, action = 'store', help = 'Name prefix for the saved pkl')
+    parser.add_argument('--saveprefix', default = '/scratch/users/chengxuz/barrel/barrel_relat_files/dataset/statistic/Data_force_', type = str, action = 'store', help = 'Name prefix for the saved pkl')
     #parser.add_argument('--savepath', default = '/om/user/chengxuz/Data/barrel_dataset/statistics/Data_force_combined.pkl', type = str, action = 'store', help = 'Path for saving the computed statistics')
-    parser.add_argument('--savepath', default = '/om/user/chengxuz/Data/barrel_dataset/statistics/Data_torque_combined.pkl', type = str, action = 'store', help = 'Path for saving the computed statistics')
+    #parser.add_argument('--savepath', default = '/om/user/chengxuz/Data/barrel_dataset/statistics/Data_torque_combined.pkl', type = str, action = 'store', help = 'Path for saving the computed statistics')
+    parser.add_argument('--savepath', default = '/scratch/users/chengxuz/barrel/barrel_relat_files/dataset/statistic/Data_torque_combined.pkl', type = str, action = 'store', help = 'Path for saving the computed statistics')
 
     args    = parser.parse_args()
 
@@ -32,6 +34,7 @@ def main():
         max_array = np.maximum(data_tmp['max_array'], max_array)
         min_array = np.minimum(data_tmp['min_array'], min_array)
 
+        '''
         tmp_array = sum_array.reshape([110*31, 3, 3])
         mean_now = np.mean(tmp_array, 0)/num_add
         print(mean_now)
@@ -45,7 +48,6 @@ def main():
         tmp_sq_array = data_tmp['sum_sq_array'].reshape([110*31, 3, 3])
         std_now = np.sqrt(np.mean(tmp_sq_array, 0)/num_add - mean_now**2)
         print(std_now)
-        '''
         print(name_tmp)
 
     tmp_max = max_array.reshape([110*31, 3, 3])

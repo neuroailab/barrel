@@ -27,7 +27,7 @@ def main():
     for tf_indx in xrange(args.tflen):
         tf_filename = os.path.join(args.tfdir, args.tfkey, name_pat % ((args.tfstart + tf_indx)*obj_len, obj_len))
 
-        if 'Data4025_25.tfrecords' in tf_filename:
+        if not 'Data4025_25.tfrecords' in tf_filename:
             continue
 
         record_iterator = tf.python_io.tf_record_iterator(path=tf_filename)
@@ -59,7 +59,7 @@ def main():
             tmp_mean = np.mean(reconstructed_img)
             tmp_std = np.std(reconstructed_img)
             if tmp_std>10000000:
-                print('Error data here!')
+                print('Error data here %i!' % num_add)
         #print(num_add)
         #print(sum_array.shape)
         #break
@@ -84,8 +84,8 @@ def main():
     save_dict['max_array'] = max_array
     save_dict['min_array'] = min_array
 
-    save_pathname = args.saveprefix + 'sta%i_len%i.pkl' % (args.tfstart, args.tflen)
-    cPickle.dump(save_dict, open(save_pathname, 'w'))
+    #save_pathname = args.saveprefix + 'sta%i_len%i.pkl' % (args.tfstart, args.tflen)
+    #cPickle.dump(save_dict, open(save_pathname, 'w'))
 
 if __name__=='__main__':
     main()

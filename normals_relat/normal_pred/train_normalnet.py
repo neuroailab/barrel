@@ -29,15 +29,20 @@ if host == 'freud':  # freud
     DATA_PATH['val/images'] = '/media/data2/one_world_dataset/tfvaldata/images/'
     DATA_PATH['val/normals'] = '/media/data2/one_world_dataset/tfvaldata/normals/'
 
-elif host.startswith('node') or host == 'openmind7':  # OpenMind
+elif host.startswith('node') and 'neuroaicluster' in host:  # OpenMind
     #DATA_PATH['train'] = '/om/user/chengxuz/Data/one_world_dataset/randomperm.hdf5'
     #DATA_PATH['val'] = '/om/user/chengxuz/Data/one_world_dataset/randomperm_test1.hdf5'
     #DATA_PATH['train'] = '/om/user/chengxuz/Data/one_world_dataset/dataset.tfrecords'
     #DATA_PATH['val'] = '/om/user/chengxuz/Data/one_world_dataset/dataset8.tfrecords'
-    DATA_PATH['train/images'] = '/om/user/chengxuz/Data/one_world_dataset/tfdata/images/'
-    DATA_PATH['train/normals'] = '/om/user/chengxuz/Data/one_world_dataset/tfdata/normals/'
-    DATA_PATH['val/images'] = '/om/user/chengxuz/Data/one_world_dataset/tfvaldata/images/'
-    DATA_PATH['val/normals'] = '/om/user/chengxuz/Data/one_world_dataset/tfvaldata/normals/'
+    #DATA_PATH['train/images'] = '/om/user/chengxuz/Data/one_world_dataset/tfdata/images/'
+    #DATA_PATH['train/normals'] = '/om/user/chengxuz/Data/one_world_dataset/tfdata/normals/'
+    #DATA_PATH['val/images'] = '/om/user/chengxuz/Data/one_world_dataset/tfvaldata/images/'
+    #DATA_PATH['val/normals'] = '/om/user/chengxuz/Data/one_world_dataset/tfvaldata/normals/'
+
+    DATA_PATH['train/images'] = '/mnt/fs0/datasets/one_world_dataset/tfdata/images/'
+    DATA_PATH['train/normals'] = '/mnt/fs0/datasets/one_world_dataset/tfdata/normals/'
+    DATA_PATH['val/images'] = '/mnt/fs0/datasets/one_world_dataset/tfvaldata/images/'
+    DATA_PATH['val/normals'] = '/mnt/fs0/datasets/one_world_dataset/tfvaldata/normals/'
 else:
     print("Not supported yet!")
     exit()
@@ -55,6 +60,14 @@ elif host.startswith('node') or host == 'openmind7':  # OpenMind
 else:
     print("Not supported yet!")
     exit()
+
+DATA_PATH_SCENE = {}
+DATA_PATH_SCENE['train/images'] = '/mnt/fs1/Dataset/scenenet_combine/photo'
+DATA_PATH_SCENE['train/normals'] = '/mnt/fs1/Dataset/scenenet_combine/normal_new'
+#DATA_PATH_SCENE['val/images'] = '/mnt/fs1/Dataset/scenenet_combine_val/photo'
+#DATA_PATH_SCENE['val/normals'] = '/mnt/fs1/Dataset/scenenet_combine_val/normal'
+DATA_PATH_SCENE['val/images'] = '/mnt/fs1/Dataset/scenenet_combine/photo'
+DATA_PATH_SCENE['val/normals'] = '/mnt/fs1/Dataset/scenenet_combine/normal_new'
 
 
 def online_agg(agg_res, res, step):
@@ -165,11 +178,91 @@ class Threedworld_hdf5(data.ParallelBySliceProvider):
         self.update_nownum()
         return images_batch
 
-    def init_threads(self):
-        self.input_ops, self.dtypes, self.shapes = \
-                super(Threedworld_hdf5, self).init_ops()
+class SceneNet(data.TFRecordsParallelByFileProvider):
 
-        return [self.input_ops, self.dtypes, self.shapes]
+    N_TRAIN = 5100000 
+    #N_VAL = 300000
+    N_VAL = 6400
+
+    def __init__(self,
+                 data_path,
+                 group='train',
+                 batch_size=1,
+                 n_threads=4,
+                 crop_size=None,
+                 *args,
+                 **kwargs):
+        """
+        A specific reader for Threedworld generated dataset stored as a HDF5 file
+
+        Args:
+            - data_path
+                path to raw hdf5 data
+        Kwargs:
+            - group (str, default: 'train')
+                Which subset of the dataset you want: train, val.
+                The latter contains 50k images from the train set,
+                so that you can directly compare performance on the validation set
+                to the performance on the train set to track overfitting.
+            - batch_size (int, default: 1)
+                Number of images to return when `next` is called. By default set
+                to 1 since it is expected to be used with queues where reading one
+                image at a time is ok.
+            - crop_size (int or None, default: None)
+                For center crop (crop_size x crop_size). If None, no cropping will occur.
+            - *args, **kwargs
+                Extra arguments for HDF5DataProvider
+        """
+        self.group = group
+        self.images = 'images'
+        self.labels = 'normals'
+
+        super(SceneNet, self).__init__(
+            source_dirs = [data_path["%s/%s" % (group, self.images)] , data_path["%s/%s" % (group, self.labels)]],
+            batch_size=batch_size,
+            postprocess={self.images: [(self.postproc_s, (), {})], self.labels: [(self.postproc_s, (), {})]},
+            trans_dicts = [{'image_raw': self.images}, {'image_raw': self.labels}], 
+            n_threads=n_threads,
+            shuffle = True,
+            *args, **kwargs)
+        if crop_size is None:
+            self.crop_size = 224
+        else:
+            self.crop_size = crop_size
+
+    def postproc_s(self, images):
+
+        if self.group=='train':
+
+            shape_tensor = images.get_shape().as_list()
+            crop_images = tf.random_crop(images, [self.batch_size, self.crop_size, self.crop_size, shape_tensor[3]], seed=0)
+            norm = tf.cast(crop_images, tf.float32)
+            norm = tf.div(norm, tf.constant(255, dtype=tf.float32))
+
+            return norm
+
+        else:
+            norm = tf.cast(images, tf.float32)
+            norm = tf.div(norm, tf.constant(255, dtype=tf.float32))
+
+            NOW_SIZE1 = 240
+            NOW_SIZE2 = 320
+
+            off = np.zeros(shape = [self.batch_size, 4])
+            off[:, 0] = int((NOW_SIZE1 - self.crop_size)/2)
+            off[:, 1] = int((NOW_SIZE2 - self.crop_size)/2)
+            off[:, 2:4] = off[:, :2] + self.crop_size
+            off[:, 0] = off[:, 0]*1.0/(NOW_SIZE1 - 1)
+            off[:, 2] = off[:, 2]*1.0/(NOW_SIZE1 - 1)
+
+            off[:, 1] = off[:, 1]*1.0/(NOW_SIZE2 - 1)
+            off[:, 3] = off[:, 3]*1.0/(NOW_SIZE2 - 1)
+
+            box_ind    = tf.constant(range(self.batch_size))
+
+            images_batch = tf.image.crop_and_resize(norm, off, box_ind, tf.constant([self.crop_size, self.crop_size]))
+
+            return images_batch
 
 #class Threedworld(data.TFRecordsDataProvider):
 class Threedworld(data.TFRecordsParallelByFileProvider):
@@ -275,41 +368,30 @@ class Threedworld(data.TFRecordsParallelByFileProvider):
     #def postproc_img(self, images, dtype, shape):
     def postproc_img(self, images):
 
-        norm = tf.cast(images, tf.float32)
-        norm = tf.div(norm, tf.constant(255, dtype=tf.float32))
-        #norm = tf.cast(norm, tf.float32)
-
         if self.group=='train':
 
-            if self.now_num==0:
-                off = np.zeros(shape = [self.batch_size, 4])
-                off[:, :2] = np.random.randint(0, IMAGE_SIZE - self.crop_size, size=[self.batch_size, 2])
-                off[:, 2:4] = off[:, :2] + self.crop_size
-                off = off*1.0/(IMAGE_SIZE - 1)
-                self.off = off
-            else:
-                off = self.off
+            shape_tensor = images.get_shape().as_list()
+            crop_images = tf.random_crop(value = images, size = [self.batch_size, self.crop_size, self.crop_size, shape_tensor[3]], seed=0)
+            norm = tf.cast(crop_images, tf.float32)
+            norm = tf.div(norm, tf.constant(255, dtype=tf.float32))
+
+            return norm
 
         else:
+
+            norm = tf.cast(images, tf.float32)
+            norm = tf.div(norm, tf.constant(255, dtype=tf.float32))
+            #norm = tf.cast(norm, tf.float32)
+
             off = np.zeros(shape = [self.batch_size, 4])
             off[:, :2] = int((IMAGE_SIZE - self.crop_size)/2)
             off[:, 2:4] = off[:, :2] + self.crop_size
             off = off*1.0/(IMAGE_SIZE - 1)
 
-        images_batch = tf.image.crop_and_resize(norm, off, self.box_ind, tf.constant([self.crop_size, self.crop_size]))
-        if self.now_num==0:
-            self.now_num = 1
-        else:
-            self.now_num = 0
+            box_ind    = tf.constant(range(self.batch_size))
 
-        #return [images_batch, images_batch.dtype, images_batch[0].get_shape()]
-        return images_batch
-
-    def init_threads(self):
-        self.input_ops, self.dtypes, self.shapes = \
-                super(Threedworld, self).init_threads()
-
-        return [self.input_ops, self.dtypes, self.shapes]
+            images_batch = tf.image.crop_and_resize(norm, off, self.box_ind, tf.constant([self.crop_size, self.crop_size]))
+            return images_batch
 
 
 #BATCH_SIZE = 256
@@ -399,12 +481,12 @@ def main(args):
     #queue_capa = BATCH_SIZE*120
     #queue_capa = BATCH_SIZE*500
     BATCH_SIZE  = normal_encoder_asymmetric_with_bypass.getBatchSize(cfg_initial)
+    if args.batchsize:
+        BATCH_SIZE = args.batchsize
     queue_capa  = normal_encoder_asymmetric_with_bypass.getQueueCap(cfg_initial)
     n_threads   = 4
 
     func_net = getattr(normal_encoder_asymmetric_with_bypass, args.namefunc)
-
-
 
     train_data_param = {
                 'func': Threedworld_hdf5,
@@ -413,7 +495,7 @@ def main(args):
                 'group': 'train',
                 'crop_size': IMAGE_SIZE_CROP,
                 'n_threads': n_threads,
-                'batch_size': BATCH_SIZE,
+                'batch_size': 2,
             }
     val_data_param = {
                     'func': Threedworld_hdf5,
@@ -422,7 +504,7 @@ def main(args):
                     'group': 'val',
                     'crop_size': IMAGE_SIZE_CROP,
                     'n_threads': n_threads,
-                    'batch_size': BATCH_SIZE,
+                    'batch_size': 2,
                 }
     train_queue_params = {
                 'queue_type': 'fifo',
@@ -456,6 +538,13 @@ def main(args):
                 }
         val_target          = 'normals'
 
+    if args.whichdataset==1:
+        train_data_param['func']   = SceneNet
+        val_data_param['func']     = SceneNet
+        train_data_param['data_path']   = DATA_PATH_SCENE
+        val_data_param['data_path']   = DATA_PATH_SCENE
+
+
     val_step_num = val_data_param['func'].N_VAL // BATCH_SIZE + 1
     NUM_BATCHES_PER_EPOCH = train_data_param['func'].N_TRAIN // BATCH_SIZE
 
@@ -471,12 +560,17 @@ def main(args):
             'staircase': True
         }
 
-    optimizer_class = tf.train.MomentumOptimizer
-
     model_params = {
             'func': func_net,
             'seed': args.seed,
             'cfg_initial': cfg_initial
+        }
+
+    optim_params = {
+            'func': optimizer.ClipOptimizer,
+            'optimizer_class': tf.train.MomentumOptimizer,
+            'clip': True,
+            'momentum': .9
         }
 
     if args.whichloss==1:
@@ -485,13 +579,18 @@ def main(args):
                 'func': tf.train.exponential_decay,
                 'learning_rate': .001,
                 'decay_rate': .5,
-                'decay_steps': 5*NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
+                'decay_steps': NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
                 'staircase': True
             }
         #optimizer_class     = tf.train.RMSPropOptimizer
         #train_data_param['center_im'] = True
         #val_data_param['center_im'] = True
         model_params['center_im']   = True
+        optim_params = {
+                'func': optimizer.ClipOptimizer,
+                'optimizer_class': tf.train.RMSPropOptimizer,
+                'clip': True,
+            }
 
     params = {
         'save_params': {
@@ -508,11 +607,11 @@ def main(args):
             #'do_save': False,
             'save_initial_filters': True,
             'save_metrics_freq': 2000,  # keeps loss from every SAVE_LOSS_FREQ steps.
-            'save_valid_freq': 10000,
+            'save_valid_freq': 5000,
             #'save_metrics_freq': 100,  # keeps loss from every SAVE_LOSS_FREQ steps.
             #'save_valid_freq': 100,
-            'save_filters_freq': 30000,
-            'cache_filters_freq': 10000,
+            'save_filters_freq': 5000,
+            'cache_filters_freq': 5000,
             'cache_dir': cache_dir,  # defaults to '~/.tfutils'
             'save_to_gfs': ['images_fea', 'normals_fea', 'outputs_fea'], 
             #'save_intermediate_freq': 1,
@@ -537,7 +636,8 @@ def main(args):
         'model_params': model_params,
 
         'train_params': {
-            'validate_first': False,
+            #'validate_first': False,
+            'validate_first': True,
             'data_params': train_data_param,
             'queue_params': train_queue_params,
             'thres_loss': 1000,
@@ -553,12 +653,7 @@ def main(args):
 
         'learning_rate_params': learning_rate_params,
 
-        'optimizer_params': {
-            'func': optimizer.ClipOptimizer,
-            'optimizer_class': optimizer_class,
-            'clip': True,
-            'momentum': .9
-        },
+        'optimizer_params': optim_params,
         'log_device_placement': False,  # if variable placement has to be logged
         'validation_params': {
             'topn': {
@@ -605,6 +700,8 @@ if __name__ == '__main__':
     parser.add_argument('--usehdf5', default = 0, type = int, action = 'store', help = 'Whether use hdf5 data reader')
     parser.add_argument('--valinum', default = -1, type = int, action = 'store', help = 'Number of validation steps, default is -1, which means all the validation')
     parser.add_argument('--whichloss', default = 0, type = int, action = 'store', help = 'Whether to use new loss')
+    parser.add_argument('--whichdataset', default = 0, type = int, action = 'store', help = '0 for threedworld, 1 for scenenet')
+    parser.add_argument('--batchsize', default = None, type = int, action = 'store', help = 'None for default')
 
     args    = parser.parse_args()
 

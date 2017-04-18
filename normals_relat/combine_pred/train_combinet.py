@@ -22,9 +22,17 @@ DATA_PATH = {}
 if 'neuroaicluster' in host:
     DATA_PATH['threed/train/images'] = '/mnt/fs0/datasets/one_world_dataset/tfdata/images'
     DATA_PATH['threed/train/normals'] = '/mnt/fs0/datasets/one_world_dataset/tfdata/normals'
+    
+    DATA_PATH['threed/val/images'] = '/mnt/fs0/datasets/one_world_dataset/tfvaldata/images'
+    DATA_PATH['threed/val/normals'] = '/mnt/fs0/datasets/one_world_dataset/tfvaldata/normals'
 
-    DATA_PATH['scenenet/train/images'] = '/mnt/fs1/Dataset/scenenet/photo'
-    DATA_PATH['scenenet/train/normals'] = '/mnt/fs1/Dataset/scenenet/normal'
+    DATA_PATH['scenenet/train/images'] = '/mnt/fs1/Dataset/scenenet_combine/photo'
+    DATA_PATH['scenenet/train/normals'] = '/mnt/fs1/Dataset/scenenet_combine/normal_new'
+
+    #DATA_PATH['scenenet/val/images'] = '/mnt/fs1/Dataset/scenenet_combine_val/photo'
+    #DATA_PATH['scenenet/val/normals'] = '/mnt/fs1/Dataset/scenenet_combine_val/normal'
+    DATA_PATH['scenenet/val/images'] = '/mnt/fs1/Dataset/scenenet_combine/photo'
+    DATA_PATH['scenenet/val/normals'] = '/mnt/fs1/Dataset/scenenet_combine/normal_new'
 
 def online_agg(agg_res, res, step):
     if agg_res is None:
@@ -41,6 +49,7 @@ class Combine_world(data.TFRecordsParallelByFileProvider):
                  batch_size=1,
                  n_threads=4,
                  crop_size=None,
+                 only_one=None,
                  *args, **kwargs
                  ):
         self.group = group
@@ -53,81 +62,81 @@ class Combine_world(data.TFRecordsParallelByFileProvider):
         # Keys for scenenet
         self.image_s = 'image_s'
         self.normal_s = 'normal_s'
-        #self.label = 'category'
 
         self.crop_size = 224
         if not crop_size==None:
             self.crop_size = crop_size
 
-        postprocess = {self.image_t: [(self.postproc_t, (), {})], self.normal_t: [(self.postproc_t, (), {})], 
-                 self.image_s: [(self.postproc_s, (), {})], self.normal_s: [(self.postproc_s, (), {})]}
+        if only_one==None:
+            postprocess = {self.image_t: [(self.postproc_t, (), {})], self.normal_t: [(self.postproc_t, (), {})], 
+                     self.image_s: [(self.postproc_s, (), {})], self.normal_s: [(self.postproc_s, (), {})]}
 
-        self.now_num_s = 0
-        self.now_num_t = 0
-        self.box_ind    = tf.constant(range(self.batch_size))
+            super(Combine_world, self).__init__(
+                source_dirs = [data_path["threed/%s/images" % group] , data_path["threed/%s/normals" % group] , data_path["scenenet/%s/images" % group], data_path["scenenet/%s/normals" % group]],
+                trans_dicts = [{'images': self.image_t}, {'normals': self.normal_t}, {'image_raw': self.image_s}, {'image_raw': self.normal_s}], 
+                postprocess = postprocess,
+                batch_size=batch_size,
+                n_threads=n_threads,
+                shuffle = True,
+                *args, **kwargs)
+        elif only_one==0: # initialize for threedworld
+            postprocess = {self.image_t: [(self.postproc_t, (), {})], self.normal_t: [(self.postproc_t, (), {})]}
 
-        super(Combine_world, self).__init__(
-            source_dirs = [data_path["threed/%s/images" % group] , data_path["threed/%s/normals" % group] , data_path["scenenet/%s/images" % group], data_path["scenenet/%s/normals" % group]],
-            trans_dicts = [{'images': self.image_t}, {'normals': self.normal_t}, {'image_raw': self.image_s}, {'image_raw': self.normal_s}], 
-            postprocess = postprocess,
-            batch_size=batch_size,
-            n_threads=n_threads,
-            shuffle = True,
-            *args, **kwargs)
+            super(Combine_world, self).__init__(
+                source_dirs = [data_path["threed/%s/images" % group] , data_path["threed/%s/normals" % group]],
+                trans_dicts = [{'images': self.image_t}, {'normals': self.normal_t}], 
+                postprocess = postprocess,
+                batch_size=batch_size,
+                n_threads=n_threads,
+                shuffle = True,
+                *args, **kwargs)
+        elif only_one==1: # initialize for scenenet
+            postprocess = {self.image_s: [(self.postproc_s, (), {})], self.normal_s: [(self.postproc_s, (), {})]}
+
+            super(Combine_world, self).__init__(
+                source_dirs = [data_path["scenenet/%s/images" % group], data_path["scenenet/%s/normals" % group]],
+                trans_dicts = [{'image_raw': self.image_s}, {'image_raw': self.normal_s}], 
+                postprocess = postprocess,
+                batch_size=batch_size,
+                n_threads=n_threads,
+                shuffle = True,
+                *args, **kwargs)
 
     def postproc_s(self, images):
 
         norm = tf.cast(images, tf.float32)
         norm = tf.div(norm, tf.constant(255, dtype=tf.float32))
 
-        return self.postproc_flag(norm, 0)
+        return self.postproc_flag(norm, 1)
 
     def postproc_t(self, images):
 
         norm = tf.cast(images, tf.float32)
         norm = tf.div(norm, tf.constant(255, dtype=tf.float32))
 
-        return self.postproc_flag(norm, 1)
+        return self.postproc_flag(norm, 0)
 
     def postproc_flag(self, norm, flag):
 
         if flag==0:
             NOW_SIZE1 = 256
             NOW_SIZE2 = 256
+            seed_random = 0
 
         if flag==1:
             NOW_SIZE1 = 240
             NOW_SIZE2 = 320
+            seed_random = 1
 
         if self.group=='train':
-            if flag==0:
-                curr_num = self.now_num_t
 
-            if flag==1:
-                curr_num = self.now_num_s
+            shape_tensor = norm.get_shape().as_list()
+            crop_images = tf.random_crop(norm, [self.batch_size, self.crop_size, self.crop_size, shape_tensor[3]], seed=seed_random)
 
-            if curr_num==0:
-                off = np.zeros(shape = [self.batch_size, 4])
-                off[:, 0] = np.random.randint(0, NOW_SIZE1 - self.crop_size, size=[self.batch_size])
-                off[:, 1] = np.random.randint(0, NOW_SIZE2 - self.crop_size, size=[self.batch_size])
-                off[:, 2:4] = off[:, :2] + self.crop_size
-                off[:, 0] = off[:, 0]*1.0/(NOW_SIZE1 - 1)
-                off[:, 2] = off[:, 2]*1.0/(NOW_SIZE1 - 1)
-
-                off[:, 1] = off[:, 1]*1.0/(NOW_SIZE2 - 1)
-                off[:, 3] = off[:, 3]*1.0/(NOW_SIZE2 - 1)
-                
-                if flag==0:
-                    self.off_t = off
-                if flag==1:
-                    self.off_s = off
-            else:
-                if flag==0:
-                    off = self.off_t
-                if flag==1:
-                    off = self.off_s
+            return crop_images
 
         else:
+
             off = np.zeros(shape = [self.batch_size, 4])
             off[:, 0] = int((NOW_SIZE1 - self.crop_size)/2)
             off[:, 1] = int((NOW_SIZE2 - self.crop_size)/2)
@@ -138,19 +147,32 @@ class Combine_world(data.TFRecordsParallelByFileProvider):
             off[:, 1] = off[:, 1]*1.0/(NOW_SIZE2 - 1)
             off[:, 3] = off[:, 3]*1.0/(NOW_SIZE2 - 1)
 
-        images_batch = tf.image.crop_and_resize(norm, off, self.box_ind, tf.constant([self.crop_size, self.crop_size]))
-        if flag==0:
-            if self.now_num_t==0:
-                self.now_num_t = 1
-            else:
-                self.now_num_t = 0
-        if flag==1:
-            if self.now_num_s==0:
-                self.now_num_s = 1
-            else:
-                self.now_num_s = 0
+            box_ind    = tf.constant(range(self.batch_size))
 
-        return images_batch
+            images_batch = tf.image.crop_and_resize(norm, off, box_ind, tf.constant([self.crop_size, self.crop_size]))
+
+            return images_batch
+        
+class Combine_world_sep:
+
+    def __init__(self, *args, **kwargs):
+        self.data_t = Combine_world(only_one = 0, *args, **kwargs)
+        self.data_s = Combine_world(only_one = 1, *args, **kwargs)
+
+    def init_ops(self):
+        self.init_ops_t = self.data_t.init_ops()
+        self.init_ops_s = self.data_s.init_ops()
+        num_threads = len(self.init_ops_t)
+
+        self.init_ops = []
+
+        for indx_t in xrange(num_threads):
+            tmp_op = self.init_ops_t[indx_t]
+            tmp_op.update(self.init_ops_s[indx_t])
+            self.init_ops.append(tmp_op)
+
+        return self.init_ops
+
 
 BATCH_SIZE = 32
 IMAGE_SIZE_CROP = 224
@@ -180,19 +202,32 @@ def rep_loss(inputs, outputs, target):
     return {'loss': loss, 'loss_2': loss_2}
 
 def save_features(inputs, outputs, num_to_save, **loss_params):
-    curr_input      = inputs['images'][:num_to_save]
-    curr_input      = tf.multiply(curr_input, tf.constant(255, dtype=tf.float32))
-    curr_input      = tf.cast(curr_input, tf.uint8)
+    curr_input_t      = inputs['image_t'][:num_to_save]
+    curr_input_t      = tf.multiply(curr_input_t, tf.constant(255, dtype=tf.float32))
+    curr_input_t      = tf.cast(curr_input_t, tf.uint8)
 
-    curr_output     = outputs[:num_to_save]
-    curr_output     = tf.multiply(curr_output, tf.constant(255, dtype=tf.float32))
-    curr_output     = tf.cast(curr_output, tf.uint8)
+    curr_input_s      = inputs['image_s'][:num_to_save]
+    curr_input_s      = tf.multiply(curr_input_s, tf.constant(255, dtype=tf.float32))
+    curr_input_s      = tf.cast(curr_input_s, tf.uint8)
 
-    curr_label      = inputs['normals'][:num_to_save]
-    curr_label      = tf.multiply(curr_label, tf.constant(255, dtype=tf.float32))
-    curr_label      = tf.cast(curr_label, tf.uint8)
+    curr_output_0     = outputs[0][:num_to_save]
+    curr_output_0     = tf.multiply(curr_output_0, tf.constant(255, dtype=tf.float32))
+    curr_output_0     = tf.cast(curr_output_0, tf.uint8)
 
-    return {'images_fea': curr_input, 'normals_fea': curr_label, 'outputs_fea': curr_output}
+    curr_output_1     = outputs[1][:num_to_save]
+    curr_output_1     = tf.multiply(curr_output_1, tf.constant(255, dtype=tf.float32))
+    curr_output_1     = tf.cast(curr_output_1, tf.uint8)
+
+    curr_label_t      = inputs['normal_t'][:num_to_save]
+    curr_label_t      = tf.multiply(curr_label_t, tf.constant(255, dtype=tf.float32))
+    curr_label_t      = tf.cast(curr_label_t, tf.uint8)
+
+    curr_label_s      = inputs['normal_s'][:num_to_save]
+    curr_label_s      = tf.multiply(curr_label_s, tf.constant(255, dtype=tf.float32))
+    curr_label_s      = tf.cast(curr_label_s, tf.uint8)
+
+    return {'images_fea_t': curr_input_t, 'normals_fea_t': curr_label_t, 'outputs_fea_t': curr_output_0, 
+            'images_fea_s': curr_input_s, 'normals_fea_s': curr_label_s, 'outputs_fea_s': curr_output_1}
 
 def mean_losses_keep_rest(step_results):
     retval = {}
@@ -253,19 +288,19 @@ def main():
     func_net = getattr(combinet_builder, args.namefunc)
 
     train_data_param = {
-                'func': Combine_world,
-                #'func': train_normalnet_hdf5.Threedworld,
+                #'func': Combine_world,
+                'func': Combine_world_sep,
                 'data_path': DATA_PATH,
                 'group': 'train',
                 'n_threads': n_threads,
                 'batch_size': 2,
             }
     val_data_param = {
-                'func': Combine_world,
-                #'func': train_normalnet_hdf5.Threedworld,
+                #'func': Combine_world,
+                'func': Combine_world_sep,
                 'data_path': DATA_PATH,
-                'group': 'train',
-                'n_threads': n_threads,
+                'group': 'val',
+                'n_threads': 1,
                 'batch_size': 2,
             }
     train_queue_params = {
@@ -294,7 +329,7 @@ def main():
             'func': tf.train.exponential_decay,
             'learning_rate': .01,
             'decay_rate': .95,
-            'decay_steps': NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
+            'decay_steps': 2*NUM_BATCHES_PER_EPOCH,  # exponential decay each epoch
             'staircase': True
         }
 
@@ -332,11 +367,12 @@ def main():
             'do_save': True,
             'save_initial_filters': True,
             'save_metrics_freq': 2000,  # keeps loss from every SAVE_LOSS_FREQ steps.
-            'save_valid_freq': 10000,
-            'save_filters_freq': 30000,
-            'cache_filters_freq': 10000,
+            'save_valid_freq': 5000,
+            'save_filters_freq': 5000,
+            'cache_filters_freq': 5000,
             'cache_dir': cache_dir,  # defaults to '~/.tfutils'
-            'save_to_gfs': ['images_fea', 'normals_fea', 'outputs_fea'], 
+            'save_to_gfs': ['images_fea_t', 'normals_fea_t', 'outputs_fea_t', 
+                'images_fea_s', 'normals_fea_s', 'outputs_fea_s'],
         },
 
         'load_params': {
@@ -387,14 +423,6 @@ def main():
                 'agg_func': lambda x: {k:np.mean(v) for k,v in x.items()},
                 'online_agg_func': online_agg
             },
-        },
-    }
-    base.train_from_params(**params)
-
-if __name__ == '__main__':
-    main()
-
-'''
             'feats':{
                 'data_params': val_data_param,
                 'queue_params': val_queue_params,
@@ -406,4 +434,12 @@ if __name__ == '__main__':
                 'num_steps': 10,
                 'agg_func': mean_losses_keep_rest,
             },
+        },
+    }
+    base.train_from_params(**params)
+
+if __name__ == '__main__':
+    main()
+
+'''
 '''
