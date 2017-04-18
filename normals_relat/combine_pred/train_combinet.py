@@ -49,6 +49,7 @@ class Combine_world(data.TFRecordsParallelByFileProvider):
                  batch_size=1,
                  n_threads=4,
                  crop_size=None,
+                 only_one=None,
                  *args, **kwargs
                  ):
         self.group = group
@@ -61,27 +62,45 @@ class Combine_world(data.TFRecordsParallelByFileProvider):
         # Keys for scenenet
         self.image_s = 'image_s'
         self.normal_s = 'normal_s'
-        #self.label = 'category'
 
         self.crop_size = 224
         if not crop_size==None:
             self.crop_size = crop_size
 
-        postprocess = {self.image_t: [(self.postproc_t, (), {})], self.normal_t: [(self.postproc_t, (), {})], 
-                 self.image_s: [(self.postproc_s, (), {})], self.normal_s: [(self.postproc_s, (), {})]}
+        if only_one==None:
+            postprocess = {self.image_t: [(self.postproc_t, (), {})], self.normal_t: [(self.postproc_t, (), {})], 
+                     self.image_s: [(self.postproc_s, (), {})], self.normal_s: [(self.postproc_s, (), {})]}
 
-        self.now_num_s = 0
-        self.now_num_t = 0
-        self.box_ind    = tf.constant(range(self.batch_size))
+            super(Combine_world, self).__init__(
+                source_dirs = [data_path["threed/%s/images" % group] , data_path["threed/%s/normals" % group] , data_path["scenenet/%s/images" % group], data_path["scenenet/%s/normals" % group]],
+                trans_dicts = [{'images': self.image_t}, {'normals': self.normal_t}, {'image_raw': self.image_s}, {'image_raw': self.normal_s}], 
+                postprocess = postprocess,
+                batch_size=batch_size,
+                n_threads=n_threads,
+                shuffle = True,
+                *args, **kwargs)
+        elif only_one==0: # initialize for threedworld
+            postprocess = {self.image_t: [(self.postproc_t, (), {})], self.normal_t: [(self.postproc_t, (), {})]}
 
-        super(Combine_world, self).__init__(
-            source_dirs = [data_path["threed/%s/images" % group] , data_path["threed/%s/normals" % group] , data_path["scenenet/%s/images" % group], data_path["scenenet/%s/normals" % group]],
-            trans_dicts = [{'images': self.image_t}, {'normals': self.normal_t}, {'image_raw': self.image_s}, {'image_raw': self.normal_s}], 
-            postprocess = postprocess,
-            batch_size=batch_size,
-            n_threads=n_threads,
-            shuffle = True,
-            *args, **kwargs)
+            super(Combine_world, self).__init__(
+                source_dirs = [data_path["threed/%s/images" % group] , data_path["threed/%s/normals" % group]],
+                trans_dicts = [{'images': self.image_t}, {'normals': self.normal_t}], 
+                postprocess = postprocess,
+                batch_size=batch_size,
+                n_threads=n_threads,
+                shuffle = True,
+                *args, **kwargs)
+        elif only_one==1: # initialize for scenenet
+            postprocess = {self.image_s: [(self.postproc_s, (), {})], self.normal_s: [(self.postproc_s, (), {})]}
+
+            super(Combine_world, self).__init__(
+                source_dirs = [data_path["scenenet/%s/images" % group], data_path["scenenet/%s/normals" % group]],
+                trans_dicts = [{'image_raw': self.image_s}, {'image_raw': self.normal_s}], 
+                postprocess = postprocess,
+                batch_size=batch_size,
+                n_threads=n_threads,
+                shuffle = True,
+                *args, **kwargs)
 
     def postproc_s(self, images):
 
@@ -134,6 +153,26 @@ class Combine_world(data.TFRecordsParallelByFileProvider):
 
             return images_batch
         
+class Combine_world_sep:
+
+    def __init__(self, *args, **kwargs):
+        self.data_t = Combine_world(only_one = 0, *args, **kwargs)
+        self.data_s = Combine_world(only_one = 1, *args, **kwargs)
+
+    def init_ops(self):
+        self.init_ops_t = self.data_t.init_ops()
+        self.init_ops_s = self.data_s.init_ops()
+        num_threads = len(self.init_ops_t)
+
+        self.init_ops = []
+
+        for indx_t in xrange(num_threads):
+            tmp_op = self.init_ops_t[indx_t]
+            tmp_op.update(self.init_ops_s[indx_t])
+            self.init_ops.append(tmp_op)
+
+        return self.init_ops
+
 
 BATCH_SIZE = 32
 IMAGE_SIZE_CROP = 224
@@ -236,19 +275,19 @@ def main():
     func_net = getattr(combinet_builder, args.namefunc)
 
     train_data_param = {
-                'func': Combine_world,
-                #'func': train_normalnet_hdf5.Threedworld,
+                #'func': Combine_world,
+                'func': Combine_world_sep,
                 'data_path': DATA_PATH,
                 'group': 'train',
                 'n_threads': n_threads,
                 'batch_size': 2,
             }
     val_data_param = {
-                'func': Combine_world,
-                #'func': train_normalnet_hdf5.Threedworld,
+                #'func': Combine_world,
+                'func': Combine_world_sep,
                 'data_path': DATA_PATH,
                 'group': 'val',
-                'n_threads': n_threads,
+                'n_threads': 1,
                 'batch_size': 2,
             }
     train_queue_params = {
