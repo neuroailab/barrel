@@ -543,7 +543,7 @@ def main():
         #over_num = 256
         #over_num = 1280
         now_num = 0
-        for indx_tmp in xrange(val_step_num):
+        for indx_tmp in xrange(val_step_num + 1):
             start_time = time.time()
             res = sess.run(valid_targets_dict['topn']['targets'])
             #print(res.keys())

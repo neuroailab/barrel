@@ -358,19 +358,6 @@ def main():
             'momentum': .9
         },
         'log_device_placement': False,  # if variable placement has to be logged
-        'validation_params': {
-            'topn': {
-                'data_params': val_data_param,
-                'queue_params': val_queue_params,
-                'targets': {
-                    'func': rep_loss,
-                    'target': val_target,
-                },
-                'num_steps': val_step_num,
-                'agg_func': lambda x: {k:np.mean(v) for k,v in x.items()},
-                'online_agg_func': online_agg
-            },
-        },
     }
     base.train_from_params(**params)
 
@@ -389,4 +376,17 @@ if __name__ == '__main__':
                 'num_steps': 10,
                 'agg_func': mean_losses_keep_rest,
             },
+        'validation_params': {
+            'topn': {
+                'data_params': val_data_param,
+                'queue_params': val_queue_params,
+                'targets': {
+                    'func': rep_loss,
+                    'target': val_target,
+                },
+                'num_steps': val_step_num,
+                'agg_func': lambda x: {k:np.mean(v) for k,v in x.items()},
+                'online_agg_func': online_agg
+            },
+        },
 '''
