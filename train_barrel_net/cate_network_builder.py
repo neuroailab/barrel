@@ -62,6 +62,103 @@ def getBnMode(i, cfg, key_want = "subnet"):
     tmp_dict = cfg[key_want]["l%i" % i]
     return tmp_dict['bn']
 
+def group_in2d(small_inputs, padding_len, row_num = 11, col_num = 10):
+    shape_now = small_inputs[0].get_shape().as_list()
+
+    if padding_len>0:
+        pad_right = tf.zeros([shape_now[0], padding_len, shape_now[2], shape_now[3]])
+        pad_up = tf.zeros([shape_now[0], shape_now[1] + padding_len, padding_len, shape_now[3]])
+
+    indx_now = 0
+
+    tensor_rows = []
+
+    for indx_row in xrange(row_num):
+
+        tensor_cols = []
+        for indx_col in xrange(col_num):
+            small_input = small_inputs[indx_now]
+            small_input = tf.concat([small_input, pad_right], 1)
+            small_input = tf.concat([small_input, pad_up], 2)
+            tensor_cols.append(small_input)
+            indx_now = indx_now + 1
+        tensor_curr_row = tf.concat(tensor_cols, 2)
+        tensor_rows.append(tensor_curr_row)
+
+    final_input = tf.concat(tensor_rows, 1)
+
+    return final_input
+
+def degroup_from2d(whole_output, padding_len, row_num = 11, col_num = 10):
+    shape_now = whole_output.get_shape().as_list()
+
+    assert shape_now[1]%row_num==0, 'Use "SAME" for padding!'
+    assert shape_now[2]%col_num==0, 'Use "SAME" for padding!'
+    small_shape = [shape_now[1]//row_num, shape_now[2]//col_num]
+
+    small_inputs = []
+    all_rows = tf.split(whole_output, row_num, 1)
+
+    for indx_row in xrange(row_num):
+        curr_row_tensor = all_rows[indx_row]
+        all_cols_curr_row = tf.split(curr_row_tensor, col_num, 2)
+
+        for indx_col in xrange(col_num):
+            curr_col_row_tensor = all_cols_curr_row[indx_col]
+
+            small_input = tf.slice(curr_col_row_tensor, [0, 0, 0, 0], [-1, small_shape[0] - padding_len, small_shape[1] - padding_len, -1])
+
+            small_inputs.append(small_input)
+
+    return small_inputs
+
+def build_partnet_3din2d(m, cfg, key_layernum, key_subnet, inputs=None, layer_offset=0, dropout=None):
+    layernum_sub = cfg[ key_layernum ]
+
+    shape_list = inputs.get_shape().as_list()
+    small_inputs = tf.split(inputs, shape_list[1], 1)
+    
+    for indx_input in xrange(len(small_inputs)):
+        small_inputs[indx_input] = tf.reshape(small_inputs[indx_input], [shape_list[0], 5, 7, -1])
+
+    for indx_layer in xrange(layernum_sub):
+        curr_size = getConvFilterSize(indx_layer, cfg, key_want = key_subnet) 
+        input_whole = group_in2d(small_inputs, curr_size - 1)
+        m.output = input_whole
+
+        do_conv = getWhetherConv(indx_layer, cfg, key_want = key_subnet)
+        if do_conv:
+            layer_name = "conv%i" % (1 + indx_layer + layer_offset)
+            with tf.variable_scope(layer_name):
+                m.conv(getConvNumFilters(indx_layer, cfg, key_want = key_subnet), 
+                        getConvFilterSize(indx_layer, cfg, key_want = key_subnet), 
+                        getConvStride(indx_layer, cfg, key_want = key_subnet))
+
+                if getWhetherBn(indx_layer, cfg, key_want = key_subnet):
+                    m.batchnorm_corr(train)
+
+                do_pool = getWhetherPool(indx_layer, cfg, key_want = key_subnet)
+                if do_pool:
+                    m.pool(getPoolFilterSize(indx_layer, cfg, key_want = key_subnet), 
+                            getPoolStride(indx_layer, cfg, key_want = key_subnet))
+
+        else:
+            layer_name = "fc%i" % (1 + indx_layer + layer_offset)
+            with tf.variable_scope(layer_name):
+                m.fc(getFcNumFilters(indx_layer, cfg, key_want = key_subnet), 
+                        init='trunc_norm', dropout=dropout, bias=.1)
+
+                if getWhetherBn(indx_layer, cfg, key_want = key_subnet):
+                    m.batchnorm_corr(train)
+
+        small_inputs = degroup_from2d(m.output, curr_size - 1)
+
+    for indx_input in xrange(len(small_inputs)):
+        small_inputs[indx_input] = tf.reshape(small_inputs[indx_input], [shape_list[0], 1, 1, -1])
+    
+    m.output = tf.concat(small_inputs, 1)
+    return m
+
 def build_partnet_3d(m, cfg, key_layernum, key_subnet, inputs=None, layer_offset=0, dropout=None):
     layernum_sub = cfg[ key_layernum ]
     for indx_layer in xrange(layernum_sub):
@@ -133,6 +230,33 @@ def build_partnet(m, cfg, key_layernum, key_subnet, inputs=None, layer_offset=0,
 
                 if getWhetherBn(indx_layer, cfg, key_want = key_subnet):
                     m.batchnorm_corr(train)
+
+    return m
+
+def catenet_spa_temp_3din2d(inputs, cfg_initial, train = True, **kwargs):
+
+    m = model.ConvNet(**kwargs)
+
+    cfg = cfg_initial
+
+    dropout_default = 0.5
+    if 'dropout' in cfg:
+        dropout_default = cfg['dropout']
+
+    dropout = dropout_default if train else None
+
+    if dropout==0:
+        dropout = None
+
+    shape_list = inputs.get_shape().as_list()
+    curr_layer = 0
+
+    assert shape_list[2]==35, 'Must set expand==1'
+
+    m = build_partnet_3din2d(m, cfg, "layernum_spa", "spanet", inputs = inputs, layer_offset = curr_layer, dropout = dropout)
+
+    curr_layer = curr_layer + cfg["layernum_spa"]
+    m = build_partnet(m, cfg, "layernum_temp", "tempnet", layer_offset = curr_layer, dropout = dropout)
 
     return m
 
@@ -393,6 +517,19 @@ def catenet_spa_temp_3d_tfutils(inputs, split_12 = False, **kwargs):
         input_t = catenet_from_3s(input_con, func_each = catenet_spa_temp_3d, **kwargs)
     else:
         input_t = catenet_from_12s(input_con, func_each = catenet_spa_temp_3d, **kwargs)
+
+    m_final = catenet_add(input_t, **kwargs)
+    return m_final.output, m_final.params
+
+def catenet_spa_temp_3din2d_tfutils(inputs, split_12 = False, **kwargs):
+
+    input_con = deal_with_inputs(inputs)
+    #print(input_con.get_shape().as_list())
+
+    if not split_12:
+        input_t = catenet_from_3s(input_con, func_each = catenet_spa_temp_3din2d, **kwargs)
+    else:
+        input_t = catenet_from_12s(input_con, func_each = catenet_spa_temp_3din2d, **kwargs)
 
     m_final = catenet_add(input_t, **kwargs)
     return m_final.output, m_final.params
