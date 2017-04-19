@@ -320,6 +320,41 @@ class ConvNet(object):
         return self.output
 
     @tf.contrib.framework.add_arg_scope
+    def pool3(self,
+             ksize=3,
+             stride=2,
+             padding='SAME',
+             in_layer=None):
+        if in_layer is None:
+            in_layer = self.output
+
+        if isinstance(ksize, int):
+            ksize1 = ksize
+            ksize2 = ksize
+            ksize3 = ksize
+        else:
+            ksize1, ksize2, ksize3 = ksize
+
+        if isinstance(stride, int):
+            stride1 = stride
+            stride2 = stride
+            stride3 = stride
+        else:
+            stride1, stride2, stride3 = stride
+
+        self.output = tf.nn.max_pool3d(in_layer,
+                                     ksize=[1, ksize1, ksize2, ksize3, 1],
+                                     strides=[1, stride1, stride2, stride3, 1],
+                                     padding=padding,
+                                     name='pool')
+        self.params = {'input': in_layer.name,
+                       'type': 'maxpool',
+                       'kernel_size': ksize,
+                       'stride': stride,
+                       'padding': padding}
+        return self.output
+
+    @tf.contrib.framework.add_arg_scope
     def pool(self,
              ksize=3,
              stride=2,

@@ -20,10 +20,24 @@ def getConvFilterSize(i, cfg, key_want = "subnet"):
     else:
         return tmp_dict["filter_size"]
 
+def getConvFilterSize3D(i, cfg, key_want = "subnet"):
+    tmp_dict = cfg[key_want]["l%i" % i]["conv"]
+    if "filter_size1" in tmp_dict:
+        return (tmp_dict["filter_size1"], tmp_dict["filter_size2"], tmp_dict["filter_size3"])
+    else:
+        return tmp_dict["filter_size"]
+
 def getConvStride(i, cfg, key_want = "subnet"):
     tmp_dict = cfg[key_want]["l%i" % i]["conv"]
     if "stride1" in tmp_dict:
         return (tmp_dict["stride1"], tmp_dict["stride2"])
+    else:
+        return tmp_dict["stride"]
+
+def getConvStride3D(i, cfg, key_want = "subnet"):
+    tmp_dict = cfg[key_want]["l%i" % i]["conv"]
+    if "stride1" in tmp_dict:
+        return (tmp_dict["stride1"], tmp_dict["stride2"], tmp_dict["stride3"])
     else:
         return tmp_dict["stride"]
 
@@ -43,10 +57,24 @@ def getPoolFilterSize(i, cfg, key_want = "subnet"):
     else:
         return tmp_dict["filter_size"]
 
+def getPoolFilterSize3D(i, cfg, key_want = "subnet"):
+    tmp_dict = cfg[key_want]["l%i" % i]["pool"]
+    if "filter_size1" in tmp_dict:
+        return (tmp_dict["filter_size1"], tmp_dict["filter_size2"], tmp_dict["filter_size3"])
+    else:
+        return tmp_dict["filter_size"]
+
 def getPoolStride(i, cfg, key_want = "subnet"):
     tmp_dict = cfg[key_want]["l%i" % i]["pool"]
     if "stride1" in tmp_dict:
         return (tmp_dict["stride1"], tmp_dict["stride2"])
+    else:
+        return tmp_dict["stride"]
+
+def getPoolStride3D(i, cfg, key_want = "subnet"):
+    tmp_dict = cfg[key_want]["l%i" % i]["pool"]
+    if "stride1" in tmp_dict:
+        return (tmp_dict["stride1"], tmp_dict["stride2"], tmp_dict["stride3"])
     else:
         return tmp_dict["stride"]
 
@@ -157,6 +185,44 @@ def build_partnet_3din2d(m, cfg, key_layernum, key_subnet, inputs=None, layer_of
         small_inputs[indx_input] = tf.reshape(small_inputs[indx_input], [shape_list[0], 1, 1, -1])
     
     m.output = tf.concat(small_inputs, 1)
+    return m
+
+def build_partnet_all3d(m, cfg, key_layernum, key_subnet, inputs=None, layer_offset=0, dropout=None):
+    layernum_sub = cfg[ key_layernum ]
+    for indx_layer in xrange(layernum_sub):
+        do_conv = getWhetherConv(indx_layer, cfg, key_want = key_subnet)
+        if do_conv:
+            layer_name = "conv%i" % (1 + indx_layer + layer_offset)
+            with tf.variable_scope(layer_name):
+                curr_size_list = getConvFilterSize3D(indx_layer, cfg, key_want = key_subnet) 
+
+                if indx_layer==0 and (not inputs==None):
+                    m.conv3(getConvNumFilters(indx_layer, cfg, key_want = key_subnet), 
+                            curr_size_list,
+                            getConvStride3D(indx_layer, cfg, key_want = key_subnet),
+                           padding='VALID', in_layer = inputs)
+                else:
+                    m.conv3(getConvNumFilters(indx_layer, cfg, key_want = key_subnet), 
+                            curr_size_list, 
+                            getConvStride3D(indx_layer, cfg, key_want = key_subnet))
+
+                if getWhetherBn(indx_layer, cfg, key_want = key_subnet):
+                    m.batchnorm_corr(train)
+
+                do_pool = getWhetherPool(indx_layer, cfg, key_want = key_subnet)
+                if do_pool:
+                    m.pool3(getPoolFilterSize3D(indx_layer, cfg, key_want = key_subnet), 
+                            getPoolStride3D(indx_layer, cfg, key_want = key_subnet))
+
+        else:
+            layer_name = "fc%i" % (1 + indx_layer + layer_offset)
+            with tf.variable_scope(layer_name):
+                m.fc(getFcNumFilters(indx_layer, cfg, key_want = key_subnet), 
+                        init='trunc_norm', dropout=dropout, bias=.1)
+
+                if getWhetherBn(indx_layer, cfg, key_want = key_subnet):
+                    m.batchnorm_corr(train)
+
     return m
 
 def build_partnet_3d(m, cfg, key_layernum, key_subnet, inputs=None, layer_offset=0, dropout=None):
@@ -307,12 +373,16 @@ def catenet_spa_temp(inputs, cfg_initial, train = True, **kwargs):
     if dropout==0:
         dropout = None
 
+    inputs = tf.transpose(inputs, [0, 2, 1, 3])
     shape_list = inputs.get_shape().as_list()
-    small_inputs = tf.split(inputs, shape_list[1], 1)
+    split_num = shape_list[2]
+    if 'split_num' in cfg:
+        split_num = cfg['split_num']
+    small_inputs = tf.split(inputs, split_num, 2)
     small_outputs = []
     curr_layer = 0
 
-    assert shape_list[2]==35, 'Must set expand==1'
+    assert shape_list[1]==35, 'Must set expand==1'
 
     first_flag = True
 
@@ -334,6 +404,76 @@ def catenet_spa_temp(inputs, cfg_initial, train = True, **kwargs):
     m.output = new_input
     curr_layer = curr_layer + cfg["layernum_spa"]
     m = build_partnet(m, cfg, "layernum_temp", "tempnet", layer_offset = curr_layer, dropout = dropout)
+
+    return m
+
+def catenet_temp_spa_sep(inputs, cfg_initial, train = True, **kwargs):
+
+    m = model.ConvNet(**kwargs)
+
+    cfg = cfg_initial
+
+    dropout_default = 0.5
+    if 'dropout' in cfg:
+        dropout_default = cfg['dropout']
+
+    dropout = dropout_default if train else None
+
+    if dropout==0:
+        dropout = None
+
+    curr_layer = 0
+    m = build_partnet(m, cfg, "layernum_temp", "tempnet", inputs = inputs, layer_offset = curr_layer, dropout = dropout)
+    curr_layer = curr_layer + cfg["layernum_temp"]
+
+    tensor_tmp = m.output
+    tensor_tmp = tf.transpose(tensor_tmp, perm = [0, 2, 1, 3])
+
+    shape_list = tensor_tmp.get_shape().as_list()
+    #print(shape_list)
+    sep_num = 9
+    if "sep_num" in cfg:
+        sep_num = cfg["sep_num"]
+
+    small_inputs = tf.split(tensor_tmp, sep_num, 2)
+    small_outputs = []
+
+    first_flag = True
+
+    for small_input in small_inputs:
+        tensor_tmp = tf.reshape(small_input, [shape_list[0], shape_list[1], -1])
+
+        shape_now = tensor_tmp.get_shape().as_list()
+        slice0 = tf.slice(tensor_tmp, [0, 0, 0], [-1, 5, -1])
+        slice1 = tf.slice(tensor_tmp, [0, 5, 0], [-1, 6, -1])
+        slice2 = tf.slice(tensor_tmp, [0, 11, 0], [-1, 14, -1])
+        slice3 = tf.slice(tensor_tmp, [0, 25, 0], [-1, 6, -1])
+
+        pad_ten0 = tf.zeros([shape_now[0], 1, shape_now[2]])
+        pad_ten1 = tf.zeros([shape_now[0], 1, shape_now[2]])
+        pad_ten2 = tf.zeros([shape_now[0], 1, shape_now[2]])
+        pad_ten3 = tf.zeros([shape_now[0], 1, shape_now[2]])
+
+        tensor_tmp = tf.concat([slice0, pad_ten0, pad_ten1, slice1, pad_ten2, slice2, pad_ten3, slice3], 1)
+
+        tensor_tmp = tf.reshape(tensor_tmp, [shape_list[0], 5, 7, -1])
+
+        m.output = tensor_tmp
+        if first_flag:
+            with tf.variable_scope("small"):
+                m = build_partnet(m, cfg, "layernum_spa", "spanet", layer_offset = curr_layer, dropout = dropout)
+            first_flag = False
+        else:
+            with tf.variable_scope("small", reuse=True):
+                m = build_partnet(m, cfg, "layernum_spa", "spanet", layer_offset = curr_layer, dropout = dropout)
+
+        small_outputs.append( m.output )
+
+    new_inputs = tf.concat(small_outputs, 1)
+    m.output = new_inputs
+    curr_layer = curr_layer + cfg["layernum_spa"]
+
+    m = build_partnet(m, cfg, "layernum_spatemp", "spatempnet", layer_offset = curr_layer, dropout = dropout)
 
     return m
 
@@ -379,6 +519,27 @@ def catenet_temp_spa(inputs, cfg_initial, train = True, **kwargs):
 
     m.output = tensor_tmp
     m = build_partnet(m, cfg, "layernum_spa", "spanet", layer_offset = curr_layer, dropout = dropout)
+
+    return m
+
+def catenet_all3d(inputs, cfg_initial = None, train=True, **kwargs):
+    m = model.ConvNet(**kwargs)
+
+    cfg = cfg_initial
+
+    dropout_default = 0.5
+    if 'dropout' in cfg:
+        dropout_default = cfg['dropout']
+
+    dropout = dropout_default if train else None
+
+    if dropout==0:
+        dropout = None
+
+    shape_list = inputs.get_shape().as_list()
+    assert shape_list[2]==35, 'Must set expand==1'
+    inputs = tf.reshape(inputs, [shape_list[0], shape_list[1], 5, 7, -1])
+    m = build_partnet_all3d(m, cfg, "layernum_sub", "subnet", inputs = inputs, layer_offset = 0, dropout = dropout)
 
     return m
 
@@ -481,6 +642,18 @@ def deal_with_inputs(inputs):
 
     return input_con
 
+def catenet_3d_tfutils(inputs, split_12 = False, **kwargs):
+
+    input_con = deal_with_inputs(inputs)
+    #print(input_con.get_shape().as_list())
+
+    if not split_12:
+        input_t = catenet_from_3s(input_con, func_each = catenet_all3d, **kwargs)
+    else:
+        input_t = catenet_from_12s(input_con, func_each = catenet_all3d, **kwargs)
+
+    m_final = catenet_add(input_t, **kwargs)
+    return m_final.output, m_final.params
 
 def catenet_tfutils(inputs, split_12 = False, **kwargs):
 
@@ -491,6 +664,19 @@ def catenet_tfutils(inputs, split_12 = False, **kwargs):
         input_t = catenet_from_3s(input_con, **kwargs)
     else:
         input_t = catenet_from_12s(input_con, **kwargs)
+
+    m_final = catenet_add(input_t, **kwargs)
+    return m_final.output, m_final.params
+
+def catenet_temp_spa_sep_tfutils(inputs, split_12 = False, **kwargs):
+
+    input_con = deal_with_inputs(inputs)
+    #print(input_con.get_shape().as_list())
+
+    if not split_12:
+        input_t = catenet_from_3s(input_con, func_each = catenet_temp_spa_sep, **kwargs)
+    else:
+        input_t = catenet_from_12s(input_con, func_each = catenet_temp_spa_sep, **kwargs)
 
     m_final = catenet_add(input_t, **kwargs)
     return m_final.output, m_final.params
