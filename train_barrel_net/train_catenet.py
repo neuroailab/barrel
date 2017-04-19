@@ -285,7 +285,12 @@ def main():
     if args.gpu>-1:
         os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
 
-    cfg_initial = json.load(open(args.pathconfig))
+    pathconfig = args.pathconfig
+    if not os.path.isfile(pathconfig):
+        pathconfig = os.path.join('network_cfgs', pathconfig)
+        assert os.path.isfile(pathconfig), "%s not existing!" % args.pathconfig
+
+    cfg_initial = json.load(open(pathconfig))
     #print(cfg_initial)
 
     exp_id  = args.expId
@@ -461,7 +466,8 @@ def main():
             'data_params': train_data_param,
             'queue_params': train_queue_params,
             'thres_loss': 1000000000,
-            'num_steps': 90 * NUM_BATCHES_PER_EPOCH  # number of steps to train
+            #'num_steps': 90 * NUM_BATCHES_PER_EPOCH  # number of steps to train
+            'num_steps': 120 * NUM_BATCHES_PER_EPOCH  # number of steps to train
         }
 
     loss_params = {

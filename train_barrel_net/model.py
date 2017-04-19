@@ -102,6 +102,77 @@ class ConvNet(object):
         return self.output
 
     @tf.contrib.framework.add_arg_scope
+    def conv3(self,
+             out_shape,
+             ksize=3,
+             stride=1,
+             padding='SAME',
+             init='xavier',
+             stddev=.01,
+             bias=1,
+             activation='relu',
+             weight_decay=None,
+             in_layer=None,
+             init_file=None,
+             init_layer_keys=None):
+
+        if in_layer is None:
+            in_layer = self.output
+        if weight_decay is None:
+            weight_decay = 0.
+        in_shape = in_layer.get_shape().as_list()[-1]
+
+        if isinstance(ksize, int):
+            ksize1 = ksize
+            ksize2 = ksize
+            ksize3 = ksize
+        else:
+            ksize1, ksize2, ksize3 = ksize
+
+        if init != 'from_file':
+            kernel = tf.get_variable(initializer=self.initializer(init, stddev=stddev),
+                                     shape=[ksize1, ksize2, ksize3, in_shape, out_shape],
+                                     dtype=tf.float32,
+                                     regularizer=tf.contrib.layers.l2_regularizer(weight_decay),
+                                     name='weights')
+            biases = tf.get_variable(initializer=tf.constant_initializer(bias),
+                                     shape=[out_shape],
+                                     dtype=tf.float32,
+                                     name='bias')
+        else:
+            init_dict = self.initializer(init,
+                                         init_file=init_file,
+                                         init_keys=init_layer_keys)
+            kernel = tf.get_variable(initializer=init_dict['weight'],
+                                     dtype=tf.float32,
+                                     regularizer=tf.contrib.layers.l2_regularizer(weight_decay),
+                                     name='weights')
+            biases = tf.get_variable(initializer=init_dict['bias'],
+                                     dtype=tf.float32,
+                                     name='bias')
+
+        conv = tf.nn.conv3d(in_layer, kernel,
+                            strides=[1, stride, stride, stride, 1],
+                            padding=padding)
+
+        self.output = tf.nn.bias_add(conv, biases, name='conv')
+        if activation is not None:
+            self.output = self.activation(kind=activation)
+        self.params = {'input': in_layer.name,
+                       'type': 'conv3',
+                       'num_filters': out_shape,
+                       'stride': stride,
+                       'kernel_size': (ksize1, ksize2, ksize3),
+                       'padding': padding,
+                       'init': init,
+                       'stddev': stddev,
+                       'bias': bias,
+                       'activation': activation,
+                       'weight_decay': weight_decay,
+                       'seed': self.seed}
+        return self.output
+
+    @tf.contrib.framework.add_arg_scope
     def conv(self,
              out_shape,
              ksize=3,
