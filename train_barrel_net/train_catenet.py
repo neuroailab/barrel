@@ -275,6 +275,7 @@ def main():
     parser.add_argument('--norm', default = 0, type = int, action = 'store', help = 'Whether do the normalization, default is no')
     parser.add_argument('--split12', default = 0, type = int, action = 'store', help = 'Whether do the 12 swipes spliting, default is no')
     parser.add_argument('--norm_std', default = 1, type = float, action = 'store', help = 'Std of new input, default is 1')
+    parser.add_argument('--tnn', default = 0, type = int, action = 'store', help = 'Whether to use the tnn, default is no')
 
     # Feature extraction related parameters
     parser.add_argument('--gen_feature', default = 0, type = int, action = 'store', help = 'Whether to generate features, default is 0, None')
@@ -288,7 +289,8 @@ def main():
     pathconfig = args.pathconfig
     if not os.path.isfile(pathconfig):
         pathconfig = os.path.join('network_cfgs', pathconfig)
-        assert os.path.isfile(pathconfig), "%s not existing!" % args.pathconfig
+
+    assert os.path.isfile(pathconfig), "%s not existing!" % args.pathconfig
 
     cfg_initial = json.load(open(pathconfig))
     #print(cfg_initial)
@@ -296,8 +298,16 @@ def main():
     exp_id  = args.expId
     cache_dir = os.path.join(args.cacheDirPrefix, '.tfutils', 'localhost:'+ str(args.nport), 'normalnet-test', 'normalnet', exp_id)
 
-    BATCH_SIZE  = cfg_initial["BATCH_SIZE"]
-    queue_capa  = cfg_initial["QUEUE_CAP"]
+    if "BATCH_SIZE" in cfg_initial:
+        BATCH_SIZE  = cfg_initial["BATCH_SIZE"]
+    else:
+        BATCH_SIZE  = 384
+
+    if "QUEUE_CAP" in cfg_initial:
+        queue_capa  = cfg_initial["QUEUE_CAP"]
+    else:
+        queue_capa  = 3840
+
     n_threads   = 4
 
     func_net = getattr(cate_network_builder, args.namefunc)
@@ -376,6 +386,9 @@ def main():
         val_queue_params['batch_size'] = BATCH_SIZE//12
         train_queue_params['capacity'] = queue_capa//12
         val_queue_params['capacity'] = BATCH_SIZE*10//12
+
+    if args.tnn==1:
+        model_params['cfg_path'] = pathconfig
 
     optimizer_params = {
             'func': optimizer.ClipOptimizer,

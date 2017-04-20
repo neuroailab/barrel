@@ -8,6 +8,10 @@ import tensorflow as tf
 from tfutils import model as model_tfutils
 import model
 
+from tnn import main
+
+from collections import OrderedDict
+
 def getWhetherConv(i, cfg, key_want = "subnet"):
     tmp_dict = cfg[key_want]["l%i" % i]
     ret_val = "conv" in tmp_dict
@@ -543,6 +547,38 @@ def catenet_all3d(inputs, cfg_initial = None, train=True, **kwargs):
 
     return m
 
+def catenet_tnn(inputs, cfg_path, train = True, **kwargs):
+    m = model.ConvNet(**kwargs)
+
+    params = {'input': inputs.name,
+               'type': 'fc'
+            }
+
+    dropout = 0.5 if train else None
+
+    # Get inputs
+    shape_list = inputs.get_shape().as_list()
+    assert shape_list[2]==35, 'Must set expand==1'
+    small_inputs = tf.split(inputs, shape_list[1], 1)
+    for indx_time in xrange(len(small_inputs)):
+        small_inputs[indx_time] = tf.reshape(small_inputs[indx_time], [shape_list[0], 5, 7, -1])
+
+    G = main.graph_from_json(cfg_path)
+    for node, attr in G.nodes(data=True):
+	if node in ['fc7', 'fc8']:
+	    if train:
+		attr['kwargs']['pre_memory'][0][1]['dropout'] = 0.5
+	    else:
+		attr['kwargs']['pre_memory'][0][1]['dropout'] = None
+
+    main.init_nodes(G, batch_size=shape_list[0])
+    main.unroll(G, input_seq={'conv1': small_inputs})
+
+    m.output = G.node['fc8']['outputs'][-1]
+    m.params = params
+
+    return m
+
 def catenet(inputs, cfg_initial = None, train=True, **kwargs):
     m = model.ConvNet(**kwargs)
 
@@ -729,6 +765,19 @@ def catenet_spa_temp_tfutils(inputs, split_12 = False, **kwargs):
         input_t = catenet_from_3s(input_con, func_each = catenet_spa_temp, **kwargs)
     else:
         input_t = catenet_from_12s(input_con, func_each = catenet_spa_temp, **kwargs)
+
+    m_final = catenet_add(input_t, **kwargs)
+    return m_final.output, m_final.params
+
+def catenet_tnn_tfutils(inputs, split_12 = False, **kwargs):
+
+    input_con = deal_with_inputs(inputs)
+    #print(input_con.get_shape().as_list())
+
+    if not split_12:
+        input_t = catenet_from_3s(input_con, func_each = catenet_tnn, **kwargs)
+    else:
+        input_t = catenet_from_12s(input_con, func_each = catenet_tnn, **kwargs)
 
     m_final = catenet_add(input_t, **kwargs)
     return m_final.output, m_final.params
