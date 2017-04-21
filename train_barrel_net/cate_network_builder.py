@@ -961,3 +961,23 @@ def catenet_tfutils_old(inputs, **kwargs):
             m_final = catenet_add(input_t, **kwargs)
 
         return m_final.output, m_final.params
+
+def parallel_net_builder(inputs, model_func, n_gpus = 2, **kwargs):
+    with tf.variable_scope(tf.get_variable_scope()) as vscope:
+        assert n_gpus > 1, ('At least two gpus have to be used')
+        outputs = []
+        params = []
+
+        inputs['Data_force'] = tf.split(inputs['Data_force'], axis=0, num_or_size_splits=n_gpus)
+        inputs['Data_torque'] = tf.split(inputs['Data_torque'], axis=0, num_or_size_splits=n_gpus)
+
+        for i, (force_inp, torque_inp) in enumerate(zip(inputs['Data_force'], inputs['Data_torque'])):
+            with tf.device('/gpu:%d' % i):
+                with tf.name_scope('gpu_' + str(i)) as gpu_scope:
+                    output, param = model_func({'Data_force': force_inp, 'Data_torque': torque_inp}, **kwargs)
+                    outputs.append(output)
+                    params.append(param)
+                    tf.get_variable_scope().reuse_variables()
+
+        params = params[0]
+        return [outputs, params]
