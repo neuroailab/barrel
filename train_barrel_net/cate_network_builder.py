@@ -9,8 +9,10 @@ from tfutils import model as model_tfutils
 import model
 
 from tnn import main
+from tnn.cell import *
 
 from collections import OrderedDict
+from tensorflow.contrib import rnn
 
 def getWhetherConv(i, cfg, key_want = "subnet"):
     tmp_dict = cfg[key_want]["l%i" % i]
@@ -143,6 +145,108 @@ def degroup_from2d(whole_output, padding_len, row_num = 11, col_num = 10):
             small_inputs.append(small_input)
 
     return small_inputs
+
+class tnn_LSTMCell(rnn.RNNCell):
+
+    def __init__(self,
+                 harbor_shape,
+                 harbor=(harbor, None),
+                 pre_memory=None,
+                 memory=(memory, None),
+                 post_memory=None,
+                 input_init=(tf.zeros, None),
+                 state_init=(tf.zeros, None),
+                 dtype=tf.float32,
+                 name=None
+                 ):
+
+        self.harbor_shape = harbor_shape
+        self.harbor = harbor if harbor[1] is not None else (harbor[0], {})
+        self.pre_memory = pre_memory
+        self.memory = memory if memory[1] is not None else (memory[0], {})
+        self.post_memory = post_memory
+
+        self.input_init = input_init if input_init[1] is not None else (input_init[0], {})
+        self.state_init = state_init if state_init[1] is not None else (state_init[0], {})
+
+        self.dtype = dtype
+        self.name = name
+
+        self._reuse = None
+
+        #self.lstm_cell = rnn.LSTMCell(100, state_is_tuple=False)
+        self.lstm_cell = rnn.LSTMCell(1024)
+
+    def __call__(self, inputs=None, state=None):
+        """
+        Produce outputs given inputs
+
+        If inputs or state are None, they are initialized from scratch.
+
+        :Kwargs:
+            - inputs (list)
+                A list of inputs. Inputs are combined using the harbor function
+            - state
+
+        :Returns:
+            (output, state)
+        """
+
+        with tf.variable_scope(self.name, reuse=self._reuse):
+
+            if inputs is None:
+                inputs = [self.input_init[0](shape=self.harbor_shape,
+                                             **self.input_init[1])]
+            output = self.harbor[0](inputs, self.harbor_shape, reuse=self._reuse, **self.harbor[1])
+       
+            pre_name_counter = 0
+            for function, kwargs in self.pre_memory:
+                with tf.variable_scope("pre_" + str(pre_name_counter), reuse=self._reuse):
+                    output = function(output, **kwargs)
+                pre_name_counter += 1
+
+            if state is None:
+                state = self.lstm_cell.zero_state(output.get_shape().as_list()[0], dtype = self.dtype)
+
+            output, state = self.lstm_cell(output, state)
+            self.state = tf.identity(state, name='state')
+
+            post_name_counter = 0
+            for function, kwargs in self.post_memory:
+                with tf.variable_scope("post_" + str(post_name_counter), reuse=self._reuse):
+                    output = function(output, **kwargs)
+                post_name_counter += 1
+            self.output = tf.identity(tf.cast(output, self.dtype), name='output')
+
+            self._reuse = True
+
+        self.state_shape = self.state.shape
+        self.output_shape = self.output.shape
+        return self.output, state
+
+    @property
+    def state_size(self):
+        """
+        Size(s) of state(s) used by this cell.
+
+        It can be represented by an Integer, a TensorShape or a tuple of Integers
+        or TensorShapes.
+        """
+        # if self.state is not None:
+        return self.state_shape
+        # else:
+        #     raise ValueError('State not initialized yet')
+
+    @property
+    def output_size(self):
+        """
+        Integer or TensorShape: size of outputs produced by this cell.
+        """
+        # if self.output is not None:
+        return self.output_shape
+        # else:
+        #     raise ValueError('Output not initialized yet')
+
 
 def build_partnet_3din2d(m, cfg, key_layernum, key_subnet, inputs=None, layer_offset=0, dropout=None):
     layernum_sub = cfg[ key_layernum ]
@@ -547,7 +651,7 @@ def catenet_all3d(inputs, cfg_initial = None, train=True, **kwargs):
 
     return m
 
-def catenet_tnn(inputs, cfg_path, train = True, **kwargs):
+def catenet_tnn(inputs, cfg_path, train = True, tnndecay = 0.1, decaytrain = 0, uselstm = 0, **kwargs):
     m = model.ConvNet(**kwargs)
 
     params = {'input': inputs.name,
@@ -565,11 +669,17 @@ def catenet_tnn(inputs, cfg_path, train = True, **kwargs):
 
     G = main.graph_from_json(cfg_path)
     for node, attr in G.nodes(data=True):
+
+        memory_func, memory_param = attr['kwargs']['memory']
+        memory_param['memory_decay'] = tnndecay
+        memory_param['trainable'] = decaytrain==1
+        attr['kwargs']['memory'] = (memory_func, memory_param)
+
 	if node in ['fc7', 'fc8']:
-	    if train:
-		attr['kwargs']['pre_memory'][0][1]['dropout'] = 0.5
-	    else:
-		attr['kwargs']['pre_memory'][0][1]['dropout'] = None
+            attr['kwargs']['pre_memory'][0][1]['dropout'] = dropout
+
+        if node in ['fc8'] and uselstm==1:
+            attr['cell'] = tnn_LSTMCell 
 
     main.init_nodes(G, batch_size=shape_list[0])
     main.unroll(G, input_seq={'conv1': small_inputs})

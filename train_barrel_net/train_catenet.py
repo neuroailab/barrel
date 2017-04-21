@@ -277,6 +277,11 @@ def main():
     parser.add_argument('--norm_std', default = 1, type = float, action = 'store', help = 'Std of new input, default is 1')
     parser.add_argument('--tnn', default = 0, type = int, action = 'store', help = 'Whether to use the tnn, default is no')
 
+    # TNN related parameters
+    parser.add_argument('--tnndecay', default = 0.1, type = float, action = 'store', help = 'Memory decay for tnn each layer')
+    parser.add_argument('--decaytrain', default = 0, type = int, action = 'store', help = 'Whether the decay is trainable')
+    parser.add_argument('--uselstm', default = 0, type = int, action = 'store', help = 'Whether to use lstm')
+
     # Feature extraction related parameters
     parser.add_argument('--gen_feature', default = 0, type = int, action = 'store', help = 'Whether to generate features, default is 0, None')
     parser.add_argument('--hdf5path', default = "/mnt/fs1/chengxuz/barrel_response/response.hdf5", type = str, action = 'store', help = 'Where to save the output')
@@ -389,6 +394,9 @@ def main():
 
     if args.tnn==1:
         model_params['cfg_path'] = pathconfig
+        model_params['tnndecay'] = args.tnndecay
+        model_params['decaytrain'] = args.decaytrain
+        model_params['uselstm'] = args.uselstm
 
     optimizer_params = {
             'func': optimizer.ClipOptimizer,
