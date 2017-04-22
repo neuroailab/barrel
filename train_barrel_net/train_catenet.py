@@ -59,8 +59,39 @@ def in_top_k(inputs, outputs, target):
     return {'top1': tf.nn.in_top_k(outputs, inputs[target], 1),
             'top5': tf.nn.in_top_k(outputs, inputs[target], 5)}
 
+def cmu_in_top_k(inputs, outputs, target):
+    top1_list = []
+    top5_list = []
+    for output in outputs:
+        tmp_ret = in_top_k(inputs, output, target)
+
+        top1_list.append(tmp_ret['top1'])
+        top5_list.append(tmp_ret['top5'])
+    return {'top1': tf.concat(top1_list, 0), 'top5': tf.concat(top5_list, 0)}
+
+def cmu_parallel_in_top_k(inputs, outputs, target):
+    new_inputs = tf.split(inputs[target], axis = 0, num_or_size_splits = len(outputs))
+    top1_list = []
+    top5_list = []
+    for new_input, new_output in zip(new_inputs, outputs):
+        tmp_ret = cmu_in_top_k({target: new_input}, new_output, target)
+        top1_list.append(tmp_ret['top1'])
+        top5_list.append(tmp_ret['top5'])
+
+    return {'top1': tf.concat(top1_list, 0), 'top5': tf.concat(top5_list, 0)}
+
 def parallel_in_top_k(inputs, outputs, target):
     return in_top_k(inputs, tf.concat(outputs, 0), target)
+
+def cmu_softmax_cross_entropy_loss(labels, logits, **kwargs):
+    with tf.variable_scope(tf.get_variable_scope()) as vscope:
+        n_time = len(logits)
+        losses = []
+        for i, logit in enumerate(logits):
+            losses.append(
+                tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
+                            labels=labels, logits=logit, **kwargs)))
+        return tf.reduce_mean(losses)
 
 def parallel_softmax_cross_entropy_loss(labels, logits, **kwargs):
     with tf.variable_scope(tf.get_variable_scope()) as vscope:
@@ -73,6 +104,21 @@ def parallel_softmax_cross_entropy_loss(labels, logits, **kwargs):
                     label = tf.squeeze(label)
                     losses.append(
                         tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
+                                    labels=label, logits=logit)))
+                    tf.get_variable_scope().reuse_variables()
+        return losses
+
+def cmu_parallel_softmax_cross_entropy_loss(labels, logits, **kwargs):
+    with tf.variable_scope(tf.get_variable_scope()) as vscope:
+        n_gpus = len(logits)
+        labels = tf.split(labels, axis=0, num_or_size_splits=n_gpus)
+        losses = []
+        for i, (label, logit) in enumerate(zip(labels, logits)):
+            with tf.device('/gpu:%d' % i):
+                with tf.name_scope('gpu_' + str(i)) as gpu_scope:
+                    label = tf.squeeze(label)
+                    losses.append(
+                        tf.reduce_mean(cmu_softmax_cross_entropy_loss(
                                     labels=label, logits=logit)))
                     tf.get_variable_scope().reuse_variables()
         return losses
@@ -346,6 +392,7 @@ def main():
     # TNN related parameters
     parser.add_argument('--tnndecay', default = 0.1, type = float, action = 'store', help = 'Memory decay for tnn each layer')
     parser.add_argument('--decaytrain', default = 0, type = int, action = 'store', help = 'Whether the decay is trainable')
+    parser.add_argument('--cmu', default = 0, type = int, action = 'store', help = 'Whether do cumulative loss')
 
     # Feature extraction related parameters
     parser.add_argument('--gen_feature', default = 0, type = int, action = 'store', help = 'Whether to generate features, default is 0, None')
@@ -462,6 +509,7 @@ def main():
         model_params['cfg_path'] = pathconfig
         model_params['tnndecay'] = args.tnndecay
         model_params['decaytrain'] = args.decaytrain
+        model_params['cmu'] = args.cmu
 
     if args.parallel==1:
         model_params['model_func'] = model_params['func']
@@ -570,9 +618,16 @@ def main():
             'loss_per_case_func': loss_func,
         }
 
-    if args.parallel==1:
+    if args.parallel==1 and args.cmu==0:
         loss_params['agg_func'] = parallel_reduce_mean
         loss_params['loss_per_case_func'] = parallel_softmax_cross_entropy_loss
+
+    if args.parallel==1 and args.cmu==1:
+        loss_params['agg_func'] = parallel_reduce_mean
+        loss_params['loss_per_case_func'] = cmu_parallel_softmax_cross_entropy_loss
+
+    if args.parallel==0 and args.cmu==1:
+        loss_params['loss_per_case_func'] = cmu_softmax_cross_entropy_loss
 
     validation_params = {
             'topn': {
@@ -588,8 +643,14 @@ def main():
             }
         }
 
-    if args.parallel==1:
+    if args.parallel==1 and args.cmu==0:
         validation_params['topn']['targets']['func'] = parallel_in_top_k
+
+    if args.parallel==1 and args.cmu==1:
+        validation_params['topn']['targets']['func'] = cmu_parallel_in_top_k
+
+    if args.parallel==0 and args.cmu==1:
+        validation_params['topn']['targets']['func'] = cmu_in_top_k
 
     if args.gen_feature==1:
         train_params['validate_first'] = True

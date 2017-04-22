@@ -651,7 +651,7 @@ def catenet_all3d(inputs, cfg_initial = None, train=True, **kwargs):
 
     return m
 
-def catenet_tnn(inputs, cfg_path, train = True, tnndecay = 0.1, decaytrain = 0, cfg_initial = None, **kwargs):
+def catenet_tnn(inputs, cfg_path, train = True, tnndecay = 0.1, decaytrain = 0, cfg_initial = None, cmu = 0, **kwargs):
     m = model.ConvNet(**kwargs)
 
     params = {'input': inputs.name,
@@ -688,7 +688,11 @@ def catenet_tnn(inputs, cfg_path, train = True, tnndecay = 0.1, decaytrain = 0, 
     main.init_nodes(G, batch_size=shape_list[0])
     main.unroll(G, input_seq={'conv1': small_inputs}, ntimes = len(small_inputs))
 
-    m.output = G.node['fc8']['outputs'][-1]
+    if cmu==0:
+        m.output = G.node['fc8']['outputs'][-1]
+    else:
+        m.output = tf.transpose(tf.stack(G.node['fc8']['outputs']), [1,2,0])
+
     print(len(G.node['fc8']['outputs']))
     m.params = params
 
@@ -896,6 +900,36 @@ def catenet_tnn_tfutils(inputs, split_12 = False, **kwargs):
 
     m_final = catenet_add(input_t, **kwargs)
     return m_final.output, m_final.params
+
+def catenet_tnn_cmu_tfutils(inputs, split_12 = False, **kwargs):
+
+    input_con = deal_with_inputs(inputs)
+    #print(input_con.get_shape().as_list())
+
+    assert kwargs['cmu']==1, 'Must set cmu to be 1!'
+
+    if not split_12:
+        input_t = catenet_from_3s(input_con, func_each = catenet_tnn, **kwargs)
+    else:
+        input_t = catenet_from_12s(input_con, func_each = catenet_tnn, **kwargs)
+
+    all_input_t = tf.unstack(input_t, axis=2)
+
+    first_flag = True
+    ret_param = None
+    all_output = []
+    for small_input in all_input_t:
+        if first_flag:
+            with tf.variable_scope("cmu"):
+                m_final = catenet_add(small_input, **kwargs)
+                ret_param = m_final.params
+                first_flag = False
+        else:
+            with tf.variable_scope("cmu", reuse = True):
+                m_final = catenet_add(small_input, **kwargs)
+
+        all_output.append(m_final.output)
+    return all_output, ret_param
 
 # Deprecated
 def catenet_old(cfg_initial = None, train=True, seed=0, **kwargs):
