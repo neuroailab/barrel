@@ -175,7 +175,7 @@ class tnn_LSTMCell(rnn.RNNCell):
         self._reuse = None
 
         #self.lstm_cell = rnn.LSTMCell(100, state_is_tuple=False)
-        self.lstm_cell = rnn.LSTMCell(1024)
+        self.lstm_cell = rnn.LSTMCell(memory[1]['nunits'])
 
     def __call__(self, inputs=None, state=None):
         """
@@ -651,7 +651,7 @@ def catenet_all3d(inputs, cfg_initial = None, train=True, **kwargs):
 
     return m
 
-def catenet_tnn(inputs, cfg_path, train = True, tnndecay = 0.1, decaytrain = 0, uselstm = 0, **kwargs):
+def catenet_tnn(inputs, cfg_path, train = True, tnndecay = 0.1, decaytrain = 0, cfg_initial = None, **kwargs):
     m = model.ConvNet(**kwargs)
 
     params = {'input': inputs.name,
@@ -663,28 +663,33 @@ def catenet_tnn(inputs, cfg_path, train = True, tnndecay = 0.1, decaytrain = 0, 
     # Get inputs
     shape_list = inputs.get_shape().as_list()
     assert shape_list[2]==35, 'Must set expand==1'
-    small_inputs = tf.split(inputs, shape_list[1], 1)
+    sep_num = shape_list[1]
+    if not cfg_initial is None and 'sep_num' in cfg_initial:
+        sep_num = cfg_initial['sep_num']
+    small_inputs = tf.split(inputs, sep_num, 1)
     for indx_time in xrange(len(small_inputs)):
+        small_inputs[indx_time] = tf.transpose(small_inputs[indx_time], [0, 2, 1, 3])
         small_inputs[indx_time] = tf.reshape(small_inputs[indx_time], [shape_list[0], 5, 7, -1])
 
     G = main.graph_from_json(cfg_path)
     for node, attr in G.nodes(data=True):
 
         memory_func, memory_param = attr['kwargs']['memory']
-        memory_param['memory_decay'] = tnndecay
-        memory_param['trainable'] = decaytrain==1
-        attr['kwargs']['memory'] = (memory_func, memory_param)
+        if 'nunits' in memory_param:
+            attr['cell'] = tnn_LSTMCell
+        else:
+            memory_param['memory_decay'] = tnndecay
+            memory_param['trainable'] = decaytrain==1
+            attr['kwargs']['memory'] = (memory_func, memory_param)
 
 	if node in ['fc7', 'fc8']:
             attr['kwargs']['pre_memory'][0][1]['dropout'] = dropout
 
-        if node in ['fc8'] and uselstm==1:
-            attr['cell'] = tnn_LSTMCell 
-
     main.init_nodes(G, batch_size=shape_list[0])
-    main.unroll(G, input_seq={'conv1': small_inputs})
+    main.unroll(G, input_seq={'conv1': small_inputs}, ntimes = len(small_inputs))
 
     m.output = G.node['fc8']['outputs'][-1]
+    print(len(G.node['fc8']['outputs']))
     m.params = params
 
     return m

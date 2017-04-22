@@ -346,7 +346,6 @@ def main():
     # TNN related parameters
     parser.add_argument('--tnndecay', default = 0.1, type = float, action = 'store', help = 'Memory decay for tnn each layer')
     parser.add_argument('--decaytrain', default = 0, type = int, action = 'store', help = 'Whether the decay is trainable')
-    parser.add_argument('--uselstm', default = 0, type = int, action = 'store', help = 'Whether to use lstm')
 
     # Feature extraction related parameters
     parser.add_argument('--gen_feature', default = 0, type = int, action = 'store', help = 'Whether to generate features, default is 0, None')
@@ -463,7 +462,6 @@ def main():
         model_params['cfg_path'] = pathconfig
         model_params['tnndecay'] = args.tnndecay
         model_params['decaytrain'] = args.decaytrain
-        model_params['uselstm'] = args.uselstm
 
     if args.parallel==1:
         model_params['model_func'] = model_params['func']
