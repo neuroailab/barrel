@@ -181,6 +181,7 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
                  norm_flag = False,
                  split_12 = False,
                  norm_std = 1,
+                 num_fake = 0,
                  *args,
                  **kwargs):
 
@@ -193,6 +194,7 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
         self.norm_flag = norm_flag
         self.norm_std = norm_std
         self.split_12 = split_12
+        self.num_fake = num_fake
         if norm_flag:
             self.stat_path = {}
             self.stat_path['Data_force'] = data_path['Data_force_stat']
@@ -221,11 +223,19 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
         slice0 = tf.strided_slice( data[curr_key], [0,0,0,0,0], [0,0,0,0,0], [3, 1, 1, 1, 1], end_mask = 31)
         slice1 = tf.strided_slice( data[curr_key], [1,0,0,0,0], [0,0,0,0,0], [3, 1, 1, 1, 1], end_mask = 31)
         slice2 = tf.strided_slice( data[curr_key], [2,0,0,0,0], [0,0,0,0,0], [3, 1, 1, 1, 1], end_mask = 31)
+
+
         #slice1 = tf.strided_slice( data[curr_key], [1], [2], [3])
         #slice2 = tf.strided_slice( data[curr_key], [2], [3], [3])
         #print(slice0.get_shape().as_list())
         data[new_key] = tf.concat([slice0, slice1, slice2], 1)
         #print(data[new_key].get_shape().as_list())
+
+        if self.num_fake>0:
+            shape_list = data[new_key].get_shape().as_list()
+            pad_zeros = tf.zeros([shape_list[0]*self.num_fake] + shape_list[1:])
+            data[new_key] = tf.concat([data[new_key], pad_zeros], 0)
+
 
         return data
 
@@ -262,6 +272,12 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
     def slice_label(self, data, curr_key, new_key):
         #print(data[curr_key].get_shape().as_list())
         slice0 = tf.strided_slice( data[curr_key], [0], [0], [3], end_mask = 1)
+
+        if self.num_fake>0:
+            shape_list = slice0.get_shape().as_list()
+            pad_zeros = tf.zeros([shape_list[0]*self.num_fake] + shape_list[1:], dtype = slice0.dtype)
+            slice0 = tf.concat([slice0, pad_zeros], 0)
+
         data[new_key] = slice0
 
         return data
@@ -398,6 +414,9 @@ def main():
     parser.add_argument('--gen_feature', default = 0, type = int, action = 'store', help = 'Whether to generate features, default is 0, None')
     parser.add_argument('--hdf5path', default = "/mnt/fs1/chengxuz/barrel_response/response.hdf5", type = str, action = 'store', help = 'Where to save the output')
 
+    # Test parameters
+    parser.add_argument('--num_fake', default = 0, type = int, action = 'store', help = 'Default is 0, no fake')
+
     args    = parser.parse_args()
 
     #if args.gpu>-1:
@@ -437,6 +456,7 @@ def main():
                 'n_threads': n_threads,
                 #'batch_size': BATCH_SIZE,
                 'batch_size': 12,
+                'num_fake': args.num_fake,
             }
     val_data_param = {
                     'func': WhiskerWorld,
