@@ -93,13 +93,16 @@ def cmu_softmax_cross_entropy_loss(labels, logits, **kwargs):
                             labels=labels, logits=logit, **kwargs)))
         return tf.reduce_mean(losses)
 
-def parallel_softmax_cross_entropy_loss(labels, logits, **kwargs):
+def parallel_softmax_cross_entropy_loss(labels, logits, gpu_offset = 0, **kwargs):
     with tf.variable_scope(tf.get_variable_scope()) as vscope:
         n_gpus = len(logits)
-        labels = tf.split(labels, axis=0, num_or_size_splits=n_gpus)
+        if n_gpus>1:
+            labels = tf.split(labels, axis=0, num_or_size_splits=n_gpus)
+        else:
+            labels = [labels]
         losses = []
         for i, (label, logit) in enumerate(zip(labels, logits)):
-            with tf.device('/gpu:%d' % i):
+            with tf.device('/gpu:%d' % (i + gpu_offset)):
                 with tf.name_scope('gpu_' + str(i)) as gpu_scope:
                     label = tf.squeeze(label)
                     losses.append(
@@ -131,9 +134,10 @@ def parallel_reduce_mean(losses, **kwargs):
 
 class ParallelClipOptimizer(object):
 
-    def __init__(self, optimizer_class, clip=True, *optimizer_args, **optimizer_kwargs):
+    def __init__(self, optimizer_class, gpu_offset = 0, clip=True, *optimizer_args, **optimizer_kwargs):
         self._optimizer = optimizer_class(*optimizer_args, **optimizer_kwargs)
         self.clip = clip
+        self.gpu_offset = gpu_offset
 
     def compute_gradients(self, *args, **kwargs):
         gvs = self._optimizer.compute_gradients(*args, **kwargs)
@@ -147,8 +151,11 @@ class ParallelClipOptimizer(object):
     def minimize(self, losses, global_step):
         with tf.variable_scope(tf.get_variable_scope()) as vscope:
             grads_and_vars = []
+            if not isinstance(losses, list):
+                losses = [losses]
+
             for i, loss in enumerate(losses):
-                with tf.device('/gpu:%d' % i):
+                with tf.device('/gpu:%d' % (i + self.gpu_offset)):
                     with tf.name_scope('gpu_' + str(i)) as gpu_scope:
                         grads_and_vars.append(self.compute_gradients(loss))
                         #tf.get_variable_scope().reuse_variables()
@@ -385,11 +392,15 @@ def mean_losses_keep_rest(step_results):
             retval[k] = plucked
     return retval
 
+def get_params_from_arg(args):
+    pass
+
 def main():
     parser = argparse.ArgumentParser(description='The script to train the catenet for barrel')
     parser.add_argument('--nport', default = 29101, type = int, action = 'store', help = 'Port number of mongodb')
     parser.add_argument('--pathconfig', default = "catenet_config.cfg", type = str, action = 'store', help = 'Path to config file')
     parser.add_argument('--expId', default = "catenet", type = str, action = 'store', help = 'Name of experiment id')
+    #parser.add_argument('--expId', default = [], type = str, action = 'append', help = 'Name of experiment id')
     parser.add_argument('--seed', default = 0, type = int, action = 'store', help = 'Random seed for model')
     parser.add_argument('--gpu', default = '0', type = str, action = 'store', help = 'Index of gpu, currently only one gpu is allowed')
     parser.add_argument('--cacheDirPrefix', default = "/media/data2/chengxuz", type = str, action = 'store', help = 'Prefix of cache directory')
@@ -416,6 +427,7 @@ def main():
 
     # Test parameters
     parser.add_argument('--num_fake', default = 0, type = int, action = 'store', help = 'Default is 0, no fake')
+    parser.add_argument('--test_mult', default = 0, type = int, action = 'store', help = 'Default is 0, no multi')
 
     args    = parser.parse_args()
 
@@ -710,9 +722,76 @@ def main():
                 'query': load_query 
         }
 
+    if args.gen_feature==0:
+        if args.test_mult==0:
+            params = {
+                'save_params': save_params,
 
-    #base.get_params()
-    if args.gen_feature==1:
+                'load_params': load_params,
+
+                'model_params': model_params,
+
+                'train_params': train_params,
+
+                'loss_params': loss_params,
+
+                'learning_rate_params': learning_rate_params,
+
+                'optimizer_params': optimizer_params,
+
+                'log_device_placement': False,  # if variable placement has to be logged
+                'validation_params': validation_params,
+            }
+        else:
+            save_params_2 = copy.deepcopy(save_params)
+            save_params_2['exp_id'] = exp_id + '_2'
+            save_params = [save_params, save_params_2]
+
+            load_params_2 = copy.deepcopy(load_params)
+            load_params_2['exp_id'] = exp_id + '_2'
+            load_params = [load_params, load_params_2]
+
+            model_params['n_gpus'] = 1
+            model_params_2 = copy.deepcopy(model_params)
+            model_params_2['gpu_offset'] = 1
+            model_params = [model_params, model_params_2]
+
+            loss_params_2 = copy.deepcopy(loss_params)
+            loss_params_2['loss_func_kwargs'] = {'gpu_offset': 1}
+            loss_params = [loss_params, loss_params_2]
+
+            learning_rate_params_2 = copy.deepcopy(learning_rate_params)
+            learning_rate_params = [learning_rate_params, learning_rate_params_2]
+
+            optimizer_params_2 = copy.deepcopy(optimizer_params)
+            optimizer_params_2['gpu_offset'] = 1
+            optimizer_params = [optimizer_params, optimizer_params_2]
+
+            validation_params_2 = copy.deepcopy(validation_params)
+            validation_params = [validation_params, validation_params_2]
+            validation_params = [{},{}]
+
+            params = {
+                'save_params': save_params,
+
+                'load_params': load_params,
+
+                'model_params': model_params,
+
+                'train_params': train_params,
+
+                'loss_params': loss_params,
+
+                'learning_rate_params': learning_rate_params,
+
+                'optimizer_params': optimizer_params,
+
+                'log_device_placement': False,  # if variable placement has to be logged
+                'validation_params': validation_params,
+            }
+        base.train_from_params(**params)
+
+    else:
         params = {
             'load_params': load_params,
             'model_params': model_params,
@@ -758,26 +837,6 @@ def main():
         base.stop_queues(sess, queues, coord, threads)
         fout.close()
         sess.close()
-    else:
-        params = {
-            'save_params': save_params,
-
-            'load_params': load_params,
-
-            'model_params': model_params,
-
-            'train_params': train_params,
-
-            'loss_params': loss_params,
-
-            'learning_rate_params': learning_rate_params,
-
-            'optimizer_params': optimizer_params,
-
-            'log_device_placement': False,  # if variable placement has to be logged
-            'validation_params': validation_params,
-        }
-        base.train_from_params(**params)
 
 if __name__ == '__main__':
     main()

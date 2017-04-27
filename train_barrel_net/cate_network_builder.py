@@ -1001,17 +1001,24 @@ def catenet_tfutils_old(inputs, **kwargs):
 
         return m_final.output, m_final.params
 
-def parallel_net_builder(inputs, model_func, n_gpus = 2, **kwargs):
+def parallel_net_builder(inputs, model_func, n_gpus = 2, gpu_offset = 0, **kwargs):
     with tf.variable_scope(tf.get_variable_scope()) as vscope:
-        assert n_gpus > 1, ('At least two gpus have to be used')
+        #assert n_gpus > 1, ('At least two gpus have to be used')
         outputs = []
         params = []
 
-        inputs['Data_force'] = tf.split(inputs['Data_force'], axis=0, num_or_size_splits=n_gpus)
-        inputs['Data_torque'] = tf.split(inputs['Data_torque'], axis=0, num_or_size_splits=n_gpus)
+        if n_gpus > 1:
+            list_Data_force = tf.split(inputs['Data_force'], axis=0, num_or_size_splits=n_gpus)
+            list_Data_torque = tf.split(inputs['Data_torque'], axis=0, num_or_size_splits=n_gpus)
+        else:
+            #list_Data_force = [tf.tile(inputs['Data_force'], [1,1,1,1,1])]
+            #list_Data_torque = [tf.tile(inputs['Data_torque'], [1,1,1,1,1])]
+            list_Data_force = [inputs['Data_force']]
+            list_Data_torque = [inputs['Data_torque']]
 
-        for i, (force_inp, torque_inp) in enumerate(zip(inputs['Data_force'], inputs['Data_torque'])):
-            with tf.device('/gpu:%d' % i):
+        for i, (force_inp, torque_inp) in enumerate(zip(list_Data_force, list_Data_torque)):
+            #print (force_inp, torque_inp)
+            with tf.device('/gpu:%d' % (i + gpu_offset)):
                 with tf.name_scope('gpu_' + str(i)) as gpu_scope:
                     output, param = model_func({'Data_force': force_inp, 'Data_torque': torque_inp}, **kwargs)
                     outputs.append(output)
