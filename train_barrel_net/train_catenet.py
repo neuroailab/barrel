@@ -393,47 +393,6 @@ def mean_losses_keep_rest(step_results):
     return retval
 
 def get_params_from_arg(args):
-    pass
-
-def main():
-    parser = argparse.ArgumentParser(description='The script to train the catenet for barrel')
-    parser.add_argument('--nport', default = 29101, type = int, action = 'store', help = 'Port number of mongodb')
-    parser.add_argument('--pathconfig', default = "catenet_config.cfg", type = str, action = 'store', help = 'Path to config file')
-    parser.add_argument('--expId', default = "catenet", type = str, action = 'store', help = 'Name of experiment id')
-    #parser.add_argument('--expId', default = [], type = str, action = 'append', help = 'Name of experiment id')
-    parser.add_argument('--seed', default = 0, type = int, action = 'store', help = 'Random seed for model')
-    parser.add_argument('--gpu', default = '0', type = str, action = 'store', help = 'Index of gpu, currently only one gpu is allowed')
-    parser.add_argument('--cacheDirPrefix', default = "/media/data2/chengxuz", type = str, action = 'store', help = 'Prefix of cache directory')
-    parser.add_argument('--namefunc', default = "catenet_tfutils", type = str, action = 'store', help = 'Name of function to build the network')
-    parser.add_argument('--valinum', default = -1, type = int, action = 'store', help = 'Number of validation steps, default is -1, which means all the validation')
-    parser.add_argument('--whichopt', default = 0, type = int, action = 'store', help = 'Choice of the optimizer, 0 means momentum, 1 means Adam')
-    parser.add_argument('--initlr', default = 0.0001, type = float, action = 'store', help = 'Initial learning rate')
-    parser.add_argument('--loadque', default = 0, type = int, action = 'store', help = 'Special setting for load query')
-    parser.add_argument('--expand', default = 0, type = int, action = 'store', help = 'Whether do the spatial padding')
-    parser.add_argument('--norm', default = 0, type = int, action = 'store', help = 'Whether do the normalization, default is no')
-    parser.add_argument('--split12', default = 0, type = int, action = 'store', help = 'Whether do the 12 swipes spliting, default is no')
-    parser.add_argument('--norm_std', default = 1, type = float, action = 'store', help = 'Std of new input, default is 1')
-    parser.add_argument('--tnn', default = 0, type = int, action = 'store', help = 'Whether to use the tnn, default is no')
-    parser.add_argument('--parallel', default = 0, type = int, action = 'store', help = 'Whether to do parallel across gpus, default is no (0)')
-
-    # TNN related parameters
-    parser.add_argument('--tnndecay', default = 0.1, type = float, action = 'store', help = 'Memory decay for tnn each layer')
-    parser.add_argument('--decaytrain', default = 0, type = int, action = 'store', help = 'Whether the decay is trainable')
-    parser.add_argument('--cmu', default = 0, type = int, action = 'store', help = 'Whether do cumulative loss')
-
-    # Feature extraction related parameters
-    parser.add_argument('--gen_feature', default = 0, type = int, action = 'store', help = 'Whether to generate features, default is 0, None')
-    parser.add_argument('--hdf5path', default = "/mnt/fs1/chengxuz/barrel_response/response.hdf5", type = str, action = 'store', help = 'Where to save the output')
-
-    # Test parameters
-    parser.add_argument('--num_fake', default = 0, type = int, action = 'store', help = 'Default is 0, no fake')
-    parser.add_argument('--test_mult', default = 0, type = int, action = 'store', help = 'Default is 0, no multi')
-
-    args    = parser.parse_args()
-
-    #if args.gpu>-1:
-    #    os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
-    os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
 
     pathconfig = args.pathconfig
     if not os.path.isfile(pathconfig):
@@ -629,9 +588,12 @@ def main():
             'do_save': True,
             'save_initial_filters': True,
             'save_metrics_freq': 2000,  # keeps loss from every SAVE_LOSS_FREQ steps.
-            'save_valid_freq': 5000,
-            'save_filters_freq': 5000,
-            'cache_filters_freq': 5000,
+            #'save_valid_freq': 5000,
+            #'save_filters_freq': 5000,
+            #'cache_filters_freq': 5000,
+            'save_valid_freq':  NUM_BATCHES_PER_EPOCH,
+            'save_filters_freq': NUM_BATCHES_PER_EPOCH,
+            'cache_filters_freq': NUM_BATCHES_PER_EPOCH,
             'cache_dir': cache_dir,
         }
 
@@ -789,7 +751,9 @@ def main():
                 'log_device_placement': False,  # if variable placement has to be logged
                 'validation_params': validation_params,
             }
-        base.train_from_params(**params)
+        #base.train_from_params(**params)
+
+        return params
 
     else:
         params = {
@@ -837,6 +801,97 @@ def main():
         base.stop_queues(sess, queues, coord, threads)
         fout.close()
         sess.close()
+    return None
+
+def main():
+    parser = argparse.ArgumentParser(description='The script to train the catenet for barrel')
+    # System setting
+    parser.add_argument('--gpu', default = '0', type = str, action = 'store', help = 'Index of gpu, currently only one gpu is allowed')
+
+    # General setting
+    parser.add_argument('--nport', default = 29101, type = int, action = 'store', help = 'Port number of mongodb')
+    parser.add_argument('--pathconfig', default = "catenet_config.cfg", type = str, action = 'store', help = 'Path to config file')
+    parser.add_argument('--expId', default = "catenet", type = str, action = 'store', help = 'Name of experiment id')
+    #parser.add_argument('--expId', default = [], type = str, action = 'append', help = 'Name of experiment id')
+    parser.add_argument('--seed', default = 0, type = int, action = 'store', help = 'Random seed for model')
+    parser.add_argument('--cacheDirPrefix', default = "/media/data2/chengxuz", type = str, action = 'store', help = 'Prefix of cache directory')
+    parser.add_argument('--namefunc', default = "catenet_tfutils", type = str, action = 'store', help = 'Name of function to build the network')
+    parser.add_argument('--valinum', default = -1, type = int, action = 'store', help = 'Number of validation steps, default is -1, which means all the validation')
+    parser.add_argument('--whichopt', default = 0, type = int, action = 'store', help = 'Choice of the optimizer, 0 means momentum, 1 means Adam')
+    parser.add_argument('--initlr', default = 0.0001, type = float, action = 'store', help = 'Initial learning rate')
+    parser.add_argument('--loadque', default = 0, type = int, action = 'store', help = 'Special setting for load query')
+    parser.add_argument('--expand', default = 0, type = int, action = 'store', help = 'Whether do the spatial padding')
+    parser.add_argument('--split12', default = 0, type = int, action = 'store', help = 'Whether do the 12 swipes spliting, default is no')
+    parser.add_argument('--norm', default = 0, type = int, action = 'store', help = 'Whether do the normalization, default is no')
+    parser.add_argument('--norm_std', default = 1, type = float, action = 'store', help = 'Std of new input, default is 1')
+    parser.add_argument('--parallel', default = 0, type = int, action = 'store', help = 'Whether to do parallel across gpus, default is no (0)')
+
+    # TNN related parameters
+    parser.add_argument('--tnn', default = 0, type = int, action = 'store', help = 'Whether to use the tnn, default is no')
+    parser.add_argument('--tnndecay', default = 0.1, type = float, action = 'store', help = 'Memory decay for tnn each layer')
+    parser.add_argument('--decaytrain', default = 0, type = int, action = 'store', help = 'Whether the decay is trainable')
+    parser.add_argument('--cmu', default = 0, type = int, action = 'store', help = 'Whether do cumulative loss')
+
+    # Feature extraction related parameters
+    parser.add_argument('--gen_feature', default = 0, type = int, action = 'store', help = 'Whether to generate features, default is 0, None')
+    parser.add_argument('--hdf5path', default = "/mnt/fs1/chengxuz/barrel_response/response.hdf5", type = str, action = 'store', help = 'Where to save the output')
+
+    # Test parameters
+    parser.add_argument('--num_fake', default = 0, type = int, action = 'store', help = 'Default is 0, no fake')
+    parser.add_argument('--test_mult', default = 0, type = int, action = 'store', help = 'Default is 0, no multi')
+
+    # Parameters for Multiple networks
+    parser.add_argument('--innerargs', default = [], type = str, action = 'append', help = 'Arguments for every network')
+    parser.add_argument('--gpu_offset', default = [], type = int, action = 'append', help = 'GPU offset for every network')
+    parser.add_argument('--ngpus', default = [], type = int, action = 'append', help = 'Number of gpus for every network')
+
+    args    = parser.parse_args()
+
+    os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
+
+    if len(args.innerargs)==0:
+        params = get_params_from_arg(args)
+
+        if not params is None:
+            base.train_from_params(**params)
+    else:
+        params = {
+                'save_params': [],
+
+                'load_params': [],
+
+                'model_params': [],
+
+                'train_params': None,
+
+                'loss_params': [],
+
+                'learning_rate_params': [],
+
+                'optimizer_params': [],
+
+                'log_device_placement': False,  # if variable placement has to be logged
+                'validation_params': [],
+            }
+
+        list_names = ["save_params", "load_params", "model_params", "validation_params", "loss_params", "learning_rate_params", "optimizer_params"]
+        
+        assert len(args.innerargs)==len(args.gpu_offset)==len(args.ngpus), "Three lists must be the same length"
+        for curr_arg, curr_gpu_offset, curr_ngpus in zip(args.innerargs, args.gpu_offset, args.ngpus):
+            args = parser.parse_args(curr_arg.split())
+            curr_params = get_params_from_arg(args)
+
+            curr_params['model_params']['n_gpus'] = curr_ngpus
+            curr_params['model_params']['gpu_offset'] = curr_gpu_offset 
+            curr_params['loss_params']['loss_func_kwargs'] = {'gpu_offset': curr_gpu_offset }
+            curr_params['optimizer_params']['gpu_offset'] = curr_gpu_offset
+            
+            for tmp_key in list_names:
+                params[tmp_key].append(curr_params[tmp_key])
+
+            params['train_params'] = curr_params['train_params']
+
+        base.train_from_params(**params)
 
 if __name__ == '__main__':
     main()

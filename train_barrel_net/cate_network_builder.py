@@ -725,7 +725,7 @@ def catenet(inputs, cfg_initial = None, train=True, **kwargs):
                     m.conv(getConvNumFilters(indx_layer, cfg), getConvFilterSize(indx_layer, cfg), getConvStride(indx_layer, cfg))
 
                 if getWhetherBn(indx_layer, cfg):
-                    m.batchnorm(train, getBnMode(indx_layer, cfg))
+                    m.batchnorm_corr(train)
 
                 do_pool = getWhetherPool(indx_layer, cfg)
                 if do_pool:
@@ -737,7 +737,7 @@ def catenet(inputs, cfg_initial = None, train=True, **kwargs):
                 m.fc(getFcNumFilters(indx_layer, cfg), init='trunc_norm', dropout=dropout, bias=.1)
 
                 if getWhetherBn(indx_layer, cfg):
-                    m.batchnorm(train, getBnMode(indx_layer, cfg))
+                    m.batchnorm_corr(train)
 
     return m
 
