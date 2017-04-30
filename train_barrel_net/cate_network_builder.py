@@ -175,7 +175,11 @@ class tnn_LSTMCell(rnn.RNNCell):
         self._reuse = None
 
         #self.lstm_cell = rnn.LSTMCell(100, state_is_tuple=False)
-        self.lstm_cell = rnn.LSTMCell(memory[1]['nunits'])
+        cell_type = 'LSTMCell'
+        if 'type' in memory[1]:
+            cell_type = memory[1]['type']
+        #self.lstm_cell = rnn.LSTMCell(memory[1]['nunits'])
+        self.lstm_cell = getattr(rnn, cell_type)(memory[1]['nunits'])
 
     def __call__(self, inputs=None, state=None):
         """
@@ -1001,7 +1005,7 @@ def catenet_tfutils_old(inputs, **kwargs):
 
         return m_final.output, m_final.params
 
-def parallel_net_builder(inputs, model_func, n_gpus = 2, gpu_offset = 0, **kwargs):
+def parallel_net_builder(inputs, model_func, n_gpus = 2, gpu_offset = 0, inputthre = 0, **kwargs):
     with tf.variable_scope(tf.get_variable_scope()) as vscope:
         #assert n_gpus > 1, ('At least two gpus have to be used')
         outputs = []
@@ -1018,6 +1022,12 @@ def parallel_net_builder(inputs, model_func, n_gpus = 2, gpu_offset = 0, **kwarg
 
         for i, (force_inp, torque_inp) in enumerate(zip(list_Data_force, list_Data_torque)):
             #print (force_inp, torque_inp)
+            if inputthre>0:
+                force_inp = tf.minimum(force_inp, tf.constant(  inputthre, dtype = force_inp.dtype))
+                force_inp = tf.maximum(force_inp, tf.constant( -inputthre, dtype = force_inp.dtype))
+
+                torque_inp = tf.minimum(torque_inp, tf.constant(  inputthre, dtype = torque_inp.dtype))
+                torque_inp = tf.maximum(torque_inp, tf.constant( -inputthre, dtype = torque_inp.dtype))
             with tf.device('/gpu:%d' % (i + gpu_offset)):
                 with tf.name_scope('gpu_' + str(i)) as gpu_scope:
                     output, param = model_func({'Data_force': force_inp, 'Data_torque': torque_inp}, **kwargs)

@@ -77,7 +77,7 @@ class ConvNet(object):
         return self.output
 
     @tf.contrib.framework.add_arg_scope
-    def batchnorm_corr(self, is_training, inputs = None, decay = 0.99, epsilon = 1e-3):
+    def batchnorm_corr(self, is_training, inputs = None, decay = 0.999, epsilon = 1e-3):
         if inputs==None:
             inputs = self.output
 
@@ -96,11 +96,11 @@ class ConvNet(object):
                 pass
             #print(pop_mean.get_shape().as_list(), batch_mean.get_shape().as_list())
 
-            train_mean = tf.assign(pop_mean,
-                                   pop_mean * decay + batch_mean * (1 - decay))
-            fn_0 = lambda: tf.assign(pop_var, pop_var * decay + batch_var * (1 - decay))
-            fn_1 = lambda: tf.assign(pop_var, pop_var)
-            train_var = tf.cond(tf.less(tf.reduce_max(batch_var), 100000000), fn_0, fn_1)
+            train_mean = tf.assign(pop_mean, pop_mean * decay + batch_mean * (1 - decay))
+            #fn_0 = lambda: tf.assign(pop_var, pop_var * decay + batch_var * (1 - decay))
+            #fn_1 = lambda: tf.assign(pop_var, pop_var)
+            #train_var = tf.cond(tf.less(tf.reduce_max(batch_var), 100000000), fn_0, fn_1)
+            train_var = tf.assign(pop_var, pop_var * decay + batch_var * (1 - decay))
 
             #train_mean = tf.Print(train_mean, [train_mean], message = "Pop mean " + pop_mean.op.name, summarize = 3)
             if 'conv1' in inputs.op.name:
