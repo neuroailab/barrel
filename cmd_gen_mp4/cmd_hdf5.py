@@ -369,11 +369,11 @@ if __name__=="__main__":
         #if not 'Data15554_10_da92c8d35fabe4093a67185d75524e9c.hdf5' in config_dict["FILE_NAME"]["value"]:
         #    continue
         if not 'Data4039_9_6e5bf008a9259e95fa80fb391ee7ccee.hdf5' in config_dict["FILE_NAME"]["value"]:
-            #continue
+            continue
             pass
 
         if not 'Data3' in config_dict["group_name"]["value"]:
-            #continue
+            continue
             pass
 
         if args.checkmode==1:
