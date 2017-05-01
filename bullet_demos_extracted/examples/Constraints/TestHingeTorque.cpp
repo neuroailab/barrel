@@ -956,6 +956,7 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
         obj_scaling_list[indx_obj*4] = desire_scale;
         obj_scaling_list[indx_obj*4 + 1] = desire_scale;
         obj_scaling_list[indx_obj*4 + 2] = desire_scale;
+        obj_scaling_list[indx_obj*4 + 3] = control_len_now;
 
         mass_want = mass_want*pow((desire_scale/10), 3);
         obj_mass_list[indx_obj] = mass_want;
@@ -1004,7 +1005,40 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
 
     if (avoid_coll==1){
         float max_value = 0;
+        btVector3 min_vec, max_vec;
 
+        for (int i=0;i<num_point;i++){
+            btVector3 curr_point = shape->getScaledPoint(i);
+
+            for (int j=0;j<3;j++){
+                if ((i==0) || (curr_point[j] < min_vec[j]))
+                    min_vec[j] = curr_point[j];
+                if ((i==0) || (curr_point[j] > max_vec[j]))
+                    max_vec[j] = curr_point[j];
+            }
+        }
+
+        btVector3 diff_vec = max_vec - min_vec;
+
+        for (int i=0;i<20;i++)
+            for (int j=0;j<20;j++)
+                for (int k=0;k<20;k++){
+                    btVector3 curr_point = btVector3(diff_vec[0]/20*i + min_vec[0], diff_vec[1]/20*j + min_vec[1], diff_vec[2]/20*k + min_vec[2]);
+                    curr_point = startTransform(curr_point);
+
+                    for (int jj=0;jj<m_allcentpos_big_list.size();jj++){
+                        btVector3 now_dest = m_allcentpos_big_list[jj][0];
+
+                        float time_need = (now_dest[1] - curr_point[1])/obj_speed_list[1];
+                        btVector3 next_point = curr_point + time_need*btVector3(obj_speed_list[0], obj_speed_list[1], obj_speed_list[2]);
+                        if ((next_point[2] > now_dest[2] - avoid_coll_z_off) && ( abs(next_point[0] - now_dest[0]) < avoid_coll_x_off) ){
+                            if (max_value < next_point[2] - (now_dest[2] - avoid_coll_z_off))
+                                max_value = next_point[2] - (now_dest[2] - avoid_coll_z_off);
+                        }
+                    }
+                }
+
+        /*
         for (int i=0;i<num_point;i++){
             btVector3 curr_point = shape->getScaledPoint(i);
             curr_point = startTransform(curr_point);
@@ -1020,6 +1054,7 @@ btRigidBody* TestHingeTorque::addObjasRigidBody(string fileName,
                 }
             }
         }
+        */
 
         startTransform.setOrigin(btVector3(position[0], position[1], position[2] - max_value));
     }

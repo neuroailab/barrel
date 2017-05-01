@@ -17,8 +17,10 @@ def get_list(fin_name, dirload):
     return ret_list
 
 obj_list_fname = 'obj_choice_2.txt'
-load_path0 = '/om/user/chengxuz/threedworld_related/shapenet_onlyobj/after_vhacd'
-load_path1 = '/om/user/chengxuz/threedworld_related/shapenet_onlyobj/ShapeNetCore.v2'
+#load_path0 = '/om/user/chengxuz/threedworld_related/shapenet_onlyobj/after_vhacd'
+#load_path1 = '/om/user/chengxuz/threedworld_related/shapenet_onlyobj/ShapeNetCore.v2'
+load_path0 = '/scratch/users/chengxuz/barrel/barrel_relat_files/all_objs/after_vhacd'
+load_path1 = '/scratch/users/chengxuz/barrel/barrel_relat_files/all_objs/shapenet_onlyobj/ShapeNetCore.v2'
 
 list_0 = get_list(obj_list_fname, load_path0)
 list_1 = get_list(obj_list_fname, load_path1)

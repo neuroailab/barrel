@@ -24,8 +24,8 @@
 #done
 
 #len_data=25
-#len_data=10
-len_data=1
+len_data=10
+#len_data=1
 #len_data=20
 
 bigsamnum=12
@@ -34,8 +34,8 @@ bigsamnum=12
 #for k in $(seq 0 ${len_data} 9981)
 #for k in 9160
 #for k in 5554
-for k in 4039
-#for k in $(seq ${len_data} ${len_data} 9981)
+#for k in 4039
+for k in $(seq ${len_data} ${len_data} 9981)
 #for k in $(seq 6250 ${len_data} 9981)
 #for k in $(seq 5065 5069)
 #for k in $(seq 0 ${len_data} 399)
@@ -43,9 +43,9 @@ for k in 4039
 do
     #sbatch --job-name=dataset${k} script_gendataset.sh ${k} ${len_data} ${bigsamnum}
     #sbatch --qos=use-everything --job-name=dataset${k} script_gendataset.sh ${k} ${len_data} ${bigsamnum}
-    #sbatch --job-name=dataset${k} script_gendataset_sher.sh ${k} ${len_data} ${bigsamnum}
+    sbatch --job-name=dataset${k} script_gendataset_sher.sh ${k} ${len_data} ${bigsamnum}
     #sbatch --job-name=dataset${k} script_gendataset_sher.sh ${k} 1 ${bigsamnum}
-    sbatch --job-name=dataset${k} script_gendataset.sh ${k} ${len_data} ${bigsamnum}
+    #sbatch --job-name=dataset${k} script_gendataset.sh ${k} ${len_data} ${bigsamnum}
     #sbatch --job-name=tfrecs${k} script_to_tfrecs.sh ${k} ${len_data}
     #sbatch --job-name=tfrecs${k} script_to_tfrecs_sher.sh ${k} ${len_data}
 

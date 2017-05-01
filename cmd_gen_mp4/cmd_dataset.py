@@ -51,6 +51,7 @@ def main():
     parser.add_argument('--pathconfig', default = "/om/user/chengxuz/barrel/configs_2", type = str, action = 'store', help = 'Path to config folder')
 
     cmd_str = "python cmd_hdf5.py --pathhdf5 %s --pathexe %s --fromcfg %s --pathconfig %s --objindx %s --generatemode 3 --testmode 2 --hdf5suff %s --smallolen 4 --smallplen 3 --randseed %i --bigsamnum %i --checkmode %i"
+    #cmd_str = "python cmd_hdf5.py --pathhdf5 %s --pathexe %s --fromcfg %s --pathconfig %s --objindx %s --generatemode 3 --testmode 1 --hdf5suff %s --smallolen 4 --smallplen 3 --randseed %i --bigsamnum %i --checkmode %i"
 
     args    = parser.parse_args()
 
