@@ -88,6 +88,14 @@ def getFcNumFilters(i, cfg, key_want = "subnet"):
     tmp_dict = cfg[key_want]["l%i" % i]["fc"]
     return tmp_dict["num_features"]
 
+def getWhetherLrn(i, cfg, key_want = "subnet"):
+    tmp_dict = cfg[key_want]["l%i" % i]
+    return 'lrn' in tmp_dict
+
+def getLrnDepth(i, cfg, key_want = "subnet"):
+    tmp_dict = cfg[key_want]["l%i" % i]
+    return tmp_dict['lrn']
+
 def getWhetherBn(i, cfg, key_want = "subnet"):
     tmp_dict = cfg[key_want]["l%i" % i]
     return 'bn' in tmp_dict
@@ -728,6 +736,10 @@ def catenet(inputs, cfg_initial = None, train=True, **kwargs):
                 else:
                     m.conv(getConvNumFilters(indx_layer, cfg), getConvFilterSize(indx_layer, cfg), getConvStride(indx_layer, cfg))
 
+                if getWhetherLrn(indx_layer, cfg):
+                    print('Lrn used!')
+                    m.norm(getLrnDepth(indx_layer, cfg))
+
                 if getWhetherBn(indx_layer, cfg):
                     m.batchnorm_corr(train)
 
@@ -748,8 +760,31 @@ def catenet(inputs, cfg_initial = None, train=True, **kwargs):
 def catenet_add(inputs, cfg_initial = None, train=True, **kwargs):
 
     m_add = model.ConvNet(**kwargs)
+    cfg = cfg_initial
+
+    dropout_default = 0.5
+    if 'dropout' in cfg:
+        dropout_default = cfg['dropout']
+
+    dropout = dropout_default if train else None
+
+    if dropout==0:
+        dropout = None
+
+    layernum_add = cfg['layernum_add']
+
+    m_add.output = inputs
+
+    for indx_layer in xrange(layernum_add - 1):
+        layer_name = "fc_add%i" % (1 + indx_layer)
+        with tf.variable_scope(layer_name):
+            m_add.fc(getFcNumFilters(indx_layer, cfg, key_want = "addnet"), init='trunc_norm', dropout=dropout, bias=.1)
+
+            if getWhetherBn(indx_layer, cfg, key_want = "addnet"):
+                m.batchnorm_corr(train)
+
     with tf.variable_scope('fc_add'):
-        m_add.fc(117, init='trunc_norm', activation=None, dropout=None, bias=0, in_layer=inputs)
+        m_add.fc(117, init='trunc_norm', activation=None, dropout=None, bias=0)
 
     return m_add
 
@@ -1028,6 +1063,8 @@ def parallel_net_builder(inputs, model_func, n_gpus = 2, gpu_offset = 0, inputth
 
                 torque_inp = tf.minimum(torque_inp, tf.constant(  inputthre, dtype = torque_inp.dtype))
                 torque_inp = tf.maximum(torque_inp, tf.constant( -inputthre, dtype = torque_inp.dtype))
+
+                #force_inp = tf.Print(force_inp, [tf.reduce_max(force_inp)], message = 'Input max: ')
             with tf.device('/gpu:%d' % (i + gpu_offset)):
                 with tf.name_scope('gpu_' + str(i)) as gpu_scope:
                     output, param = model_func({'Data_force': force_inp, 'Data_torque': torque_inp}, **kwargs)

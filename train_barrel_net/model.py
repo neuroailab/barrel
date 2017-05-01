@@ -314,7 +314,7 @@ class ConvNet(object):
     def norm(self,
              depth_radius=2,
              bias=1,
-             alpha=2e-5,
+             alpha=0.0001,
              beta=.75,
              in_layer=None):
         if in_layer is None:
