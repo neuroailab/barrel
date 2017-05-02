@@ -684,6 +684,19 @@ def catenet_tnn(inputs, cfg_path, train = True, tnndecay = 0.1, decaytrain = 0, 
         small_inputs[indx_time] = tf.reshape(small_inputs[indx_time], [shape_list[0], 5, 7, -1])
 
     G = main.graph_from_json(cfg_path)
+
+    if 'all_conn' in cfg_initial:
+        node_list = ['conv1', 'conv2', 'conv3', 'conv4', 'conv5', 'conv6']
+
+	MASTER_EDGES = []
+	for i in range(len(node_list)):
+	    for j in range(len(node_list)):
+		if (j > i+1 or i > j) and (j>0): #since (i, j) w/ j > i is already an edge
+		    MASTER_EDGES.append((node_list[i], node_list[j]))
+
+        G.add_edges_from(MASTER_EDGES)
+
+
     for node, attr in G.nodes(data=True):
 
         memory_func, memory_param = attr['kwargs']['memory']
