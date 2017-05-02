@@ -700,10 +700,13 @@ def catenet_tnn(inputs, cfg_path, train = True, tnndecay = 0.1, decaytrain = 0, 
     main.init_nodes(G, batch_size=shape_list[0])
     main.unroll(G, input_seq={'conv1': small_inputs}, ntimes = len(small_inputs))
 
-    if cmu==0:
-        m.output = G.node['fc8']['outputs'][-1]
+    if not 'retres' in cfg_initial:
+        if cmu==0:
+            m.output = G.node['fc8']['outputs'][-1]
+        else:
+            m.output = tf.transpose(tf.stack(G.node['fc8']['outputs']), [1,2,0])
     else:
-        m.output = tf.transpose(tf.stack(G.node['fc8']['outputs']), [1,2,0])
+        m.output = tf.concat([G.node['fc8']['outputs'][x] for x in cfg_initial['retres']], 1)
 
     print(len(G.node['fc8']['outputs']))
     m.params = params
@@ -771,7 +774,10 @@ def catenet_add(inputs, cfg_initial = None, train=True, **kwargs):
     if dropout==0:
         dropout = None
 
-    layernum_add = cfg['layernum_add']
+    if 'layernum_add' in cfg:
+        layernum_add = cfg['layernum_add']
+    else:
+        layernum_add = 1
 
     m_add.output = inputs
 
@@ -785,6 +791,20 @@ def catenet_add(inputs, cfg_initial = None, train=True, **kwargs):
 
     with tf.variable_scope('fc_add'):
         m_add.fc(117, init='trunc_norm', activation=None, dropout=None, bias=0)
+
+    total_parameters = 0
+    for variable in tf.trainable_variables():
+	# shape is an array of tf.Dimension
+	shape = variable.get_shape()
+	#print(shape)
+	#print(len(shape))
+	variable_parametes = 1
+	for dim in shape:
+	    #print(dim)
+	    variable_parametes *= dim.value
+	#print(variable_parametes)
+	total_parameters += variable_parametes
+    print(total_parameters)
 
     return m_add
 

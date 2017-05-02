@@ -580,6 +580,18 @@ def get_params_from_arg(args):
         }
         #print(load_query)
 
+    if args.loadque==2:
+        load_query = {'saved_filters': True, 'step': 59880}
+        load_params = {
+                'host': 'localhost',
+                'port': args.nport,
+                'dbname': 'whisker_net',
+                'collname': 'catenet',
+                'exp_id': 'catenet_tnn_decay_train_sep22_np',
+                'do_restore': True,
+                'query': load_query 
+        }
+
     save_params = {
             'host': 'localhost',
             'port': args.nport,
