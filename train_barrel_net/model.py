@@ -85,13 +85,27 @@ class ConvNet(object):
 	beta = tf.Variable(tf.zeros([inputs.get_shape()[-1]]))
 	pop_mean = tf.get_variable(name = 'bn_mean', shape = [inputs.get_shape()[-1]], initializer = tf.zeros_initializer(), trainable=False)
 	pop_var = tf.get_variable(name = 'bn_var', shape = [inputs.get_shape()[-1]], initializer = tf.ones_initializer(), trainable=False)
+        #pop_mean = tf.Print(pop_mean, [pop_mean], message = "Pop mean", summarize = 3)
 
         if is_training:
             batch_mean, batch_var = tf.nn.moments(inputs, list(range(inputs.get_shape().ndims - 1)))
-            train_mean = tf.assign(pop_mean,
-                                   pop_mean * decay + batch_mean * (1 - decay))
-            train_var = tf.assign(pop_var,
-                                  pop_var * decay + batch_var * (1 - decay))
+
+            #batch_mean = tf.Print(batch_mean, [batch_mean], message = "Batch mean " + inputs.op.name, summarize = 3)
+            if 'conv1' in inputs.op.name:
+                #batch_var = tf.Print(batch_var, [batch_var], message = "Batch var " + inputs.op.name, summarize = 3)
+                pass
+            #print(pop_mean.get_shape().as_list(), batch_mean.get_shape().as_list())
+
+            train_mean = tf.assign(pop_mean, pop_mean * decay + batch_mean * (1 - decay))
+            #fn_0 = lambda: tf.assign(pop_var, pop_var * decay + batch_var * (1 - decay))
+            #fn_1 = lambda: tf.assign(pop_var, pop_var)
+            #train_var = tf.cond(tf.less(tf.reduce_max(batch_var), 100000000), fn_0, fn_1)
+            train_var = tf.assign(pop_var, pop_var * decay + batch_var * (1 - decay))
+
+            #train_mean = tf.Print(train_mean, [train_mean], message = "Pop mean " + pop_mean.op.name, summarize = 3)
+            if 'conv1' in inputs.op.name:
+                #train_var = tf.Print(train_var, [train_var], message = "Pop var " + pop_var.op.name, summarize = 3)
+                pass
             with tf.control_dependencies([train_mean, train_var]):
                 self.output = tf.nn.batch_normalization(inputs,
                     batch_mean, batch_var, beta, scale, epsilon)
@@ -300,7 +314,7 @@ class ConvNet(object):
     def norm(self,
              depth_radius=2,
              bias=1,
-             alpha=2e-5,
+             alpha=0.0001,
              beta=.75,
              in_layer=None):
         if in_layer is None:

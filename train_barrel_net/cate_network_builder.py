@@ -88,6 +88,14 @@ def getFcNumFilters(i, cfg, key_want = "subnet"):
     tmp_dict = cfg[key_want]["l%i" % i]["fc"]
     return tmp_dict["num_features"]
 
+def getWhetherLrn(i, cfg, key_want = "subnet"):
+    tmp_dict = cfg[key_want]["l%i" % i]
+    return 'lrn' in tmp_dict
+
+def getLrnDepth(i, cfg, key_want = "subnet"):
+    tmp_dict = cfg[key_want]["l%i" % i]
+    return tmp_dict['lrn']
+
 def getWhetherBn(i, cfg, key_want = "subnet"):
     tmp_dict = cfg[key_want]["l%i" % i]
     return 'bn' in tmp_dict
@@ -175,7 +183,11 @@ class tnn_LSTMCell(rnn.RNNCell):
         self._reuse = None
 
         #self.lstm_cell = rnn.LSTMCell(100, state_is_tuple=False)
-        self.lstm_cell = rnn.LSTMCell(memory[1]['nunits'])
+        cell_type = 'LSTMCell'
+        if 'type' in memory[1]:
+            cell_type = memory[1]['type']
+        #self.lstm_cell = rnn.LSTMCell(memory[1]['nunits'])
+        self.lstm_cell = getattr(rnn, cell_type)(memory[1]['nunits'])
 
     def __call__(self, inputs=None, state=None):
         """
@@ -688,10 +700,13 @@ def catenet_tnn(inputs, cfg_path, train = True, tnndecay = 0.1, decaytrain = 0, 
     main.init_nodes(G, batch_size=shape_list[0])
     main.unroll(G, input_seq={'conv1': small_inputs}, ntimes = len(small_inputs))
 
-    if cmu==0:
-        m.output = G.node['fc8']['outputs'][-1]
+    if not 'retres' in cfg_initial:
+        if cmu==0:
+            m.output = G.node['fc8']['outputs'][-1]
+        else:
+            m.output = tf.transpose(tf.stack(G.node['fc8']['outputs']), [1,2,0])
     else:
-        m.output = tf.transpose(tf.stack(G.node['fc8']['outputs']), [1,2,0])
+        m.output = tf.concat([G.node['fc8']['outputs'][x] for x in cfg_initial['retres']], 1)
 
     print(len(G.node['fc8']['outputs']))
     m.params = params
@@ -724,8 +739,12 @@ def catenet(inputs, cfg_initial = None, train=True, **kwargs):
                 else:
                     m.conv(getConvNumFilters(indx_layer, cfg), getConvFilterSize(indx_layer, cfg), getConvStride(indx_layer, cfg))
 
+                if getWhetherLrn(indx_layer, cfg):
+                    print('Lrn used!')
+                    m.norm(getLrnDepth(indx_layer, cfg))
+
                 if getWhetherBn(indx_layer, cfg):
-                    m.batchnorm(train, getBnMode(indx_layer, cfg))
+                    m.batchnorm_corr(train)
 
                 do_pool = getWhetherPool(indx_layer, cfg)
                 if do_pool:
@@ -737,15 +756,55 @@ def catenet(inputs, cfg_initial = None, train=True, **kwargs):
                 m.fc(getFcNumFilters(indx_layer, cfg), init='trunc_norm', dropout=dropout, bias=.1)
 
                 if getWhetherBn(indx_layer, cfg):
-                    m.batchnorm(train, getBnMode(indx_layer, cfg))
+                    m.batchnorm_corr(train)
 
     return m
 
 def catenet_add(inputs, cfg_initial = None, train=True, **kwargs):
 
     m_add = model.ConvNet(**kwargs)
+    cfg = cfg_initial
+
+    dropout_default = 0.5
+    if 'dropout' in cfg:
+        dropout_default = cfg['dropout']
+
+    dropout = dropout_default if train else None
+
+    if dropout==0:
+        dropout = None
+
+    if 'layernum_add' in cfg:
+        layernum_add = cfg['layernum_add']
+    else:
+        layernum_add = 1
+
+    m_add.output = inputs
+
+    for indx_layer in xrange(layernum_add - 1):
+        layer_name = "fc_add%i" % (1 + indx_layer)
+        with tf.variable_scope(layer_name):
+            m_add.fc(getFcNumFilters(indx_layer, cfg, key_want = "addnet"), init='trunc_norm', dropout=dropout, bias=.1)
+
+            if getWhetherBn(indx_layer, cfg, key_want = "addnet"):
+                m.batchnorm_corr(train)
+
     with tf.variable_scope('fc_add'):
-        m_add.fc(117, init='trunc_norm', activation=None, dropout=None, bias=0, in_layer=inputs)
+        m_add.fc(117, init='trunc_norm', activation=None, dropout=None, bias=0)
+
+    total_parameters = 0
+    for variable in tf.trainable_variables():
+	# shape is an array of tf.Dimension
+	shape = variable.get_shape()
+	#print(shape)
+	#print(len(shape))
+	variable_parametes = 1
+	for dim in shape:
+	    #print(dim)
+	    variable_parametes *= dim.value
+	#print(variable_parametes)
+	total_parameters += variable_parametes
+    print(total_parameters)
 
     return m_add
 
@@ -1001,17 +1060,32 @@ def catenet_tfutils_old(inputs, **kwargs):
 
         return m_final.output, m_final.params
 
-def parallel_net_builder(inputs, model_func, n_gpus = 2, **kwargs):
+def parallel_net_builder(inputs, model_func, n_gpus = 2, gpu_offset = 0, inputthre = 0, **kwargs):
     with tf.variable_scope(tf.get_variable_scope()) as vscope:
-        assert n_gpus > 1, ('At least two gpus have to be used')
+        #assert n_gpus > 1, ('At least two gpus have to be used')
         outputs = []
         params = []
 
-        inputs['Data_force'] = tf.split(inputs['Data_force'], axis=0, num_or_size_splits=n_gpus)
-        inputs['Data_torque'] = tf.split(inputs['Data_torque'], axis=0, num_or_size_splits=n_gpus)
+        if n_gpus > 1:
+            list_Data_force = tf.split(inputs['Data_force'], axis=0, num_or_size_splits=n_gpus)
+            list_Data_torque = tf.split(inputs['Data_torque'], axis=0, num_or_size_splits=n_gpus)
+        else:
+            #list_Data_force = [tf.tile(inputs['Data_force'], [1,1,1,1,1])]
+            #list_Data_torque = [tf.tile(inputs['Data_torque'], [1,1,1,1,1])]
+            list_Data_force = [inputs['Data_force']]
+            list_Data_torque = [inputs['Data_torque']]
 
-        for i, (force_inp, torque_inp) in enumerate(zip(inputs['Data_force'], inputs['Data_torque'])):
-            with tf.device('/gpu:%d' % i):
+        for i, (force_inp, torque_inp) in enumerate(zip(list_Data_force, list_Data_torque)):
+            #print (force_inp, torque_inp)
+            if inputthre>0:
+                force_inp = tf.minimum(force_inp, tf.constant(  inputthre, dtype = force_inp.dtype))
+                force_inp = tf.maximum(force_inp, tf.constant( -inputthre, dtype = force_inp.dtype))
+
+                torque_inp = tf.minimum(torque_inp, tf.constant(  inputthre, dtype = torque_inp.dtype))
+                torque_inp = tf.maximum(torque_inp, tf.constant( -inputthre, dtype = torque_inp.dtype))
+
+                #force_inp = tf.Print(force_inp, [tf.reduce_max(force_inp)], message = 'Input max: ')
+            with tf.device('/gpu:%d' % (i + gpu_offset)):
                 with tf.name_scope('gpu_' + str(i)) as gpu_scope:
                     output, param = model_func({'Data_force': force_inp, 'Data_torque': torque_inp}, **kwargs)
                     outputs.append(output)

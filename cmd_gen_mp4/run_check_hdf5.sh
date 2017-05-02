@@ -8,3 +8,12 @@
 #python cmd_dataset.py --objsta 4039 --bigsamnum 12 --savedir /Users/chengxuz/barrel/bullet/barrle_related_files/hdf5s --loaddir /Users/chengxuz/barrel/bullet/bullet3/data --pathexe /Users/chengxuz/barrel/bullet/example_build/ExampleBrowser/App_ExampleBrowser --pathconfig /Users/chengxuz/barrel/bullet/barrle_related_files/configs --fromcfg /Users/chengxuz/barrel/bullet/barrel_github/cmd_gen_mp4/opt_results/para_
 #python cmd_dataset.py --objsta 4039 --bigsamnum 12 --savedir /Users/chengxuz/barrel/bullet/barrle_related_files/hdf5s --loaddir /Users/chengxuz/barrel/bullet/bullet3/data --pathexe /Users/chengxuz/barrel/bullet/example_build/ExampleBrowser/App_ExampleBrowser --pathconfig /Users/chengxuz/barrel/bullet/barrle_related_files/configs --fromcfg /Users/chengxuz/barrel/bullet/barrel_github/cmd_gen_mp4/opt_results/para_
 python cmd_dataset.py --objsta 241 --bigsamnum 12 --savedir /Users/chengxuz/barrel/bullet/barrle_related_files/hdf5s --loaddir /Users/chengxuz/barrel/bullet/bullet3/data --pathexe /Users/chengxuz/barrel/bullet/example_build/ExampleBrowser/App_ExampleBrowser --pathconfig /Users/chengxuz/barrel/bullet/barrle_related_files/configs --fromcfg /Users/chengxuz/barrel/bullet/barrel_github/cmd_gen_mp4/opt_results/para_
+
+# command to run the program on ubuntu home
+#python cmd_dataset.py --objsta 4039 --bigsamnum 12 --savedir /home/chengxuz/barrel/related_files/hdf5_files --loaddir /home/chengxuz/barrel/bullet3/data --pathexe /home/chengxuz/barrel/build_examples/ExampleBrowser/App_ExampleBrowser --fromcfg /home/chengxuz/barrel/barrel/cmd_gen_mp4/opt_results/para_ --pathconfig /home/chengxuz/barrel/related_files/configs
+
+# command to run the program on sherlock, for test
+#python cmd_dataset.py --objsta 4039 --objlen 1 --bigsamnum 12 --pathexe /scratch/users/chengxuz/barrel/examples_build_2/Constraints/App_TestHinge --fromcfg /scratch/users/chengxuz/barrel/barrel/cmd_gen_mp4/opt_results/para_ --pathconfig /scratch/users/chengxuz/barrel/barrel_relat_files/configs --savedir /scratch/users/chengxuz/barrel/barrel_relat_files/dataset2/raw_hdf5 --loaddir /scratch/users/chengxuz/barrel/barrel_relat_files/all_objs/after_vhacd --seedbas 0  --checkmode 0
+
+# command to run the program on openmind, for test
+#python cmd_dataset.py --objsta 4039 --objlen 1 --bigsamnum 12 --savedir /om/user/chengxuz/Data/barrel_dataset2/raw_hdf5 --checkmode 0

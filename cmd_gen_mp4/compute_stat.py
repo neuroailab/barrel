@@ -16,7 +16,8 @@ def main():
 
     shape_tfr = [110, 31, 3, 3]
     obj_len = 25 # Number of objs in one tfrecord file
-    name_pat = 'Data%i_%i.tfrecords'
+    #name_pat = 'Data%i_%i.tfrecords'
+    name_pat = 'sher_Data%i_%i.tfrecords'
 
     sum_array = np.zeros(shape_tfr)
     sum_sq_array = np.zeros(shape_tfr)
@@ -26,9 +27,10 @@ def main():
 
     for tf_indx in xrange(args.tflen):
         tf_filename = os.path.join(args.tfdir, args.tfkey, name_pat % ((args.tfstart + tf_indx)*obj_len, obj_len))
+        print(tf_filename)
 
-        if not 'Data4025_25.tfrecords' in tf_filename:
-            continue
+        #if 'Data4025_25.tfrecords' in tf_filename:
+        #    continue
 
         record_iterator = tf.python_io.tf_record_iterator(path=tf_filename)
 
@@ -59,18 +61,16 @@ def main():
             tmp_mean = np.mean(reconstructed_img)
             tmp_std = np.std(reconstructed_img)
             if tmp_std>10000000:
-                print('Error data here %i!' % num_add)
+                print('Error data here %i with %f!' % (num_add, tmp_std))
         #print(num_add)
         #print(sum_array.shape)
         #break
         tmp_array = sum_array.reshape([110*31, 3, 3])
         mean_now = np.mean(tmp_array, 0)/num_add
-        print(mean_now)
+        #print(mean_now)
         tmp_sq_array = sum_sq_array.reshape([110*31, 3, 3])
         std_now = np.sqrt(np.mean(tmp_sq_array, 0)/num_add - mean_now**2)
-        print(std_now)
-
-        print(tf_filename)
+        #print(std_now)
 
         #tmp_max = max_array.reshape([110*31, 3, 3])
         #print(np.max(tmp_max, 0))
