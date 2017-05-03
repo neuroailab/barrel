@@ -16,14 +16,17 @@ for which_data in xrange(12):
 '''
 
 #hdf5_folder = '/om/user/chengxuz/Data/barrel_dataset2/raw_hdf5/'
-hdf5_folder = '/om/user/chengxuz/Data/barrel_dataset/raw_hdf5/'
+#hdf5_folder = '/om/user/chengxuz/Data/barrel_dataset/raw_hdf5/'
+hdf5_folder = '/scratch/users/chengxuz/barrel/barrel_relat_files/dataset2/raw_hdf5'
+#hdf5_folder = '/scratch/users/chengxuz/barrel/barrel_relat_files/dataset/raw_hdf5'
 file_list = os.listdir(hdf5_folder)
 
 file_num = 0
 
 for file_name in file_list:
     #file_path = os.path.join(hdf5_folder, file_name)
-    file_path = '/om/user/chengxuz/Data/barrel_dataset/raw_hdf5/Data4030_0_5776239d3e133b68a02fa8dacc37a297.hdf5'
+    file_path = os.path.join(hdf5_folder, "Data10886_2_1e820e0daaae16c7c3bd24f986301745.hdf5")
+    #file_path = '/om/user/chengxuz/Data/barrel_dataset/raw_hdf5/Data4030_0_5776239d3e133b68a02fa8dacc37a297.hdf5'
 
     fin = h5py.File(file_path, 'r')
 
@@ -31,7 +34,7 @@ for file_name in file_list:
         which_entry = fin[which_data]
         for key_now in key_list:
             arr_now = which_entry[key_now][...]
-            print(np.std(arr_now))
+            print("std", np.std(arr_now))
             max_tmp = np.max(arr_now)
             if max_tmp < 100000:
                 print(max_tmp)
