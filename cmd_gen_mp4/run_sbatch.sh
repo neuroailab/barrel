@@ -39,16 +39,22 @@ bigsamnum=2
 #for k in $(seq 6250 ${len_data} 9981)
 #for k in $(seq 5065 5069)
 #for k in $(seq 0 ${len_data} 399)
-for k in 0
+#for k in 0
+for k in $(seq 1 116)
+#for k in 1
+#for k in 4119
 do
     #sbatch --job-name=dataset${k} script_gendataset.sh ${k} ${len_data} ${bigsamnum}
     #sbatch --qos=use-everything --job-name=dataset${k} script_gendataset.sh ${k} ${len_data} ${bigsamnum}
     #sbatch --job-name=dataset${k} script_gendataset_sher.sh ${k} ${len_data} ${bigsamnum}
-    sbatch --job-name=dataset${k} script_genvaldataset_sher.sh ${k} ${len_data} ${bigsamnum}
+    #sbatch --job-name=dataset${k} script_genvaldataset_sher.sh ${k} 1 ${bigsamnum}
+    #sbatch --job-name=dataset${k} script_genvaldataset_sher.sh ${k} ${len_data} ${bigsamnum}
     #sbatch --job-name=dataset${k} script_gendataset_sher.sh ${k} 1 ${bigsamnum}
     #sbatch --job-name=dataset${k} script_gendataset.sh ${k} ${len_data} ${bigsamnum}
     #sbatch --job-name=tfrecs${k} script_to_tfrecs.sh ${k} ${len_data}
     #sbatch --job-name=tfrecs${k} script_to_tfrecs_sher.sh ${k} ${len_data}
+    sbatch --job-name=tfrecs${k} script_to_tfr_bycat.sh ${k}
+    #sbatch --job-name=tfrecs${k} script_to_tfr_bycat.sh ${k}
 
     #sbatch --job-name=compute${k} script_computestat.sh ${k} ${len_data} Data_force
     #sbatch --job-name=compute${k} script_computestat.sh ${k} ${len_data} Data_torque
