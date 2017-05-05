@@ -235,10 +235,16 @@ def generate_iter_list(args):
         hdf5_prefix = "Data"
 
     if args.generatemode<=2:
-        pos_list = get_pos_list(args.generatemode)
-        speed_list = get_speed_list(args.generatemode)
-        orn_list = get_orn_list(args.generatemode)
-        scale_list = get_scale_list(args.generatemode)
+        if args.generatemode>0:
+            pos_list = get_pos_list(args.generatemode)
+            speed_list = get_speed_list(args.generatemode)
+            orn_list = get_orn_list(args.generatemode)
+            scale_list = get_scale_list(args.generatemode)
+        else:
+            pos_list = [get_pos_list(3)]
+            speed_list = [get_speed_list(3)]
+            orn_list = [get_orn_list(3)]
+            scale_list = [get_scale_list(3)]
 
         for indx_pos_now in xrange(args.pindxsta, min(args.pindxsta + args.pindxlen, len(pos_list))):
             for indx_scale_now in xrange(args.scindxsta, min(args.scindxsta + args.scindxlen, len(scale_list))):
@@ -368,6 +374,7 @@ if __name__=="__main__":
         #    continue
         #if not 'Data15554_10_da92c8d35fabe4093a67185d75524e9c.hdf5' in config_dict["FILE_NAME"]["value"]:
         #    continue
+
         if not 'Data4039_9_6e5bf008a9259e95fa80fb391ee7ccee.hdf5' in config_dict["FILE_NAME"]["value"]:
             #continue
             pass

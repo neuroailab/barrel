@@ -226,7 +226,8 @@ def get_config_dict():
 
             "time_leap":{"value":1.0/240.0, "help":"Time unit for simulation", "type":"float"},
             #"time_leap":{"value":1.0/120.0, "help":"Time unit for simulation", "type":"float"},
-            "camera_dist":{"value":60, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
+            #"camera_dist":{"value":60, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
+            "camera_dist":{"value":40, "help":"Distance of camera", "type":"float", "dict_nu":{5: 20, 15:45, 25:70}}, 
             #"camera_yaw":{"value":183, "type":"float"}, 
             "camera_yaw":{"value":21, "type":"float"}, 
             #"camera_pitch":{"value":83, "type":"float"}, 

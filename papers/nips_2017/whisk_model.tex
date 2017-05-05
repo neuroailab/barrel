@@ -1,0 +1,4 @@
+In order to provide the similar inputs to deep neural networks as those to rodent somatosensory systems, one will need a physically accurate models for the the rodent whiskers. 
+In our models, we are more interested in ensuring the correctness of the mechanical details of every individual whisker. And at the same time, we also need the simulations to be fast enough for generating a large scale dataset. Therefore, we use Bullet \cite{wiki:bullet} as physics engine, which is a open-source real-time physics engine used in many video games and visual effects in movies.
+
+We use small cuboids concatenated along the longest dimension to model single whisker, where each cuboid are connected to every other cuboids in the same whisker using both linear and torsion springs. The equilibrium points of all the springs are set to make the whisker 
