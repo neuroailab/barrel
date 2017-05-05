@@ -38,3 +38,4 @@ ipython_note_anlys/Normal_results_for_chengxu.ipynb
 !train*/*.cfg
 !train*/*/*.cfg
 *.avi
+*.pdf
