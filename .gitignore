@@ -42,3 +42,5 @@ papers/*/*.bbl
 papers/*/*.blg
 papers/*/*.log
 papers/*/*.out
+*.avi
+
