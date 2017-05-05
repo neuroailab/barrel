@@ -37,3 +37,8 @@ ipython_note_anlys/Normal_results_for_chengxu.ipynb
 *.mexa64
 !train*/*.cfg
 !train*/*/*.cfg
+papers/*/*.aux
+papers/*/*.bbl
+papers/*/*.blg
+papers/*/*.log
+papers/*/*.out
