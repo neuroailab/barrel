@@ -22,6 +22,7 @@ IF(APPLE)
 ELSEIF(UNIX)
     SET(HDF5_SELF_INCLUDE ${HDF5_INCLUDE_DIR})
     SET(HDF5_SELF_LIBRARY hdf5 hdf5_cpp)
+    #SET(HDF5_SELF_LIBRARY /usr/lib/x86_64-linux-gnu/hdf5/serial/lib/libhdf5.so;/usr/lib/x86_64-linux-gnu/hdf5/serial/lib/libhdf5_cpp.so) # Special for neuroaicluster
 ENDIF()
 INCLUDE_DIRECTORIES( ${HDF5_SELF_INCLUDE} )
 
