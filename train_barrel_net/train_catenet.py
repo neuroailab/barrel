@@ -42,7 +42,7 @@ if 'neuroaicluster' in host:
     DATA_PATH['Data_torque_stat'] = train_data_path_prefix + '/Data_torque/Data_torque_combined.pkl'
 
 NEW_DATA_PATH = {}
-new_data_path_prefix = '/mnt/fs2/chengxuz/Data/whisker2/tfrecords'
+new_data_path_prefix = '/mnt/fs2/chengxuz/Data/whisker2/tfrecords2'
 
 NEW_DATA_PATH['train/Data_force'] = new_data_path_prefix + '/Data_force/'
 NEW_DATA_PATH['train/Data_torque'] = new_data_path_prefix + '/Data_torque/'
@@ -50,6 +50,7 @@ NEW_DATA_PATH['train/category'] = new_data_path_prefix + '/category/'
 NEW_DATA_PATH['val/Data_force'] = new_data_path_prefix + '/Data_force/'
 NEW_DATA_PATH['val/Data_torque'] = new_data_path_prefix + '/Data_torque/'
 NEW_DATA_PATH['val/category'] = new_data_path_prefix + '/category/'
+
 NEW_DATA_PATH['strain'] = '*_strain.tfrecords'
 NEW_DATA_PATH['sval'] = '*_sval.tfrecords'
 
@@ -111,8 +112,8 @@ def cmu_softmax_cross_entropy_loss(labels, logits, **kwargs):
 
 def parallel_softmax_cross_entropy_loss(labels, logits, gpu_offset = 0, **kwargs):
     #labels = tf.Print(labels, [labels], message = "Labels", summarize = 30)
-    y, idx = tf.unique(labels)
-    labels = tf.Print(labels, [tf.reduce_max(idx)], message = "Labels", summarize = 1)
+    #y, idx = tf.unique(labels)
+    #labels = tf.Print(labels, [tf.reduce_max(idx)], message = "Labels", summarize = 1)
 
     with tf.variable_scope(tf.get_variable_scope()) as vscope:
         n_gpus = len(logits)
