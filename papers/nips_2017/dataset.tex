@@ -2,14 +2,21 @@ After we have the whisker array, we can generate a large-scale dataset for train
 The choice of the tasks is believed to be critical for whether the trained networks will be a good model for that cortex or not.
 For example, it has been shown that one of the imporant reasons that the neural networks trained for object recognition could predict responses of IT cortex in visual cortex well~\cite{cadieu2014deep, Yamins2014} is that object recognition is believed to be a major function performed by IT cortex~\cite{hung2005fast, yamins2016using}.
 Although the functions performed by rodent somatosensory systems are poorly understood, it is found that rodents could use their whiskers to detect object shape, position, and texture of object surface\cite{Boubenec2012,Diamond2008,Arabzadeh2005,OConnor2010}
-Therefore, we are temporarally using object recognition as the task to generate the dataset and optimize the neural networks. 
-Meanwhile, we also make other information such as object shapes as surface normals and speed of object moving available for further task switching.
+Therefore, we are temporarily using object recognition as the task to generate the dataset and optimize the neural networks.
+But meanwhile, we also make other information such as object shapes as surface normals and speed of object moving available for further task switching.
 
 Specifically, the dataset we generated consists of many independent trails in which one object will be moving towards the whisker array from the front of it in a constant speed.
 The collision happens between object and cuboids while the speed of object will not be influenced.
 For every whisker, we collect the sums of all the forces and torques from all springs connecting to three cuboids respectively at the bottom of that whisker, as researchers have found that forces and torques can be used to explain the signals transimitted by follicles of whiskers~\cite{Quist2014, Huet2016}.
 
-The objects used are chosen from ShapeNet~\cite{Chang2015}, where over 50 thousand 3D objects belonging to 55 categories are collected from Internet. 
-We further split the 55 categories into 117 categories by extracting fine-grained subcategories. 
-Then we randomly sample 9981 objects from ShapeNet with much more averaged category distribution, where most of the categories as well as the categories with most objects have 91 objects and the category with fewest objects has 42 objects. 
+The objects used are chosen from ShapeNet~\cite{Chang2015}, where over 50 thousand 3D objects belonging to 55 categories are collected from Internet.
+We further split the 55 categories into 117 categories by extracting fine-grained subcategories.
+Then we randomly sample 9981 objects from ShapeNet with much more averaged category distribution, where most of the categories as well as the categories with most objects have 91 objects and the category with fewest objects has 42 objects.
 
+Every object is placed after random rotation and random scaling. The scaling is done to set the longest axis on the object to be between 25mm and 135mm. The object is placed randomly in front of the whisker array, where the direction of "front" means the front of mice.
+The object will be moved towards the center of the whisker array and the position of the object will be adjusted later to avoid the possible collisions between the object and the fixed bottom of whiskers.
+The absolute value of speed is randomly chosen at the beginning from 7 to 14mm/s.
+For one rotation and scaling setting, the object will be placed in top, middle, and bottom three different initial vertical positions. The intuition is from the mice exploring behaviors using their whiskers, when multiple swiping at different vertical positions towards one object~\cite{hobbs2015spatiotemporal}.
+
+The simulation lasts for 11 seconds for every trial. And the sampling rate of forces and torques is 10Hz. So overall, we will collect data of dimension $110 \times 31 \times 3 \times 2 \times 3$, where the first dimension will be called temporal dimension, the second dimension will be called spatial dimension, and the last three dimensions will be combined together as 18 different channels. 
+For every object, 96 independent settings including independent sampled rotation, scaling, speed, and initial position will be sampled, where each setting includes three swipes including top, middle, and bottom swipes. Eight more independent settings will be generated for every object for validation.
