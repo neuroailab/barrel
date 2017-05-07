@@ -17,6 +17,8 @@ def main():
 
     #parser.add_argument('--key', default = 'category', type = str, action = 'store', help = 'Which key to split')
     parser.add_argument('--key', default = 'Data_force', type = str, action = 'store', help = 'Which key to split')
+    parser.add_argument('--staindx', default = 0, type = int, action = 'store', help = 'Start index of the file')
+    parser.add_argument('--lenindx', default = 1, type = int, action = 'store', help = 'Length of index of the file')
 
     # Usually fixed parameters
     parser.add_argument('--fromdir', default = '/mnt/fs2/chengxuz/Data/whisker2/tfrecords', type = str, action = 'store', help = 'From which the tfrecs to split')
@@ -32,11 +34,14 @@ def main():
     max_num = 11*144
 
     file_list = os.listdir(from_dir)
+    file_list.sort()
     #print(len(file_list))
 
-    for file_name in file_list:
+    for file_indx in xrange(args.staindx, min(args.staindx+args.lenindx, len(file_list))):
+        file_name = file_list[file_indx]
         if not file_name.endswith('tfrecords'):
             print(file_name)
+            continue
 
         file_path = os.path.join(from_dir, file_name)
 
