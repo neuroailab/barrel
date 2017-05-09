@@ -632,6 +632,20 @@ def get_params_from_arg(args):
                 'query': load_query 
         }
 
+    if args.loadque==3:
+        if args.loadname is None:
+            args.loadname = args.expId
+
+        load_params = {
+                'host': 'localhost',
+                'port': args.loadport,
+                'dbname': 'whisker_net',
+                'collname': 'catenet',
+                'exp_id': args.loadname,
+                'do_restore': True,
+                'query': load_query 
+        }
+
     save_params = {
             'host': 'localhost',
             'port': args.nport,
@@ -874,7 +888,6 @@ def main():
     parser.add_argument('--valinum', default = -1, type = int, action = 'store', help = 'Number of validation steps, default is -1, which means all the validation')
     parser.add_argument('--whichopt', default = 0, type = int, action = 'store', help = 'Choice of the optimizer, 0 means momentum, 1 means Adam')
     parser.add_argument('--initlr', default = 0.0001, type = float, action = 'store', help = 'Initial learning rate')
-    parser.add_argument('--loadque', default = 0, type = int, action = 'store', help = 'Special setting for load query')
     parser.add_argument('--expand', default = 0, type = int, action = 'store', help = 'Whether do the spatial padding')
     parser.add_argument('--split12', default = 0, type = int, action = 'store', help = 'Whether do the 12 swipes spliting, default is no')
     parser.add_argument('--norm', default = 0, type = int, action = 'store', help = 'Whether do the normalization, default is no')
@@ -904,6 +917,11 @@ def main():
     # New dataset related parameters
     parser.add_argument('--newdata', default = 0, type = int, action = 'store', help = 'Default is 0, use old dataset')
     parser.add_argument('--valbycat', default = 0, type = int, action = 'store', help = 'Default is 0, use original validation splitting')
+
+    # Load old results related parameters
+    parser.add_argument('--loadque', default = 0, type = int, action = 'store', help = 'Special setting for load query')
+    parser.add_argument('--loadname', default = None, type = str, action = 'store', help = 'While loadque is 3, will use this as load experiment id name')
+    parser.add_argument('--loadport', default = 29101, type = int, action = 'store', help = 'While loadque is 3, will use this as load port number')
 
     args    = parser.parse_args()
 
