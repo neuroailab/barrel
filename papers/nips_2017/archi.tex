@@ -1,0 +1,15 @@
+In this section, we will show several families of DNNs trained on the dataset. Different families of DNNs are based on different hypotheses about the computations performed by neurons. 
+For example, the model with spatial-temporal convolution structure is based on our assumption about neurons integrating spatial-temporal information. 
+As the temporal dimension of our input data is fixed across different trials, we could use feed-forward convolutional neural networks (CNNs) as well as recurrent neural networks (RNNs).
+We will compare different families of networks through their performances while controlling the number of parameters in the model.
+
+\subsection{Spatial-temporal integrating networks}
+
+In this family of networks, we use CNNs where convolution is done both on temporal dimension and spatial dimension, which means that responses from different whiskers across some time will be combined together in neurons of every layer, while neurons at higher layer will have larger receptive field on both dimensions.
+
+
+\subsection{Temporal integrating before spatial integrating}
+
+\subsection{Spatial integrating before temporal integrating}
+
+\subsection{Recurrent neural networks}
