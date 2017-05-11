@@ -41,6 +41,23 @@ if 'neuroaicluster' in host:
     DATA_PATH['Data_force_stat'] = train_data_path_prefix + '/Data_force/Data_force_combined.pkl'
     DATA_PATH['Data_torque_stat'] = train_data_path_prefix + '/Data_torque/Data_torque_combined.pkl'
 
+NEW_DATA_PATH = {}
+new_data_path_prefix = '/mnt/fs2/chengxuz/Data/whisker2/tfrecords2'
+
+NEW_DATA_PATH['train/Data_force'] = new_data_path_prefix + '/Data_force/'
+NEW_DATA_PATH['train/Data_torque'] = new_data_path_prefix + '/Data_torque/'
+NEW_DATA_PATH['train/category'] = new_data_path_prefix + '/category/'
+NEW_DATA_PATH['val/Data_force'] = new_data_path_prefix + '/Data_force/'
+NEW_DATA_PATH['val/Data_torque'] = new_data_path_prefix + '/Data_torque/'
+NEW_DATA_PATH['val/category'] = new_data_path_prefix + '/category/'
+
+NEW_DATA_PATH['strain'] = '*_strain.tfrecords'
+NEW_DATA_PATH['sval'] = '*_sval.tfrecords'
+
+NEW_DATA_PATH['ctrain'] = 'ctrain_*.tfrecords'
+NEW_DATA_PATH['cval'] = 'cval_*.tfrecords'
+
+
 def online_agg(agg_res, res, step):
     if agg_res is None:
         agg_res = {k: [] for k in res}
@@ -94,6 +111,10 @@ def cmu_softmax_cross_entropy_loss(labels, logits, **kwargs):
         return tf.reduce_mean(losses)
 
 def parallel_softmax_cross_entropy_loss(labels, logits, gpu_offset = 0, **kwargs):
+    #labels = tf.Print(labels, [labels], message = "Labels", summarize = 30)
+    #y, idx = tf.unique(labels)
+    #labels = tf.Print(labels, [tf.reduce_max(idx)], message = "Labels", summarize = 1)
+
     with tf.variable_scope(tf.get_variable_scope()) as vscope:
         n_gpus = len(logits)
         if n_gpus>1:
@@ -189,6 +210,7 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
                  split_12 = False,
                  norm_std = 1,
                  num_fake = 0,
+                 patprefix = None,
                  *args,
                  **kwargs):
 
@@ -208,11 +230,16 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
             self.stat_path['Data_torque'] = data_path['Data_torque_stat']
         postprocess = {self.force: [(self.postprocess_images, (), {})], self.torque: [(self.postprocess_images, (), {})]}
 
+        file_pattern = '*.tfrecords'
+        if not patprefix is None:
+            file_pattern = data_path[patprefix + group]
+
         super(WhiskerWorld, self).__init__(
             source_dirs = [data_path["%s/%s" % (group, self.force)] , data_path["%s/%s" % (group, self.torque)] , data_path["%s/%s" % (group, self.label)]],
             postprocess = postprocess,
             batch_size=batch_size,
             n_threads=n_threads,
+            file_pattern=file_pattern,
             shuffle = True,
             *args, **kwargs)
 
@@ -416,6 +443,8 @@ def get_params_from_arg(args):
     else:
         queue_capa  = 3840
 
+    queue_capa = queue_capa*50;
+
     n_threads   = 4
 
     func_net = getattr(cate_network_builder, args.namefunc)
@@ -495,6 +524,17 @@ def get_params_from_arg(args):
         val_queue_params['batch_size'] = BATCH_SIZE//12
         train_queue_params['capacity'] = queue_capa//12
         val_queue_params['capacity'] = BATCH_SIZE*10//12
+
+    if args.newdata==1:
+        train_data_param['data_path'] = NEW_DATA_PATH
+        val_data_param['data_path'] = NEW_DATA_PATH
+
+        if args.valbycat==0:
+            train_data_param['patprefix'] = 's'
+            val_data_param['patprefix'] = 's'
+        else:
+            train_data_param['patprefix'] = 'c'
+            val_data_param['patprefix'] = 'c'
 
     if args.tnn==1:
         model_params['cfg_path'] = pathconfig
@@ -588,6 +628,20 @@ def get_params_from_arg(args):
                 'dbname': 'whisker_net',
                 'collname': 'catenet',
                 'exp_id': 'catenet_tnn_decay_train_sep22_np',
+                'do_restore': True,
+                'query': load_query 
+        }
+
+    if args.loadque==3:
+        if args.loadname is None:
+            args.loadname = args.expId
+
+        load_params = {
+                'host': 'localhost',
+                'port': args.loadport,
+                'dbname': 'whisker_net',
+                'collname': 'catenet',
+                'exp_id': args.loadname,
                 'do_restore': True,
                 'query': load_query 
         }
@@ -834,7 +888,6 @@ def main():
     parser.add_argument('--valinum', default = -1, type = int, action = 'store', help = 'Number of validation steps, default is -1, which means all the validation')
     parser.add_argument('--whichopt', default = 0, type = int, action = 'store', help = 'Choice of the optimizer, 0 means momentum, 1 means Adam')
     parser.add_argument('--initlr', default = 0.0001, type = float, action = 'store', help = 'Initial learning rate')
-    parser.add_argument('--loadque', default = 0, type = int, action = 'store', help = 'Special setting for load query')
     parser.add_argument('--expand', default = 0, type = int, action = 'store', help = 'Whether do the spatial padding')
     parser.add_argument('--split12', default = 0, type = int, action = 'store', help = 'Whether do the 12 swipes spliting, default is no')
     parser.add_argument('--norm', default = 0, type = int, action = 'store', help = 'Whether do the normalization, default is no')
@@ -860,6 +913,15 @@ def main():
     parser.add_argument('--innerargs', default = [], type = str, action = 'append', help = 'Arguments for every network')
     parser.add_argument('--gpu_offset', default = [], type = int, action = 'append', help = 'GPU offset for every network')
     parser.add_argument('--ngpus', default = [], type = int, action = 'append', help = 'Number of gpus for every network')
+
+    # New dataset related parameters
+    parser.add_argument('--newdata', default = 0, type = int, action = 'store', help = 'Default is 0, use old dataset')
+    parser.add_argument('--valbycat', default = 0, type = int, action = 'store', help = 'Default is 0, use original validation splitting')
+
+    # Load old results related parameters
+    parser.add_argument('--loadque', default = 0, type = int, action = 'store', help = 'Special setting for load query')
+    parser.add_argument('--loadname', default = None, type = str, action = 'store', help = 'While loadque is 3, will use this as load experiment id name')
+    parser.add_argument('--loadport', default = 29101, type = int, action = 'store', help = 'While loadque is 3, will use this as load port number')
 
     args    = parser.parse_args()
 

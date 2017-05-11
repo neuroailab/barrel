@@ -28,12 +28,14 @@ for key_now in key_list:
             print path_now
 '''
 
-tfrecords_filename = '/media/data3/chengxuz/whisker/tfrecords/category/Data0_25.tfrecords'
+#tfrecords_filename = '/media/data3/chengxuz/whisker/tfrecords/category/Data0_25.tfrecords'
+tfrecords_filename = '/scratch/users/chengxuz/barrel/barrel_relat_files/dataset2/tfrecords/category/ctrain_100_0_21_strain.tfrecords'
 reconstructed_images = []
 
 record_iterator = tf.python_io.tf_record_iterator(path=tfrecords_filename)
 diff_name = []
 diff_len = 144
+#diff_len = 24
 now_len = 0
 
 for string_record in record_iterator:
@@ -54,3 +56,4 @@ for string_record in record_iterator:
     now_len = now_len + 1
 
 print(diff_name)
+print(now_len)

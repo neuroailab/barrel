@@ -1,0 +1,30 @@
+In this section, we will show several families of DNNs trained on the dataset. Different families of DNNs are based on different hypotheses about the computations performed by neurons. 
+For example, the model with spatial-temporal convolution structure is based on our assumption about neurons integrating spatial-temporal information. 
+As the temporal dimension of our input data is fixed across different trials, we could use feed-forward convolutional neural networks (CNNs) as well as recurrent neural networks (RNNs).
+We will compare different families of networks through their performances while controlling the number of parameters in the model.
+
+\subsection{Spatial-temporal integrating networks}
+
+In this family of networks, we use CNNs where convolution is done simultaneously on temporal dimension and spatial dimension, which means that responses from different whiskers across a specific window of time will be combined together in neurons of every layer, while neurons at higher layer will have larger receptive field at both dimensions.
+We began with 2D-convolution on temporal and spatial dimension, where the spatial dimension is the indexing of the whiskers through going across the columns and then the rows on the $5\times7$ grid. 
+We also tried expanding the spatial dimension into two dimensions of $5\times7$ and then doing a 3D-convolution instead, the results will be shown later in this section. 
+
+The general structure of the networks includes several convolution layers followed by several fully connected layers. Each categorization is done towards a combination of top, middle, and bottom swipe of the same object under fixed setting. 
+The same network will be applied to three swipes after which the outputs will be concatenated to give the final categorization label.
+For example, one structure in this family consists of 5 convolutional layers and 2 fully connected layers for each swipe with one additional fully connected layer for combining three swipes. 
+The convolutional layers are named from \textit{conv1} to \textit{conv5}.
+And the filter size of \textit{conv1} is $9\times3$ and that of other convolutional layers is $3\times3$, where the first number is for temporal dimension and the second number is for spatial dimension. 
+The strides of all convolutional layers for both dimensions are 1. The number of filters are 96, 256, 384, 384, and 256 respectively.
+There are max-pooling layers after \textit{conv1}, \textit{conv2}, and \textit{conv5}, called \textit{pool1}, \textit{pool2}, and \textit{pool5}. The filter size of \textit{pool1} is $3\times1$ and the stride of \textit{pool1} is the same. 
+For \textit{pool2} and \textit{pool5}, the filter size is $3\times3$ while the stride is $2\times2$.
+After \textit{pool5}, the output is transformed by two fully connected layers \textit{fc6} and \textit{fc7}. Layer \textit{fc6} has an output shape of 4096 and layer \textit{fc7} has an output shape of 1024.
+Finally the three swipes are concatenated together and an additional fully connected layer \textit{fc_add} is used to predict the category by giving an output with shape of 117.
+
+The network is trained using cross-entropy loss function using Adagrad algorithm \cite{duchi2011adaptive}. 
+The learning rate remained at 
+
+\subsection{Temporal integrating before spatial integrating}
+
+\subsection{Spatial integrating before temporal integrating}
+
+\subsection{Recurrent neural networks}

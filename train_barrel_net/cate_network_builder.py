@@ -694,6 +694,7 @@ def catenet_tnn(inputs, cfg_path, train = True, tnndecay = 0.1, decaytrain = 0, 
 		if (j > i+1 or i > j) and (j>0): #since (i, j) w/ j > i is already an edge
 		    MASTER_EDGES.append((node_list[i], node_list[j]))
 
+        print(MASTER_EDGES)
         G.add_edges_from(MASTER_EDGES)
 
 
