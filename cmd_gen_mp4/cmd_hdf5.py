@@ -233,6 +233,12 @@ def generate_iter_list(args):
         elif args.objindx==7:
             obj_path = [os.path.join(obj_path_prefix, "chair_aftervhacd.obj")]
             hdf5_prefix = "chair"
+        elif args.objindx==8:
+            obj_path = [os.path.join(obj_path_prefix, "cube.obj")]
+            hdf5_prefix = "cube"
+        elif args.objindx==9:
+            obj_path = [os.path.join(obj_path_prefix, "duck.obj")]
+            hdf5_prefix = "duck"
     else:
         obj_path = [args.objindx]
         hdf5_prefix = "Data"
@@ -247,7 +253,9 @@ def generate_iter_list(args):
         else:
             pos_list = [get_pos_list(3)]
             speed_list = [get_speed_list(3)]
+            #speed_list = [[0,0.1,0]]
             orn_list = [get_orn_list(3)]
+            #orn_list = [[0,0,0,1]]
             scale_list = [get_scale_list(3)]
 
         for indx_pos_now in xrange(args.pindxsta, min(args.pindxsta + args.pindxlen, len(pos_list))):
