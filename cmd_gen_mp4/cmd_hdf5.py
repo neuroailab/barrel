@@ -104,12 +104,15 @@ def get_scale_list(mode=0):
     elif mode==2:
         #return [[60], [70], [80]]
         ret_val = []
-        #start_sc = 30
-        start_sc = 25
-        #end_sc = 90
+
+        start_sc = 30
+        #start_sc = 25
+        
+        end_sc = 90
         #end_sc = 91
-        end_sc = 136
+        #end_sc = 136
         step_sc = 10
+
         for inter_sc in xrange(start_sc, end_sc, step_sc):
             ret_val.append([inter_sc])
         #return [[60], [70], [80]]
@@ -240,6 +243,7 @@ def generate_iter_list(args):
             speed_list = get_speed_list(args.generatemode)
             orn_list = get_orn_list(args.generatemode)
             scale_list = get_scale_list(args.generatemode)
+            print(len(pos_list), len(speed_list), len(orn_list), len(scale_list))
         else:
             pos_list = [get_pos_list(3)]
             speed_list = [get_speed_list(3)]
@@ -259,7 +263,8 @@ def generate_iter_list(args):
                         now_add_dict['obj_filename'] = obj_path
 
                         hash_value = make_hash(now_add_dict)
-                        hash_value = "%i_%i_%i_%i_%i" % (hash_value, indx_pos_now, indx_scale_now, indx_speed_now, indx_orn_now)
+                        #hash_value = "%i_%i_%i_%i_%i" % (hash_value, indx_pos_now, indx_scale_now, indx_speed_now, indx_orn_now)
+                        hash_value = "%i_%i_%i_%i" % (indx_pos_now, indx_scale_now, indx_speed_now, indx_orn_now)
 
                         now_add_dict["FILE_NAME"] = os.path.join(args.pathhdf5, "%s_%s.hdf5" % (hdf5_prefix, hash_value))
                         now_add_dict["_hash_value"] = hash_value
