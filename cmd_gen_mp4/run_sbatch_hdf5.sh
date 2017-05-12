@@ -50,11 +50,17 @@ bigsamnum=48
 #for seed in $(seq 251 500)
 #for seed in $(seq 0 250)
 #for seed in $(seq 130 150)
-#do
-#    sbatch script_gentestdataset_sher.sh ${data_path1} ${bigsamnum} teddy_${seed} ${seed}
-#    sbatch script_gentestdataset_sher.sh ${data_path2} ${bigsamnum} duck_${seed} ${seed}
-#done
+for seed in 0
+do
+    for control in 1
+    do
+        sbatch script_gentestdataset_sher.sh ${data_path1} ${bigsamnum} teddy_${seed} ${seed} ${control}
+        #sbatch script_gentestdataset_sher.sh ${data_path1} ${bigsamnum} teddy_${seed} ${seed}
+        #sbatch script_gentestdataset_sher.sh ${data_path2} ${bigsamnum} duck_${seed} ${seed}
+    done
+done
 
+:'
 for objindx in 0 1
 #for objindx in 0
 do
@@ -74,3 +80,4 @@ do
         done
     done
 done
+'
