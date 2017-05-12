@@ -8,10 +8,14 @@ class ConvNet(object):
     """Basic implementation of ConvNet class compatible with tfutils.
     """
 
-    def __init__(self, seed=None, **kwargs):
+    def __init__(self, seed=None, fixweights = False, **kwargs):
         self.seed = seed
         self.output = None
         self._params = OrderedDict()
+        self.default_trainable = True
+        if fixweights:
+            print('Will use random weights!')
+            self.default_trainable = False
 
     @property
     def params(self):
@@ -128,7 +132,12 @@ class ConvNet(object):
              weight_decay=None,
              in_layer=None,
              init_file=None,
-             init_layer_keys=None):
+             init_layer_keys=None,
+             trainable = None
+             ):
+
+        if trainable is None:
+            trainable = self.default_trainable
 
         if in_layer is None:
             in_layer = self.output
@@ -148,11 +157,11 @@ class ConvNet(object):
                                      shape=[ksize1, ksize2, ksize3, in_shape, out_shape],
                                      dtype=tf.float32,
                                      regularizer=tf.contrib.layers.l2_regularizer(weight_decay),
-                                     name='weights')
+                                     name='weights', trainable = trainable)
             biases = tf.get_variable(initializer=tf.constant_initializer(bias),
                                      shape=[out_shape],
                                      dtype=tf.float32,
-                                     name='bias')
+                                     name='bias', trainable = trainable)
         else:
             init_dict = self.initializer(init,
                                          init_file=init_file,
@@ -160,10 +169,10 @@ class ConvNet(object):
             kernel = tf.get_variable(initializer=init_dict['weight'],
                                      dtype=tf.float32,
                                      regularizer=tf.contrib.layers.l2_regularizer(weight_decay),
-                                     name='weights')
+                                     name='weights', trainable = trainable)
             biases = tf.get_variable(initializer=init_dict['bias'],
                                      dtype=tf.float32,
-                                     name='bias')
+                                     name='bias', trainable = trainable)
 
         conv = tf.nn.conv3d(in_layer, kernel,
                             strides=[1, stride, stride, stride, 1],
@@ -199,7 +208,13 @@ class ConvNet(object):
              weight_decay=None,
              in_layer=None,
              init_file=None,
-             init_layer_keys=None):
+             init_layer_keys=None,
+             trainable = None
+             ):
+
+        if trainable is None:
+            trainable = self.default_trainable
+
         if in_layer is None:
             in_layer = self.output
         if weight_decay is None:
@@ -217,11 +232,11 @@ class ConvNet(object):
                                      shape=[ksize1, ksize2, in_shape, out_shape],
                                      dtype=tf.float32,
                                      regularizer=tf.contrib.layers.l2_regularizer(weight_decay),
-                                     name='weights')
+                                     name='weights', trainable = trainable)
             biases = tf.get_variable(initializer=tf.constant_initializer(bias),
                                      shape=[out_shape],
                                      dtype=tf.float32,
-                                     name='bias')
+                                     name='bias', trainable = trainable)
         else:
             init_dict = self.initializer(init,
                                          init_file=init_file,
@@ -229,10 +244,10 @@ class ConvNet(object):
             kernel = tf.get_variable(initializer=init_dict['weight'],
                                      dtype=tf.float32,
                                      regularizer=tf.contrib.layers.l2_regularizer(weight_decay),
-                                     name='weights')
+                                     name='weights', trainable = trainable)
             biases = tf.get_variable(initializer=init_dict['bias'],
                                      dtype=tf.float32,
-                                     name='bias')
+                                     name='bias', trainable = trainable)
 
         conv = tf.nn.conv2d(in_layer, kernel,
                             strides=[1, stride, stride, 1],
@@ -264,7 +279,12 @@ class ConvNet(object):
            dropout=.5,
            in_layer=None,
            init_file=None,
-           init_layer_keys=None):
+           init_layer_keys=None,
+           trainable = None
+           ):
+
+        if trainable is None:
+            trainable = self.default_trainable
 
         if in_layer is None:
             in_layer = self.output
@@ -276,21 +296,21 @@ class ConvNet(object):
             kernel = tf.get_variable(initializer=self.initializer(init, stddev=stddev),
                                      shape=[in_shape, out_shape],
                                      dtype=tf.float32,
-                                     name='weights')
+                                     name='weights', trainable = trainable)
             biases = tf.get_variable(initializer=tf.constant_initializer(bias),
                                      shape=[out_shape],
                                      dtype=tf.float32,
-                                     name='bias')
+                                     name='bias', trainable = trainable)
         else:
             init_dict = self.initializer(init,
                                          init_file=init_file,
                                          init_keys=init_layer_keys)
             kernel = tf.get_variable(initializer=init_dict['weight'],
                                      dtype=tf.float32,
-                                     name='weights')
+                                     name='weights', trainable = trainable)
             biases = tf.get_variable(initializer=init_dict['bias'],
                                      dtype=tf.float32,
-                                     name='bias')
+                                     name='bias', trainable = trainable)
 
         fcm = tf.matmul(resh, kernel)
         self.output = tf.nn.bias_add(fcm, biases, name='fc')

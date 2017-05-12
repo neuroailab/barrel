@@ -804,7 +804,8 @@ def catenet_add(inputs, cfg_initial = None, train=True, **kwargs):
                 m.batchnorm_corr(train)
 
     with tf.variable_scope('fc_add'):
-        m_add.fc(117, init='trunc_norm', activation=None, dropout=None, bias=0)
+        #m_add.fc(117, init='trunc_norm', activation=None, dropout=None, bias=0)
+        m_add.fc(117, init='trunc_norm', activation=None, dropout=None, bias=0, trainable = True)
 
     total_parameters = 0
     for variable in tf.trainable_variables():

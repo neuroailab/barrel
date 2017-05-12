@@ -549,6 +549,9 @@ def get_params_from_arg(args):
         if args.inputthre>0:
             model_params['inputthre'] = args.inputthre
 
+    if args.fixweights==1:
+        model_params['fixweights'] = True
+
     optimizer_params = {
             'func': optimizer.ClipOptimizer,
             'optimizer_class': optimizer_class,
@@ -894,6 +897,7 @@ def main():
     parser.add_argument('--norm_std', default = 1, type = float, action = 'store', help = 'Std of new input, default is 1')
     parser.add_argument('--parallel', default = 0, type = int, action = 'store', help = 'Whether to do parallel across gpus, default is no (0)')
     parser.add_argument('--inputthre', default = 0, type = float, action = 'store', help = 'Threshold to control the input')
+    parser.add_argument('--fixweights', default = 0, type = float, action = 'store', help = 'Threshold to control the input')
 
     # TNN related parameters
     parser.add_argument('--tnn', default = 0, type = int, action = 'store', help = 'Whether to use the tnn, default is no')
