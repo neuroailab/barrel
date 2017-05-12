@@ -60,15 +60,16 @@ for objindx in 0 1
 do
     #for pindxsta in 1 $(seq 12 19)
     for pindxsta in $(seq 0 3 35)
-    #for pindxsta in 1
+    #for pindxsta in 0
     do
         for scindxsta in $(seq 0 5)
         #for scindxsta in 0
         do
             for oindxsta in $(seq 0 5 14)
+            #for oindxsta in 0
             do
-                #sbatch script_sbatch_hdf5_om.sh ${objindx} ${pindxsta} ${scindxsta} ${oindxsta}
-                sbatch script_gentestdataset_dis_sher.sh ${objindx} ${pindxsta} ${scindxsta} ${oindxsta}
+                sbatch script_sbatch_hdf5_om.sh ${objindx} ${pindxsta} ${scindxsta} ${oindxsta}
+                #sbatch script_gentestdataset_dis_sher.sh ${objindx} ${pindxsta} ${scindxsta} ${oindxsta}
             done
         done
     done

@@ -275,7 +275,7 @@ def generate_iter_list(args):
                         hash_value = "%i_%i_%i_%i" % (indx_pos_now, indx_scale_now, indx_speed_now, indx_orn_now)
 
                         now_add_dict["FILE_NAME"] = os.path.join(args.pathhdf5, "%s_%s.hdf5" % (hdf5_prefix, hash_value))
-                        now_add_dict["_hash_value"] = hash_value
+                        now_add_dict["_hash_value"] = hdf5_prefix + hash_value
 
                         ret_val.append(now_add_dict)
 
@@ -396,8 +396,12 @@ if __name__=="__main__":
             #continue
             pass
 
+        size_wanted = 14792976
+        if args.smallplen*args.smallolen==1:
+            size_wanted = 1233100
+
         if args.checkmode==1:
-            if (os.path.exists(config_dict["FILE_NAME"]["value"]) and (os.path.getsize(config_dict["FILE_NAME"]["value"])==14792976)):
+            if (os.path.exists(config_dict["FILE_NAME"]["value"]) and (os.path.getsize(config_dict["FILE_NAME"]["value"])==size_wanted)):
                 exist_num = exist_num + 1
                 continue
             else:
