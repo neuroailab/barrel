@@ -21,5 +21,5 @@ Furthermore, to simulate the exploration behaviors through walking and swiping a
 So in total, there will be 12 trails for every setting.
 
 And for each trial, the simulation lasts for 11 seconds for every trial. And the sampling rate of forces and torques is 10Hz. 
-So overall, for one trial we will collect data of dimension $110 \times 31 \times 3 \times 2 \times 3$, where the first dimension will be called temporal dimension, the second dimension will be called spatial dimension, and the last three dimensions will be combined together as 18 different channels.
+So overall, for one trial we will collect data of dimension $110 \times 31 \times 3 \times 2 \times 3$, where the first dimension will be called temporal dimension, the second dimension will be called spatial dimension, and the last three dimensions will be combined together as 18 different channels such as RGB channels in color images.
 For every object, 24 settings including independent sampled rotation, scaling, speed, and initial position will be sampled where each setting includes 12 trials including four rotations combined with top, middle, and bottom swipes. Two more independent settings will be generated for every object for validation.

@@ -104,12 +104,15 @@ def get_scale_list(mode=0):
     elif mode==2:
         #return [[60], [70], [80]]
         ret_val = []
-        #start_sc = 30
-        start_sc = 25
-        #end_sc = 90
+
+        start_sc = 30
+        #start_sc = 25
+        
+        end_sc = 90
         #end_sc = 91
-        end_sc = 136
+        #end_sc = 136
         step_sc = 10
+
         for inter_sc in xrange(start_sc, end_sc, step_sc):
             ret_val.append([inter_sc])
         #return [[60], [70], [80]]
@@ -230,6 +233,12 @@ def generate_iter_list(args):
         elif args.objindx==7:
             obj_path = [os.path.join(obj_path_prefix, "chair_aftervhacd.obj")]
             hdf5_prefix = "chair"
+        elif args.objindx==8:
+            obj_path = [os.path.join(obj_path_prefix, "cube.obj")]
+            hdf5_prefix = "cube"
+        elif args.objindx==9:
+            obj_path = [os.path.join(obj_path_prefix, "duck.obj")]
+            hdf5_prefix = "duck"
     else:
         obj_path = [args.objindx]
         hdf5_prefix = "Data"
@@ -240,10 +249,13 @@ def generate_iter_list(args):
             speed_list = get_speed_list(args.generatemode)
             orn_list = get_orn_list(args.generatemode)
             scale_list = get_scale_list(args.generatemode)
+            print(len(pos_list), len(speed_list), len(orn_list), len(scale_list))
         else:
             pos_list = [get_pos_list(3)]
             speed_list = [get_speed_list(3)]
+            #speed_list = [[0,0.1,0]]
             orn_list = [get_orn_list(3)]
+            #orn_list = [[0,0,0,1]]
             scale_list = [get_scale_list(3)]
 
         for indx_pos_now in xrange(args.pindxsta, min(args.pindxsta + args.pindxlen, len(pos_list))):
@@ -259,10 +271,11 @@ def generate_iter_list(args):
                         now_add_dict['obj_filename'] = obj_path
 
                         hash_value = make_hash(now_add_dict)
-                        hash_value = "%i_%i_%i_%i_%i" % (hash_value, indx_pos_now, indx_scale_now, indx_speed_now, indx_orn_now)
+                        #hash_value = "%i_%i_%i_%i_%i" % (hash_value, indx_pos_now, indx_scale_now, indx_speed_now, indx_orn_now)
+                        hash_value = "%i_%i_%i_%i" % (indx_pos_now, indx_scale_now, indx_speed_now, indx_orn_now)
 
                         now_add_dict["FILE_NAME"] = os.path.join(args.pathhdf5, "%s_%s.hdf5" % (hdf5_prefix, hash_value))
-                        now_add_dict["_hash_value"] = hash_value
+                        now_add_dict["_hash_value"] = hdf5_prefix + hash_value
 
                         ret_val.append(now_add_dict)
 
@@ -383,8 +396,12 @@ if __name__=="__main__":
             #continue
             pass
 
+        size_wanted = 14792976
+        if args.smallplen*args.smallolen==1:
+            size_wanted = 1233100
+
         if args.checkmode==1:
-            if (os.path.exists(config_dict["FILE_NAME"]["value"]) and (os.path.getsize(config_dict["FILE_NAME"]["value"])==14792976)):
+            if (os.path.exists(config_dict["FILE_NAME"]["value"]) and (os.path.getsize(config_dict["FILE_NAME"]["value"])==size_wanted)):
                 exist_num = exist_num + 1
                 continue
             else:

@@ -59,6 +59,7 @@ do
     #sbatch --job-name=tfrecs${k} script_to_tfrecs_sher.sh ${k} ${len_data}
     #sbatch --job-name=tfrecs${k} script_to_tfr_bycat.sh ${k}
     #sbatch --job-name=tfrecs${k} script_to_tfr_bycat.sh ${k}
+    #sbatch --job-name=tfrecs${k} script_to_tfr_bycat_om.sh ${k}
 
     #sbatch --job-name=compute${k} script_computestat.sh ${k} ${len_data} Data_force
     #sbatch --job-name=compute${k} script_computestat.sh ${k} ${len_data} Data_torque

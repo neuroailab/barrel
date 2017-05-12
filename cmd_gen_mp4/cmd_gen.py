@@ -27,7 +27,8 @@ if host_sys=='Darwin':
 else:
     default_pathconfig = "/scratch/users/chengxuz/barrel/barrel_relat_files/configs"
     default_pathexe = "/scratch/users/chengxuz/barrel/examples_build/Constraints/App_TestHinge"
-    obj_path_prefix = "/home/chengxuz/barrel/bullet3/data/"
+    #obj_path_prefix = "/home/chengxuz/barrel/bullet3/data/"
+    obj_path_prefix = "/scratch/users/chengxuz/barrel/bullet3/data/"
 
 host_name = os.uname()[1]
 
@@ -38,6 +39,7 @@ if host_name.startswith('node') or host_name == 'openmind7':
 elif host_name=="kanefsky":
     default_pathconfig = "/home/chengxuz/barrel/barrel_github/configs"
     default_pathexe = "/home/chengxuz/barrel/barrel_github/example_build/Constraints/App_TestHinge"
+    obj_path_prefix = "/home/chengxuz/barrel/bullet3/data/"
 
 args        = []
 all_items   = []
