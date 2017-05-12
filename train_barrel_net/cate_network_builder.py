@@ -663,8 +663,8 @@ def catenet_all3d(inputs, cfg_initial = None, train=True, **kwargs):
 
     return m
 
-def catenet_tnn(inputs, cfg_path, train = True, tnndecay = 0.1, decaytrain = 0, cfg_initial = None, cmu = 0, **kwargs):
-    m = model.ConvNet(**kwargs)
+def catenet_tnn(inputs, cfg_path, train = True, tnndecay = 0.1, decaytrain = 0, cfg_initial = None, cmu = 0, fixweights = False, **kwargs):
+    m = model.ConvNet(fixweights = fixweights, **kwargs)
 
     params = {'input': inputs.name,
                'type': 'fc'
@@ -707,6 +707,15 @@ def catenet_tnn(inputs, cfg_path, train = True, tnndecay = 0.1, decaytrain = 0, 
             memory_param['memory_decay'] = tnndecay
             memory_param['trainable'] = decaytrain==1
             attr['kwargs']['memory'] = (memory_func, memory_param)
+
+        if fixweights:
+            if node.startswith('conv'):
+                _, prememory_param = attr['kwargs']['pre_memory'][0]
+                attr['kwargs']['pre_memory'][0] = (model.conv_fix, prememory_param)
+
+            if node.startswith('fc'):
+                _, prememory_param = attr['kwargs']['pre_memory'][0]
+                attr['kwargs']['pre_memory'][0] = (model.fc_fix, prememory_param)
 
 	if node in ['fc7', 'fc8']:
             attr['kwargs']['pre_memory'][0][1]['dropout'] = dropout
