@@ -51,6 +51,12 @@ NEW_DATA_PATH['val/Data_force'] = new_data_path_prefix + '/Data_force/'
 NEW_DATA_PATH['val/Data_torque'] = new_data_path_prefix + '/Data_torque/'
 NEW_DATA_PATH['val/category'] = new_data_path_prefix + '/category/'
 
+OTHER_LABELS_LIST = ['speed', 'orn', 'scale', 'position']
+
+for other_label in OTHER_LABELS_LIST:
+    for group in ['train', 'val']:
+        NEW_DATA_PATH['%s/%s' % (group, other_label)] = '%s/%s/' % (new_data_path_prefix, other_label)
+
 NEW_DATA_PATH['strain'] = '*_strain.tfrecords'
 NEW_DATA_PATH['sval'] = '*_sval.tfrecords'
 
@@ -211,6 +217,7 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
                  norm_std = 1,
                  num_fake = 0,
                  patprefix = None,
+                 otherlabels = False,
                  *args,
                  **kwargs):
 
@@ -224,6 +231,7 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
         self.norm_std = norm_std
         self.split_12 = split_12
         self.num_fake = num_fake
+        self.otherlabels = otherlabels
         if norm_flag:
             self.stat_path = {}
             self.stat_path['Data_force'] = data_path['Data_force_stat']
@@ -234,8 +242,20 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
         if not patprefix is None:
             file_pattern = data_path[patprefix + group]
 
+        source_dirs = [data_path["%s/%s" % (group, self.force)] , data_path["%s/%s" % (group, self.torque)] , data_path["%s/%s" % (group, self.label)]]
+
+        if self.otherlabels:
+            self.otherlabel_list = OTHER_LABELS_LIST
+
+            for other_label in self.otherlabel_list:
+                source_dirs.append(data_path["%s/%s" % (group, other_label)])
+                if other_label=='speed':
+                    postprocess[other_label] = [(self.postprocess_arrs_3, (), {})]
+                else:
+                    postprocess[other_label] = [(self.postprocess_arrs_4, (), {})]
+
         super(WhiskerWorld, self).__init__(
-            source_dirs = [data_path["%s/%s" % (group, self.force)] , data_path["%s/%s" % (group, self.torque)] , data_path["%s/%s" % (group, self.label)]],
+            source_dirs = source_dirs,
             postprocess = postprocess,
             batch_size=batch_size,
             n_threads=n_threads,
@@ -257,7 +277,6 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
         slice0 = tf.strided_slice( data[curr_key], [0,0,0,0,0], [0,0,0,0,0], [3, 1, 1, 1, 1], end_mask = 31)
         slice1 = tf.strided_slice( data[curr_key], [1,0,0,0,0], [0,0,0,0,0], [3, 1, 1, 1, 1], end_mask = 31)
         slice2 = tf.strided_slice( data[curr_key], [2,0,0,0,0], [0,0,0,0,0], [3, 1, 1, 1, 1], end_mask = 31)
-
 
         #slice1 = tf.strided_slice( data[curr_key], [1], [2], [3])
         #slice2 = tf.strided_slice( data[curr_key], [2], [3], [3])
@@ -283,6 +302,33 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
         slice1_ = tf.strided_slice( data[curr_key], [1,0,0,0,0], [0,0,0,0,0], [4, 1, 1, 1, 1], end_mask = 31)
         slice2_ = tf.strided_slice( data[curr_key], [2,0,0,0,0], [0,0,0,0,0], [4, 1, 1, 1, 1], end_mask = 31)
         slice3_ = tf.strided_slice( data[curr_key], [3,0,0,0,0], [0,0,0,0,0], [4, 1, 1, 1, 1], end_mask = 31)
+        data[new_key] = tf.concat([slice0_, slice1_, slice2_, slice3_], 1) 
+        return data
+
+    def slice_concat_ol(self, data, curr_key, new_key):
+        slice0 = tf.strided_slice( data[curr_key], [0,0], [0,0], [3, 1], end_mask = 3)
+        slice1 = tf.strided_slice( data[curr_key], [1,0], [0,0], [3, 1], end_mask = 3)
+        slice2 = tf.strided_slice( data[curr_key], [2,0], [0,0], [3, 1], end_mask = 3)
+
+        data[new_key] = tf.concat([slice0, slice1, slice2], 1)
+
+        if self.num_fake>0:
+            shape_list = data[new_key].get_shape().as_list()
+            pad_zeros = tf.zeros([shape_list[0]*self.num_fake] + shape_list[1:])
+            data[new_key] = tf.concat([data[new_key], pad_zeros], 0)
+
+        return data
+
+    def slice_concat_12_ol(self, data, curr_key, new_key):
+        slice0 = tf.strided_slice( data[curr_key], [0,0], [0,0], [3, 1], end_mask = 3)
+        slice1 = tf.strided_slice( data[curr_key], [1,0], [0,0], [3, 1], end_mask = 3)
+        slice2 = tf.strided_slice( data[curr_key], [2,0], [0,0], [3, 1], end_mask = 3)
+        data[new_key] = tf.concat([slice0, slice1, slice2], 1)
+
+        slice0_ = tf.strided_slice( data[curr_key], [0,0], [0,0], [4, 1], end_mask = 3)
+        slice1_ = tf.strided_slice( data[curr_key], [1,0], [0,0], [4, 1], end_mask = 3)
+        slice2_ = tf.strided_slice( data[curr_key], [2,0], [0,0], [4, 1], end_mask = 3)
+        slice3_ = tf.strided_slice( data[curr_key], [3,0], [0,0], [4, 1], end_mask = 3)
         data[new_key] = tf.concat([slice0_, slice1_, slice2_, slice3_], 1) 
         return data
 
@@ -364,6 +410,13 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
             else:
                 self.input_ops[i] = self.slice_label_12(self.input_ops[i], 'category', 'category')
 
+            if self.otherlabels:
+                for other_label in self.otherlabel_list:
+                    if not self.split_12:
+                        self.input_ops[i] = self.slice_concat_ol(self.input_ops[i], other_label, other_label)
+                    else:
+                        self.input_ops[i] = self.slice_concat_12_ol(self.input_ops[i], other_label, other_label)
+
         return self.input_ops
 
     def postprocess_images(self, ims):
@@ -373,14 +426,34 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
             return im
         return tf.map_fn(lambda im: _postprocess_images(im), ims, dtype=tf.float32)
 
+    def postprocess_arrs_3(self, ims):
+        def _postprocess_arrs(im):
+            im = tf.decode_raw(im, np.float32)
+            im = tf.reshape(im, [3])
+            return im
+        return tf.map_fn(lambda im: _postprocess_arrs(im), ims, dtype=tf.float32)
+
+    def postprocess_arrs_4(self, ims):
+        def _postprocess_arrs(im):
+            im = tf.decode_raw(im, np.float32)
+            im = tf.reshape(im, [4])
+            return im
+        return tf.map_fn(lambda im: _postprocess_arrs(im), ims, dtype=tf.float32)
+
 # Change to a combined version
 #key_list = ['fc_add', 'fc7', 'fc6', 'conv5', 'conv4', 'conv3', 'conv2', 'conv1']
 key_list_default = ['fc_add', 'fc7', 'fc6', 'conv5', 'conv4', 'conv3', 'conv2', 'conv1']
-def save_features(inputs, outputs, key_list = key_list_default, special_set = False):
+def save_features(inputs, outputs, key_list = key_list_default, special_set = False, only_labels = False):
 
     ret_dict = {}
     ret_dict['label'] = inputs['category']
 
+    if only_labels:
+        for other_label in OTHER_LABELS_LIST:
+            if other_label in inputs:
+                ret_dict[other_label] = inputs[other_label]
+        print(ret_dict)
+        return ret_dict
 
     # Output test code
     #all_name_list = [n.name for n in tf.get_default_graph().as_graph_def().node]
@@ -575,6 +648,10 @@ def get_params_from_arg(args):
         else:
             train_data_param['patprefix'] = 'c'
             val_data_param['patprefix'] = 'c'
+
+        if args.otherlabels==1:
+            train_data_param['otherlabels'] = True
+            val_data_param['otherlabels'] = True
 
     if args.tnn==1:
         model_params['cfg_path'] = pathconfig
@@ -784,11 +861,17 @@ def get_params_from_arg(args):
                     new_key_list.append(key_list[indx_which])
 
             key_list = new_key_list
-        
+
+        onlylabels = False
+
+        if args.onlylabels==1:
+            onlylabels = True
+
         validation_params['topn']['targets'] = {
                 'func': save_features,
                 'key_list': key_list,
-                'special_set': special_set
+                'special_set': special_set,
+                'only_labels': onlylabels,
             }
         validation_params['topn']['online_agg_func'] = online_agg_genfeautre
         validation_params['topn']['num_steps'] = 10
@@ -982,6 +1065,7 @@ def main():
     parser.add_argument('--whichtype', default = 0, type = int, action = 'store', help = 'Which type of network, this will decide the key_list used')
     parser.add_argument('--whichpart', default = 0, type = int, action = 'store', help = 'Which part of the list, this will decide which part of the key_list used')
     parser.add_argument('--partnum', default = 2, type = int, action = 'store', help = 'Number of parts of the list, used when whichpart is larger than 0')
+    parser.add_argument('--onlylabels', default = 0, type = int, action = 'store', help = 'Default is 0, not reporting only labels')
 
     # Test parameters
     parser.add_argument('--num_fake', default = 0, type = int, action = 'store', help = 'Default is 0, no fake')
@@ -995,6 +1079,7 @@ def main():
     # New dataset related parameters
     parser.add_argument('--newdata', default = 0, type = int, action = 'store', help = 'Default is 0, use old dataset')
     parser.add_argument('--valbycat', default = 0, type = int, action = 'store', help = 'Default is 0, use original validation splitting')
+    parser.add_argument('--otherlabels', default = 0, type = int, action = 'store', help = 'Default is 0, not including other labels')
 
     # Load old results related parameters
     parser.add_argument('--loadque', default = 0, type = int, action = 'store', help = 'Special setting for load query')
