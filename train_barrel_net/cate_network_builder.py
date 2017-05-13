@@ -781,6 +781,8 @@ def catenet(inputs, cfg_initial = None, train=True, **kwargs):
                 if getWhetherBn(indx_layer, cfg):
                     m.batchnorm_corr(train)
 
+    if layernum_sub==0:
+        m.output = inputs
     return m
 
 def catenet_add(inputs, cfg_initial = None, train=True, **kwargs):
@@ -1084,7 +1086,7 @@ def catenet_tfutils_old(inputs, **kwargs):
 
         return m_final.output, m_final.params
 
-def parallel_net_builder(inputs, model_func, n_gpus = 2, gpu_offset = 0, inputthre = 0, **kwargs):
+def parallel_net_builder(inputs, model_func, n_gpus = 2, gpu_offset = 0, inputthre = 0, with_modelprefix = None, **kwargs):
     with tf.variable_scope(tf.get_variable_scope()) as vscope:
         #assert n_gpus > 1, ('At least two gpus have to be used')
         outputs = []
@@ -1116,5 +1118,12 @@ def parallel_net_builder(inputs, model_func, n_gpus = 2, gpu_offset = 0, inputth
                     params.append(param)
                     tf.get_variable_scope().reuse_variables()
 
-        params = params[0]
+        if with_modelprefix is None:
+            params = params[0]
+        else:
+            params = params[0]
+            orig_keys = params.keys()
+            for key_now in orig_keys:
+                params['%s/%s' % (with_modelprefix, key_now)] = params.pop(key_now)
+
         return [outputs, params]

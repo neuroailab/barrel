@@ -375,28 +375,52 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
 
 # Change to a combined version
 #key_list = ['fc_add', 'fc7', 'fc6', 'conv5', 'conv4', 'conv3', 'conv2', 'conv1']
-key_list = ['fc_add', 'fc7', 'fc6', 'conv5', 'conv4', 'conv3', 'conv2', 'conv1']
-def save_features(inputs, outputs):
+key_list_default = ['fc_add', 'fc7', 'fc6', 'conv5', 'conv4', 'conv3', 'conv2', 'conv1']
+def save_features(inputs, outputs, key_list = key_list_default, special_set = False):
 
     ret_dict = {}
     ret_dict['label'] = inputs['category']
+
+
+    # Output test code
+    #all_name_list = [n.name for n in tf.get_default_graph().as_graph_def().node]
+    #all_name_list = filter(lambda name_now: 'validation/topn' in name_now, all_name_list)
+    #all_name_list = filter(lambda name_now: 'fc8' in name_now, all_name_list)
+    #all_name_list = filter(lambda name_now: 'output' in name_now, all_name_list)
+
+    #print(all_name_list)
+    #print(len(all_name_list))
+
     for target in key_list:
         all_name_list = [n.name for n in tf.get_default_graph().as_graph_def().node]
 
         all_name_list = filter(lambda name_now: 'validation/topn' in name_now, all_name_list)
         all_name_list = filter(lambda name_now: target in name_now, all_name_list)
-        tmp_name_list = filter(lambda name_now: 'pool' in name_now, all_name_list)
-        if len(tmp_name_list) > 0:
-            all_name_list = tmp_name_list
-        else:
-            tmp_name_list = filter(lambda name_now: 'relu' in name_now, all_name_list)
+        if (not special_set) or (target.startswith('fc_add')):
+            #print(target, all_name_list)
+            tmp_name_list = filter(lambda name_now: 'pool' in name_now, all_name_list)
             if len(tmp_name_list) > 0:
                 all_name_list = tmp_name_list
             else:
-                tmp_name_list = filter(lambda name_now: name_now.endswith('/fc'), all_name_list)
-                all_name_list = tmp_name_list
+                tmp_name_list = filter(lambda name_now: 'relu' in name_now, all_name_list)
+                if (len(tmp_name_list) > 0) and (not target=='fc_add'):
+                    all_name_list = tmp_name_list
+                else:
+                    tmp_name_list = filter(lambda name_now: name_now.endswith('/fc'), all_name_list)
+                    all_name_list = tmp_name_list
+        else:
+            tmp_name_list = filter(lambda name_now: 'output' in name_now, all_name_list)
+            all_name_list = tmp_name_list
 
         output_now_tmp = [tf.get_default_graph().get_tensor_by_name("%s:0" % tmp_name) for tmp_name in all_name_list]
+
+        if target=='fc_add':
+            output_now_tmp2 = []
+            for v in output_now_tmp:
+                #print(v.get_shape().as_list())
+                if (v.get_shape().as_list()[1]==117):
+                    output_now_tmp2.append(v)
+            output_now_tmp = output_now_tmp2
 
         for len_rep in xrange(3):
             gfs_key = '%s_%i' % (target, len_rep)
@@ -406,6 +430,22 @@ def save_features(inputs, outputs):
             gfs_key = '%s_%i' % (target, len_have)
             ret_dict[gfs_key] = output_now_tmp[len_have]
 
+    if special_set:
+        print(len(ret_dict))
+        #print([(v, ret_dict[v]) for v in ret_dict if v.startswith('fc_add')])
+
+        total_parameters = 0
+        for variable in ret_dict:
+            if isinstance(ret_dict[variable], list):
+                continue
+            shape = ret_dict[variable].get_shape()
+            variable_parametes = 1
+            for dim in shape:
+                variable_parametes *= dim.value
+            total_parameters += variable_parametes
+        print(total_parameters)
+    else:
+        print(ret_dict)
     return ret_dict
 
 def mean_losses_keep_rest(step_results):
@@ -722,16 +762,40 @@ def get_params_from_arg(args):
         train_params['validate_first'] = True
         train_params['num_steps'] = 305005
         val_data_param['n_threads'] = 1
+
+        key_list = key_list_default
+        special_set = False
+
+        if args.whichtype==1:
+            key_list = ['fc_add', 'fc_add1', 'fc12', 'fc11', 'conv6', 'conv7', 'conv8', 'conv9', 'conv10', 
+                    'conv5', 'conv4', 'conv3', 'conv2', 'conv1']
+
+        if args.whichtype==-1:
+            key_list = ['fc_add']
+
+        if args.whichtype==2:
+            key_list = ['fc_add', 'fc_add1', 'fc_add2', 'fc8', 'fc7', 'conv6', 'conv5', 'conv4', 'conv3', 'conv2', 'conv1']
+            special_set = True
+
+        if args.whichpart>0:
+            new_key_list = []
+            for indx_which, item in enumerate(key_list):
+                if indx_which % args.partnum==args.whichpart % args.partnum:
+                    new_key_list.append(key_list[indx_which])
+
+            key_list = new_key_list
         
         validation_params['topn']['targets'] = {
                 'func': save_features,
+                'key_list': key_list,
+                'special_set': special_set
             }
         validation_params['topn']['online_agg_func'] = online_agg_genfeautre
         validation_params['topn']['num_steps'] = 10
         val_queue_params['capacity'] = val_queue_params['batch_size'] 
 
         save_to_gfs = ['label']
-        for key_now in key_list:
+        for key_now in key_list_default:
             for len_rep in xrange(3):
                 gfs_key = '%s_%i' % (key_now, len_rep)
                 save_to_gfs.append(gfs_key)
@@ -745,6 +809,7 @@ def get_params_from_arg(args):
                        'save_intermediate_freq': 1,
                        'save_to_gfs': save_to_gfs}
 
+        '''
         #load_query = {'saved_filters': True, 'step': 305000}
         load_params = {
                 'host': 'localhost',
@@ -755,6 +820,8 @@ def get_params_from_arg(args):
                 'do_restore': True,
                 'query': load_query 
         }
+        '''
+        pass
 
     if args.gen_feature==0:
         if args.test_mult==0:
@@ -828,6 +895,10 @@ def get_params_from_arg(args):
         return params
 
     else:
+        if args.parallel==1:
+            model_params['with_modelprefix'] = args.expId
+            pass
+
         params = {
             'load_params': load_params,
             'model_params': model_params,
@@ -908,6 +979,9 @@ def main():
     # Feature extraction related parameters
     parser.add_argument('--gen_feature', default = 0, type = int, action = 'store', help = 'Whether to generate features, default is 0, None')
     parser.add_argument('--hdf5path', default = "/mnt/fs1/chengxuz/barrel_response/response.hdf5", type = str, action = 'store', help = 'Where to save the output')
+    parser.add_argument('--whichtype', default = 0, type = int, action = 'store', help = 'Which type of network, this will decide the key_list used')
+    parser.add_argument('--whichpart', default = 0, type = int, action = 'store', help = 'Which part of the list, this will decide which part of the key_list used')
+    parser.add_argument('--partnum', default = 2, type = int, action = 'store', help = 'Number of parts of the list, used when whichpart is larger than 0')
 
     # Test parameters
     parser.add_argument('--num_fake', default = 0, type = int, action = 'store', help = 'Default is 0, no fake')
