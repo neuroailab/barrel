@@ -70,6 +70,7 @@ do
     #sbatch --job-name=tfrecs${k} script_rewrite_tfr.sh ${k} ${len_tfr} Data_torque
     #sbatch --job-name=tfrecs${k} script_rewrite_tfr.sh ${k} ${len_tfr} category
     #sbatch --job-name=tfrecs${k} script_rewrite_tfr.sh ${k} ${len_tfr} speed
-    sbatch --job-name=tfrecs${k} script_rewrite_tfr.sh ${k} ${len_tfr} position
-    sbatch --job-name=tfrecs${k} script_rewrite_tfr.sh ${k} ${len_tfr} orn
+    #sbatch --job-name=tfrecs${k} script_rewrite_tfr.sh ${k} ${len_tfr} position
+    #sbatch --job-name=tfrecs${k} script_rewrite_tfr.sh ${k} ${len_tfr} orn
+    sbatch --job-name=tfrecs${k} script_rewrite_tfr.sh ${k} ${len_tfr} scale
 done
