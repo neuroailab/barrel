@@ -14,6 +14,15 @@ In fact, researchers have also found that the DNNs optimized for performances on
 Using a general class of computational architectures known as HCNNs \cite{lecun1995convolutional}, which also include the recent convolutional neural networks, they found that optimizing for object recognition task could improve not only the performances on explaining the responses of IT layers using that of final layers but also that of explaining V4 areas using intermediate layers of the same architecture simultaneously \cite{cadieu2014deep}.
 And the final models they got successfully surpassed all existed models on explaining IT and V4 areas. Similar results were also found in the deep neural networks that were trained on large-scale object recognition tasks \cite{Yamins2014}.
 
+\begin{figure}
+\centering
+\includegraphics [width=1\linewidth]{figures/schematic.pdf}
+\vspace{-2mm}
+\caption{\textbf{Goal-Driven Approach to Modeling Barrel Cortex:} \textbf{a.} Rodents have highly sensitive whisker arrays that provide input data about the animal's environment.  Whisker signals are is subsequently processed by a somatosensory cascade of brain areas knowns as barrel cortex. Barrel cortex is a prime target for modeling because it is likely to be richly representational, but its computational underpinnings are largely unknown. Our long-term approach to modeling barrel cortex is \emph{goal-driven}: using an artificial whisker-array input device built using extensive biophysical measurements (\textbf{b.}), we seek to optimize neural networks of various architectures (\textbf{c.}) to solve ethologically-relevant shape recognition tasks (\textbf{d.}), and then measure to what extent the networks predict fine-grained response patterns in real neural recordings. ~\label{fig_schematic}}
+\end{figure}
+
+
+
 Utilizing the goal-driven modeling method which has been proven to be successful for visual ventral stream, we will show how we can use hierarchical models for modeling the rodent somatosensory systems.
 In order to do that, we need to first have a large-scale dataset for training the DNNs.
 The dataset is supposed to teach the DNNs to perform the tasks that rodent somatosensory systems are doing using the responses from whisker arrays.

@@ -39,22 +39,33 @@ do
 done
 '
 
-data_path1=/scratch/users/chengxuz/barrel/bullet3/data/teddy2_VHACD_CHs.obj
-data_path2=/scratch/users/chengxuz/barrel/bullet3/data/duck_vhacd.obj
+#data_path1=/scratch/users/chengxuz/barrel/bullet3/data/teddy2_VHACD_CHs.obj
+#data_path2=/scratch/users/chengxuz/barrel/bullet3/data/duck_vhacd.obj
+data_path1=/om/user/chengxuz/barrel/bullet3/data/teddy2_VHACD_CHs.obj
+data_path2=/om/user/chengxuz/barrel/bullet3/data/duck_vhacd.obj
 
 #bigsamnum=4
-bigsamnum=48
+bigsamnum=96
 
-#for seed in $(seq 0 250)
+for seed in $(seq 0 124)
 #for seed in 0
 #for seed in $(seq 251 500)
 #for seed in $(seq 0 250)
 #for seed in $(seq 130 150)
-#do
-#    sbatch script_gentestdataset_sher.sh ${data_path1} ${bigsamnum} teddy_${seed} ${seed}
-#    sbatch script_gentestdataset_sher.sh ${data_path2} ${bigsamnum} duck_${seed} ${seed}
-#done
+#for seed in 0
+do
+    #for control in 1 2
+    for control in 3 4
+    do
+        #sbatch script_gentestdataset_sher.sh ${data_path1} ${bigsamnum} teddy_${seed} ${seed} ${control}
+        sbatch script_sbatch_hdf5_om.sh ${data_path1} ${bigsamnum} teddy_${seed} ${seed} ${control}
+        sbatch script_sbatch_hdf5_om.sh ${data_path2} ${bigsamnum} duck_${seed} ${seed} ${control}
+        #sbatch script_gentestdataset_sher.sh ${data_path1} ${bigsamnum} teddy_${seed} ${seed}
+        #sbatch script_gentestdataset_sher.sh ${data_path2} ${bigsamnum} duck_${seed} ${seed}
+    done
+done
 
+:'
 for objindx in 0 1
 #for objindx in 0
 do
@@ -74,3 +85,4 @@ do
         done
     done
 done
+'
