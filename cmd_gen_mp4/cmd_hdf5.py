@@ -292,6 +292,10 @@ def generate_iter_list(args):
             orn_now = get_orn_list(args.generatemode)
             scale_now = get_scale_list(args.generatemode)
 
+            if args.whichbig>-1:
+                if not args.whichbig==which_big:
+                    continue
+
             if args.whichcontrol>0:
                 if args.whichcontrol==1:
                     pos_now = [-10.1199,10,-22.9956,0]
@@ -382,6 +386,7 @@ if __name__=="__main__":
     parser.add_argument('--smallolen', default = 1, type = int, action = 'store', help = 'Length for orn')
     parser.add_argument('--hdf5suff', default = '', type = str, action = 'store', help = 'Suffix for hdf5 file saved')
     parser.add_argument('--randseed', default = 0, type = int, action = 'store', help = 'Seed for randomization')
+    parser.add_argument('--whichbig', default = -1, type = int, action = 'store', help = 'Controlling which big sample number to use')
 
     args    = parser.parse_args()
 
@@ -417,6 +422,8 @@ if __name__=="__main__":
         if args.checkmode==1:
             if (os.path.exists(config_dict["FILE_NAME"]["value"]) and (os.path.getsize(config_dict["FILE_NAME"]["value"])==size_wanted)):
                 exist_num = exist_num + 1
+                print(config_dict["FILE_NAME"]["value"])
+                sys.stdout.flush()
                 continue
             else:
                 not_exist = not_exist + 1
