@@ -12,12 +12,15 @@ def main():
     parser.add_argument('--key', default = 'conv1_0', type = str, action = 'store', help = 'which key in the hdf5 file to use')
     parser.add_argument('--savepath', default = '/mnt/fs0/chengxuz/Data/nd_response/RDM_conv1_0.pkl', type = str, action = 'store', help = 'Path to store the final RDM')
     parser.add_argument('--numcat', default = 117, type = int, action = 'store', help = 'Number of categories')
+    #parser.add_argument('--hdf5list', default = [], type = str, action = 'append', help = 'Path to the list of hdf5 file storing all the information')
 
     args    = parser.parse_args()
 
     print(args.key)
 
     fin = h5py.File(args.hdf5path, 'r')
+
+    #fin_list = []
 
     num_example = fin[args.key].shape[0]
     fea_len = fin[args.key].size/num_example
@@ -40,6 +43,8 @@ def main():
     dis_matrix = 1 - np.corrcoef(all_mean)
 
     cPickle.dump(dis_matrix, open(args.savepath, 'w'))
+
+    fin.close()
 
 if __name__ == '__main__':
     main()
