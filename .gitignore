@@ -44,4 +44,5 @@ papers/*/*.log
 papers/*/*.out
 *.avi
 papers/*/*.pdf
+ipython_note_anlys/*.pdf
 *.mexw64
