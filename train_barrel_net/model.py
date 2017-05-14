@@ -118,6 +118,7 @@ class ConvNet(object):
         self.output = None
         self._params = OrderedDict()
         self.default_trainable = True
+        #self.num_units = 0
         if fixweights:
             print('Will use random weights!')
             self.default_trainable = False
@@ -372,6 +373,17 @@ class ConvNet(object):
                        'activation': activation,
                        'weight_decay': weight_decay,
                        'seed': self.seed}
+        
+        '''
+        shape_list = self.output.get_shape().as_list()
+        curr_num = 1
+        for indx_shape in xrange(1, len(shape_list)):
+            curr_num = curr_num*shape_list[indx_shape]
+        self.num_units = self.num_units
+
+        print("Adding layer %s with %s " % (self.output.name , str(shape_list)))
+        '''
+
         return self.output
 
     @tf.contrib.framework.add_arg_scope

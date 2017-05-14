@@ -51,6 +51,12 @@ NEW_DATA_PATH['val/Data_force'] = new_data_path_prefix + '/Data_force/'
 NEW_DATA_PATH['val/Data_torque'] = new_data_path_prefix + '/Data_torque/'
 NEW_DATA_PATH['val/category'] = new_data_path_prefix + '/category/'
 
+OTHER_LABELS_LIST = ['speed', 'orn', 'scale', 'position']
+
+for other_label in OTHER_LABELS_LIST:
+    for group in ['train', 'val']:
+        NEW_DATA_PATH['%s/%s' % (group, other_label)] = '%s/%s/' % (new_data_path_prefix, other_label)
+
 NEW_DATA_PATH['strain'] = '*_strain.tfrecords'
 NEW_DATA_PATH['sval'] = '*_sval.tfrecords'
 
@@ -211,6 +217,7 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
                  norm_std = 1,
                  num_fake = 0,
                  patprefix = None,
+                 otherlabels = False,
                  *args,
                  **kwargs):
 
@@ -224,6 +231,7 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
         self.norm_std = norm_std
         self.split_12 = split_12
         self.num_fake = num_fake
+        self.otherlabels = otherlabels
         if norm_flag:
             self.stat_path = {}
             self.stat_path['Data_force'] = data_path['Data_force_stat']
@@ -234,8 +242,20 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
         if not patprefix is None:
             file_pattern = data_path[patprefix + group]
 
+        source_dirs = [data_path["%s/%s" % (group, self.force)] , data_path["%s/%s" % (group, self.torque)] , data_path["%s/%s" % (group, self.label)]]
+
+        if self.otherlabels:
+            self.otherlabel_list = OTHER_LABELS_LIST
+
+            for other_label in self.otherlabel_list:
+                source_dirs.append(data_path["%s/%s" % (group, other_label)])
+                if other_label=='speed':
+                    postprocess[other_label] = [(self.postprocess_arrs_3, (), {})]
+                else:
+                    postprocess[other_label] = [(self.postprocess_arrs_4, (), {})]
+
         super(WhiskerWorld, self).__init__(
-            source_dirs = [data_path["%s/%s" % (group, self.force)] , data_path["%s/%s" % (group, self.torque)] , data_path["%s/%s" % (group, self.label)]],
+            source_dirs = source_dirs,
             postprocess = postprocess,
             batch_size=batch_size,
             n_threads=n_threads,
@@ -257,7 +277,6 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
         slice0 = tf.strided_slice( data[curr_key], [0,0,0,0,0], [0,0,0,0,0], [3, 1, 1, 1, 1], end_mask = 31)
         slice1 = tf.strided_slice( data[curr_key], [1,0,0,0,0], [0,0,0,0,0], [3, 1, 1, 1, 1], end_mask = 31)
         slice2 = tf.strided_slice( data[curr_key], [2,0,0,0,0], [0,0,0,0,0], [3, 1, 1, 1, 1], end_mask = 31)
-
 
         #slice1 = tf.strided_slice( data[curr_key], [1], [2], [3])
         #slice2 = tf.strided_slice( data[curr_key], [2], [3], [3])
@@ -283,6 +302,33 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
         slice1_ = tf.strided_slice( data[curr_key], [1,0,0,0,0], [0,0,0,0,0], [4, 1, 1, 1, 1], end_mask = 31)
         slice2_ = tf.strided_slice( data[curr_key], [2,0,0,0,0], [0,0,0,0,0], [4, 1, 1, 1, 1], end_mask = 31)
         slice3_ = tf.strided_slice( data[curr_key], [3,0,0,0,0], [0,0,0,0,0], [4, 1, 1, 1, 1], end_mask = 31)
+        data[new_key] = tf.concat([slice0_, slice1_, slice2_, slice3_], 1) 
+        return data
+
+    def slice_concat_ol(self, data, curr_key, new_key):
+        slice0 = tf.strided_slice( data[curr_key], [0,0], [0,0], [3, 1], end_mask = 3)
+        slice1 = tf.strided_slice( data[curr_key], [1,0], [0,0], [3, 1], end_mask = 3)
+        slice2 = tf.strided_slice( data[curr_key], [2,0], [0,0], [3, 1], end_mask = 3)
+
+        data[new_key] = tf.concat([slice0, slice1, slice2], 1)
+
+        if self.num_fake>0:
+            shape_list = data[new_key].get_shape().as_list()
+            pad_zeros = tf.zeros([shape_list[0]*self.num_fake] + shape_list[1:])
+            data[new_key] = tf.concat([data[new_key], pad_zeros], 0)
+
+        return data
+
+    def slice_concat_12_ol(self, data, curr_key, new_key):
+        slice0 = tf.strided_slice( data[curr_key], [0,0], [0,0], [3, 1], end_mask = 3)
+        slice1 = tf.strided_slice( data[curr_key], [1,0], [0,0], [3, 1], end_mask = 3)
+        slice2 = tf.strided_slice( data[curr_key], [2,0], [0,0], [3, 1], end_mask = 3)
+        data[new_key] = tf.concat([slice0, slice1, slice2], 1)
+
+        slice0_ = tf.strided_slice( data[curr_key], [0,0], [0,0], [4, 1], end_mask = 3)
+        slice1_ = tf.strided_slice( data[curr_key], [1,0], [0,0], [4, 1], end_mask = 3)
+        slice2_ = tf.strided_slice( data[curr_key], [2,0], [0,0], [4, 1], end_mask = 3)
+        slice3_ = tf.strided_slice( data[curr_key], [3,0], [0,0], [4, 1], end_mask = 3)
         data[new_key] = tf.concat([slice0_, slice1_, slice2_, slice3_], 1) 
         return data
 
@@ -364,6 +410,13 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
             else:
                 self.input_ops[i] = self.slice_label_12(self.input_ops[i], 'category', 'category')
 
+            if self.otherlabels:
+                for other_label in self.otherlabel_list:
+                    if not self.split_12:
+                        self.input_ops[i] = self.slice_concat_ol(self.input_ops[i], other_label, other_label)
+                    else:
+                        self.input_ops[i] = self.slice_concat_12_ol(self.input_ops[i], other_label, other_label)
+
         return self.input_ops
 
     def postprocess_images(self, ims):
@@ -373,30 +426,145 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
             return im
         return tf.map_fn(lambda im: _postprocess_images(im), ims, dtype=tf.float32)
 
+    def postprocess_arrs_3(self, ims):
+        def _postprocess_arrs(im):
+            im = tf.decode_raw(im, np.float32)
+            im = tf.reshape(im, [3])
+            return im
+        return tf.map_fn(lambda im: _postprocess_arrs(im), ims, dtype=tf.float32)
+
+    def postprocess_arrs_4(self, ims):
+        def _postprocess_arrs(im):
+            im = tf.decode_raw(im, np.float32)
+            im = tf.reshape(im, [4])
+            return im
+        return tf.map_fn(lambda im: _postprocess_arrs(im), ims, dtype=tf.float32)
+
 # Change to a combined version
 #key_list = ['fc_add', 'fc7', 'fc6', 'conv5', 'conv4', 'conv3', 'conv2', 'conv1']
-key_list = ['fc_add', 'fc7', 'fc6', 'conv5', 'conv4', 'conv3', 'conv2', 'conv1']
-def save_features(inputs, outputs):
+key_list_default = ['fc_add', 'fc7', 'fc6', 'conv5', 'conv4', 'conv3', 'conv2', 'conv1']
+
+def add_layer_list(subnet, now_list, layer_offset = 0):
+    len_key = len(subnet.keys())
+    for indx_tmp in xrange(len_key):
+        now_layer = subnet['l%i' % indx_tmp]
+        if 'conv' in now_layer:
+            now_list.append('conv%i' % (indx_tmp + layer_offset + 1))
+        else:
+            now_list.append('fc%i' % (indx_tmp + layer_offset + 1))
+
+    return now_list
+
+def add_fc_add_list(addnet, now_list):
+    for indx_add in xrange(len(addnet.keys()) - 1):
+        now_list.append('fc_add%i' % (indx_add + 1))
+    return now_list
+
+def has_fc(now_net):
+    for layer_now in now_net:
+        if 'fc' in now_net[layer_now]:
+            return True
+    return False
+
+def get_layer_list(cfg_now):
+    if 'nodes' in cfg_now:
+        default_list = ['fc_add', 'fc8', 'fc7', 'conv6', 'conv5', 'conv4', 'conv3', 'conv2', 'conv1']
+        if not 'addnet' in cfg_now:
+            return default_list, True
+        else:
+            return add_fc_add_list(cfg_now['addnet'], default_list), True
+    else:
+        new_list = []
+        if 'subnet' in cfg_now:
+            new_list = add_layer_list(cfg_now['subnet'], new_list, len(new_list))
+        else:
+            net_list = ['spanet', 'tempnet']
+            if has_fc(cfg_now['spanet']):
+                net_list = ['tempnet', 'spanet']
+
+            for net_now_name in net_list:
+                new_list =  add_layer_list(cfg_now[net_now_name], new_list, len(new_list))
+
+        new_list.append('fc_add')
+        if 'addnet' in cfg_now:
+            new_list = add_fc_add_list(cfg_now['addnet'], new_list)
+
+        return new_list, False
+
+def get_size(curr_tensor):
+    shape_list = curr_tensor.get_shape().as_list()
+
+    curr_size = 1
+    for now_indx, now_shape in enumerate(shape_list[1:]):
+        curr_size = now_shape*curr_size
+
+    return curr_size
+
+def save_features(inputs, outputs, key_list = key_list_default, special_set = False, only_labels = False, just_count = False):
 
     ret_dict = {}
     ret_dict['label'] = inputs['category']
+
+    if only_labels:
+        for other_label in OTHER_LABELS_LIST:
+            if other_label in inputs:
+                ret_dict[other_label] = inputs[other_label]
+        print(ret_dict)
+        return ret_dict
+
+    # Output test code
+    #all_name_list = [n.name for n in tf.get_default_graph().as_graph_def().node]
+    #all_name_list = filter(lambda name_now: 'validation/topn' in name_now, all_name_list)
+    #all_name_list = filter(lambda name_now: 'fc8' in name_now, all_name_list)
+    #all_name_list = filter(lambda name_now: 'output' in name_now, all_name_list)
+
+    #print(all_name_list)
+    #print(len(all_name_list))
+
+    if just_count:
+        num_units = 0
+
     for target in key_list:
+
+        divide_num = 1
+
         all_name_list = [n.name for n in tf.get_default_graph().as_graph_def().node]
 
         all_name_list = filter(lambda name_now: 'validation/topn' in name_now, all_name_list)
         all_name_list = filter(lambda name_now: target in name_now, all_name_list)
-        tmp_name_list = filter(lambda name_now: 'pool' in name_now, all_name_list)
-        if len(tmp_name_list) > 0:
-            all_name_list = tmp_name_list
-        else:
-            tmp_name_list = filter(lambda name_now: 'relu' in name_now, all_name_list)
-            if len(tmp_name_list) > 0:
-                all_name_list = tmp_name_list
-            else:
-                tmp_name_list = filter(lambda name_now: name_now.endswith('/fc'), all_name_list)
+        if (not special_set) or (target.startswith('fc_add')):
+            #print(target, all_name_list)
+            tmp_name_list = filter(lambda name_now: 'pool' in name_now, all_name_list)
+
+
+            if len(tmp_name_list) > 0 and not just_count:
                 all_name_list = tmp_name_list
 
+            else:
+                if just_count and len(tmp_name_list) > 0:
+                    tensor_now = tf.get_default_graph().get_tensor_by_name("%s:0" % tmp_name_list[0])
+                    print(target, tensor_now.name, tensor_now.get_shape().as_list())
+                    num_units  = num_units + get_size(tensor_now)
+
+                tmp_name_list = filter(lambda name_now: 'relu' in name_now, all_name_list)
+                if (len(tmp_name_list) > 0) and (not target=='fc_add'):
+                    all_name_list = tmp_name_list
+                else:
+                    tmp_name_list = filter(lambda name_now: name_now.endswith('/fc'), all_name_list)
+                    all_name_list = tmp_name_list
+        else:
+            tmp_name_list = filter(lambda name_now: 'output' in name_now, all_name_list)
+            all_name_list = tmp_name_list
+
         output_now_tmp = [tf.get_default_graph().get_tensor_by_name("%s:0" % tmp_name) for tmp_name in all_name_list]
+
+        if target=='fc_add':
+            output_now_tmp2 = []
+            for v in output_now_tmp:
+                #print(v.get_shape().as_list())
+                if (v.get_shape().as_list()[1]==117):
+                    output_now_tmp2.append(v)
+            output_now_tmp = output_now_tmp2
 
         for len_rep in xrange(3):
             gfs_key = '%s_%i' % (target, len_rep)
@@ -406,6 +574,30 @@ def save_features(inputs, outputs):
             gfs_key = '%s_%i' % (target, len_have)
             ret_dict[gfs_key] = output_now_tmp[len_have]
 
+        if len(output_now_tmp)>0 and just_count:
+            print(target, output_now_tmp[0].name, output_now_tmp[0].get_shape().as_list())
+            num_units = num_units + get_size(output_now_tmp[0])
+
+    if just_count:
+        print(num_units)
+        exit()
+
+    if special_set:
+        print(len(ret_dict))
+        #print([(v, ret_dict[v]) for v in ret_dict if v.startswith('fc_add')])
+
+        total_parameters = 0
+        for variable in ret_dict:
+            if isinstance(ret_dict[variable], list):
+                continue
+            shape = ret_dict[variable].get_shape()
+            variable_parametes = 1
+            for dim in shape:
+                variable_parametes *= dim.value
+            total_parameters += variable_parametes
+        print(total_parameters)
+    else:
+        print(ret_dict)
     return ret_dict
 
 def mean_losses_keep_rest(step_results):
@@ -535,6 +727,10 @@ def get_params_from_arg(args):
         else:
             train_data_param['patprefix'] = 'c'
             val_data_param['patprefix'] = 'c'
+
+        if args.otherlabels==1:
+            train_data_param['otherlabels'] = True
+            val_data_param['otherlabels'] = True
 
     if args.tnn==1:
         model_params['cfg_path'] = pathconfig
@@ -722,16 +918,54 @@ def get_params_from_arg(args):
         train_params['validate_first'] = True
         train_params['num_steps'] = 305005
         val_data_param['n_threads'] = 1
-        
+
+        key_list = key_list_default
+        special_set = False
+
+        if args.whichtype==1:
+            key_list = ['fc_add', 'fc_add1', 'fc12', 'fc11', 'conv6', 'conv7', 'conv8', 'conv9', 'conv10', 
+                    'conv5', 'conv4', 'conv3', 'conv2', 'conv1']
+
+        if args.whichtype==-1:
+            key_list = ['fc_add']
+
+        if args.whichtype==2:
+            key_list = ['fc_add', 'fc_add1', 'fc_add2', 'fc8', 'fc7', 'conv6', 'conv5', 'conv4', 'conv3', 'conv2', 'conv1']
+            special_set = True
+
+        if args.whichtype==-2:
+            key_list, special_set = get_layer_list(cfg_initial)
+
+        if args.whichpart>0:
+            new_key_list = []
+            for indx_which, item in enumerate(key_list):
+                if indx_which % args.partnum==args.whichpart % args.partnum:
+                    new_key_list.append(key_list[indx_which])
+
+            key_list = new_key_list
+
+        onlylabels = False
+
+        if args.onlylabels==1:
+            onlylabels = True
+
+        just_count = False
+        if args.justcount==1:
+            just_count = True
+
         validation_params['topn']['targets'] = {
                 'func': save_features,
+                'key_list': key_list,
+                'special_set': special_set,
+                'only_labels': onlylabels,
+                'just_count': just_count,
             }
         validation_params['topn']['online_agg_func'] = online_agg_genfeautre
         validation_params['topn']['num_steps'] = 10
         val_queue_params['capacity'] = val_queue_params['batch_size'] 
 
         save_to_gfs = ['label']
-        for key_now in key_list:
+        for key_now in key_list_default:
             for len_rep in xrange(3):
                 gfs_key = '%s_%i' % (key_now, len_rep)
                 save_to_gfs.append(gfs_key)
@@ -745,6 +979,7 @@ def get_params_from_arg(args):
                        'save_intermediate_freq': 1,
                        'save_to_gfs': save_to_gfs}
 
+        '''
         #load_query = {'saved_filters': True, 'step': 305000}
         load_params = {
                 'host': 'localhost',
@@ -755,6 +990,8 @@ def get_params_from_arg(args):
                 'do_restore': True,
                 'query': load_query 
         }
+        '''
+        pass
 
     if args.gen_feature==0:
         if args.test_mult==0:
@@ -828,6 +1065,10 @@ def get_params_from_arg(args):
         return params
 
     else:
+        if args.parallel==1:
+            model_params['with_modelprefix'] = args.expId
+            pass
+
         params = {
             'load_params': load_params,
             'model_params': model_params,
@@ -908,6 +1149,11 @@ def main():
     # Feature extraction related parameters
     parser.add_argument('--gen_feature', default = 0, type = int, action = 'store', help = 'Whether to generate features, default is 0, None')
     parser.add_argument('--hdf5path', default = "/mnt/fs1/chengxuz/barrel_response/response.hdf5", type = str, action = 'store', help = 'Where to save the output')
+    parser.add_argument('--whichtype', default = 0, type = int, action = 'store', help = 'Which type of network, this will decide the key_list used')
+    parser.add_argument('--whichpart', default = 0, type = int, action = 'store', help = 'Which part of the list, this will decide which part of the key_list used')
+    parser.add_argument('--partnum', default = 2, type = int, action = 'store', help = 'Number of parts of the list, used when whichpart is larger than 0')
+    parser.add_argument('--onlylabels', default = 0, type = int, action = 'store', help = 'Default is 0, not reporting only labels')
+    parser.add_argument('--justcount', default = 0, type = int, action = 'store', help = 'Default is 0, not just counting number of units')
 
     # Test parameters
     parser.add_argument('--num_fake', default = 0, type = int, action = 'store', help = 'Default is 0, no fake')
@@ -921,6 +1167,7 @@ def main():
     # New dataset related parameters
     parser.add_argument('--newdata', default = 0, type = int, action = 'store', help = 'Default is 0, use old dataset')
     parser.add_argument('--valbycat', default = 0, type = int, action = 'store', help = 'Default is 0, use original validation splitting')
+    parser.add_argument('--otherlabels', default = 0, type = int, action = 'store', help = 'Default is 0, not including other labels')
 
     # Load old results related parameters
     parser.add_argument('--loadque', default = 0, type = int, action = 'store', help = 'Special setting for load query')

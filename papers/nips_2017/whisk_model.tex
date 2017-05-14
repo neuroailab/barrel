@@ -1,3 +1,10 @@
+\begin{figure}
+\centering
+\includegraphics [width=1\linewidth]{figures/whiskers.pdf}
+\vspace{-2mm}
+\caption{\textbf{Dynamic Three-Dimensional Whisker Model:} \textbf{a.} We constructed an array of 31 whisker objects, arranged in a 5x7 grid (with 4 missing elements).  Whisker number, placement, length and static shape were matched to biophysical data. \textbf{b.} Each whisker element is composed of a set of cuboid objects.  The follicle cuboid has a fixed location, and is attached to movable cuboids making up the rest of the hair. Motion is constrained by linear and torsional springs between each pair of cuboid elements.  The parameters of these springs are chosen to ensure naturalistic motion of the whiskers.  \textbf{c.} During dataset construction, the whisker is brought into contact with each object at three vertical heights (top, middle bottom), at each of 4 90-degree separated attack angles, for a total of 12 swipes.  Object initial angle, size, and swipe speed vary randomly between each group of 12 swipes.  Forces and torques are recorded at the three cuboids closest to to the follicle, for a total of 18 measurements per whisker per timepoint.  \textbf{d.} ~\label{fig_whiskers}}
+\end{figure}
+
 In order to provide the similar inputs to deep neural networks as those to rodent somatosensory systems, one will need a physically accurate models for the the rodent whiskers.
 In our models, we are more interested in ensuring the correctness of the mechanical details of every individual whisker.
 And at the same time, we also need the simulations to be fast enough for generating a large scale dataset.

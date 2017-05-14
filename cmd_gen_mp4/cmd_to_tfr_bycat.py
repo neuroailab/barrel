@@ -116,6 +116,7 @@ def main():
     sam_rate = 2.0/26.0
     obj_len = 21
 
+    '''
     key_list =[
         u'Data_force',
         #u'Data_normal',
@@ -124,6 +125,8 @@ def main():
         u'position',
         u'speed'
         ]
+    '''
+    key_list =[u'scale']
 
     for which_cat in xrange(args.catsta, min(args.catsta + args.catlen, len(cat_dict.keys()))):
         now_objlist = cat_dict[which_cat]
@@ -167,7 +170,8 @@ def main():
 
             writer.close()
 
-        for key_now in ['category']:
+        #for key_now in ['category']:
+        for key_now in []:
             dir_now = os.path.join(args.savedir, key_now)
             if not os.path.isdir(dir_now):
                 os.system('mkdir -p %s' % dir_now)

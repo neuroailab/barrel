@@ -292,6 +292,20 @@ def generate_iter_list(args):
             orn_now = get_orn_list(args.generatemode)
             scale_now = get_scale_list(args.generatemode)
 
+            if args.whichbig>-1:
+                if not args.whichbig==which_big:
+                    continue
+
+            if args.whichcontrol>0:
+                if args.whichcontrol==1:
+                    pos_now = [-10.1199,10,-22.9956,0]
+                if args.whichcontrol==2:
+                    speed_now = [0, -10.5, 0]
+                if args.whichcontrol==3:
+                    orn_now = [0,0,0,1]
+                if args.whichcontrol==4:
+                    scale_now = [75]
+
             for which_smallp in xrange(args.smallpsta, min(args.smallpsta + args.smallplen, 3)):
                 for which_smallo in xrange(args.smallosta, min(args.smallosta + args.smallolen, 4)):
                     new_pos = copy.deepcopy(pos_now)
@@ -337,6 +351,7 @@ def update_config_dict(config_dict, now_add_dict):
 
 if __name__=="__main__":
 
+    # General settings
     parser = argparse.ArgumentParser(description='The script to generate the hdf5 data through command line')
     parser.add_argument('--pathhdf5', default = "/home/chengxuz/barrel/related_files/hdf5_files", type = str, action = 'store', help = 'Path to hdf5 folder')
     parser.add_argument('--pathexe', default = "/home/chengxuz/barrel/build_examples/Constraints/App_TestHinge", type = str, action = 'store', help = 'Path to App_ExampleBrowser')
@@ -361,6 +376,7 @@ if __name__=="__main__":
     parser.add_argument('--pindxlen', default = 1, type = int, action = 'store', help = 'Length index of pos')
 
     parser.add_argument('--objindx', default = '0', type = str, action = 'store', help = 'Object index, 0 for duck, 1 for teddy, if it is a string, then it will be used as parameter directly')
+    parser.add_argument('--whichcontrol', default = 0, type = int, action = 'store', help = 'Which control among speed, scale, orn, position to use, 0 means no')
 
     # Parameters used for dataset generating
     parser.add_argument('--bigsamnum', default = 1, type = int, action = 'store', help = 'The big sampling number, controlling how many different sampling settings will be drawn')
@@ -370,12 +386,15 @@ if __name__=="__main__":
     parser.add_argument('--smallolen', default = 1, type = int, action = 'store', help = 'Length for orn')
     parser.add_argument('--hdf5suff', default = '', type = str, action = 'store', help = 'Suffix for hdf5 file saved')
     parser.add_argument('--randseed', default = 0, type = int, action = 'store', help = 'Seed for randomization')
+    parser.add_argument('--whichbig', default = -1, type = int, action = 'store', help = 'Controlling which big sample number to use')
 
     args    = parser.parse_args()
 
     config_dict, orig_config_dict = set_basic_value(args)
 
     now_add_dicts = generate_iter_list(args)
+
+    os.system('mkdir -p %s' % args.pathhdf5)
 
     exist_num = 0
     not_exist = 0
@@ -403,6 +422,8 @@ if __name__=="__main__":
         if args.checkmode==1:
             if (os.path.exists(config_dict["FILE_NAME"]["value"]) and (os.path.getsize(config_dict["FILE_NAME"]["value"])==size_wanted)):
                 exist_num = exist_num + 1
+                print(config_dict["FILE_NAME"]["value"])
+                sys.stdout.flush()
                 continue
             else:
                 not_exist = not_exist + 1
