@@ -56,11 +56,12 @@ for seed in $(seq 0 124)
 do
     #for control in 1 2
     #for control in 3 4
-    for control in 5
+    #for control in 5
+    for control in 6
     do
         #sbatch script_gentestdataset_sher.sh ${data_path1} ${bigsamnum} teddy_${seed} ${seed} ${control}
-        sbatch script_sbatch_hdf5_om.sh ${data_path1} ${bigsamnum} teddy_${seed} ${seed} ${control}
-        #sbatch script_sbatch_hdf5_om.sh ${data_path2} ${bigsamnum} duck_${seed} ${seed} ${control}
+        #sbatch script_sbatch_hdf5_om.sh ${data_path1} ${bigsamnum} teddy_${seed} ${seed} ${control}
+        sbatch script_sbatch_hdf5_om.sh ${data_path2} ${bigsamnum} duck_${seed} ${seed} ${control}
         #sbatch script_gentestdataset_sher.sh ${data_path1} ${bigsamnum} teddy_${seed} ${seed}
         #sbatch script_gentestdataset_sher.sh ${data_path2} ${bigsamnum} duck_${seed} ${seed}
     done

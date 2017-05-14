@@ -308,6 +308,9 @@ def generate_iter_list(args):
                 if args.whichcontrol==5:
                     scale_now = [75]
                     orn_now = [0,0,0,1]
+                if args.whichcontrol==6:
+                    scale_now = [75]
+                    speed_now = [0, -10.5, 0]
 
             for which_smallp in xrange(args.smallpsta, min(args.smallpsta + args.smallplen, 3)):
                 for which_smallo in xrange(args.smallosta, min(args.smallosta + args.smallolen, 4)):
