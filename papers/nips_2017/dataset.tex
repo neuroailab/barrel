@@ -26,9 +26,10 @@ For each object, the first 24 samples were designated a training subset, while t
 
 \subsection{Basic Validation}
 To validate that our sensor was at least minimally functional before proceeding to more complex models, we produced a smaller versions of our dataset in which swipes were sampled more densely for two randomly chosen objects (a bear and a duck).  
-We also produced multiple easier versions of this dataset in which variation along one or several latent variables was removed. 
+We also produced multiple easier versions of this dataset in which variation along one or several latent variables was suppressed. 
 We then trained binary SVM classifier to report object identity in these datasets, using just the raw sensor data, and testing classification accuracy on held-out swipes (Fig. \ref{fig_whiskers}d).  We found that with scale and object rotation variability suppressed (but with speed and position variability retained), the sensor was able to nearly perfectly identify the objects.  
-However, with all sources of variability, the SVM was just above chance in its performance.  
+However, with all sources of variability present, the SVM was just above chance in its performance,  
+while combinations of variability are more challenging for the sensor than others. 
 Thus, we concluded that our virtual whisker array was basically functional, but that unprocessed sensor data cannot be used to directly read out object shape in anything but the most highly controlled circumstances.
 As in the case of vision, it is exactly this circumstance that calls for a deep cascade of sensory processing stages. 
 
