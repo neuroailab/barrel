@@ -20,19 +20,24 @@ def main():
 
     fin = h5py.File('/data2/chengxuz/nd_response/spatemp_responses.hdf5')
     #F_arr = np.asarray(fin['fc7_0'])
-    F_arr = np.asarray(fin['fc_add_0'])
+    #F_arr = np.asarray(fin['fc6_0'])
+    F_arr = np.asarray(fin['conv5_0'])
+    F_arr = F_arr.reshape([F_arr.shape[0], F_arr.size/F_arr.shape[0]])
+    F_arr = F_arr[:, np.random.RandomState(0).permutation(F_arr.shape[1])[:1024]]
+    #F_arr = np.asarray(fin['fc_add_0'])
     print(F_arr.shape)
     eval_config = {'npc_train': 80, 
 		   'npc_test': 200, 
 		   'num_splits': 1,
 		   'metric_screen': 'regression',
-		   'metric_kwargs': {'model_type': 'linear_model.LinearRegression', 
-	                             'model_kwargs': {}},
+		   #'metric_kwargs': {'model_type': 'linear_model.LinearRegression', 
+		   'metric_kwargs': {'model_type': 'linear_model.Ridge', 
+                       'model_kwargs': {'alpha': 1}},
 		   #'metric_screen': 'classifier',
 		   #'metric_kwargs': {'model_type': 'svm.LinearSVC', 
                    #                  'model_kwargs': {'C': 5e-3}},
-                   'labelfunc': 'scale',
-                   #'labelfunc': lambda x: (np.asarray([x['speed_0'], x['speed_1'], x['speed_2']]).transpose(), None),
+                   #'labelfunc': 'scale',
+                   'labelfunc': lambda x: (np.asarray([x['speed_0'], x['speed_1'], x['speed_2']]).transpose(), None),
                    #'labelfunc': 'label',
 		   'npc_validate': 0,
 		   'split_by': 'label',
@@ -40,7 +45,8 @@ def main():
 		   'train_q': None}
     result = dlutils.compute_metric_base(F_arr,
                                          meta_now, eval_config)
-    cPickle.dump(result, open(args.savepath, 'w'))
+    print(result['multi_rsquared_array_loss'])
+    #cPickle.dump(result, open(args.savepath, 'w'))
 
 if __name__ == '__main__':
     main()

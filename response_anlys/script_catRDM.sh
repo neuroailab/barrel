@@ -19,12 +19,14 @@ do
     for layer in fc7 conv5 conv3 conv1
     do
         #python cal_catRDM.py --key ${layer}_${time} --savepath /mnt/fs0/chengxuz/Data/nd_response/fdb_RDMs/RDM_${layer}_${time}.pkl --hdf5path /data/chengxuz/nd_response/fdb_responses_2.hdf5
-        python cal_catRDM.py --key ${layer}_${time} --savepath /mnt/fs0/chengxuz/Data/nd_response/tnn_RDMs/RDM_${layer}_${time}.pkl --hdf5path /data/chengxuz/nd_response/tnn_responses_2.hdf5
+        #python cal_catRDM.py --key ${layer}_${time} --savepath /mnt/fs0/chengxuz/Data/nd_response/tnn_RDMs/RDM_${layer}_${time}.pkl --hdf5path /data/chengxuz/nd_response/tnn_responses_2.hdf5
+        python cal_catRDM.py --key ${layer}_${time} --savepath /mnt/fs0/chengxuz/Data/nd_response/byp_RDMs/RDM_${layer}_${time}.pkl --hdf5path /data/chengxuz/nd_response/byp_responses_2.hdf5
     done
 
     for layer in fc8 conv6 conv4 conv2
     do
         #python cal_catRDM.py --key ${layer}_${time} --savepath /mnt/fs0/chengxuz/Data/nd_response/fdb_RDMs/RDM_${layer}_${time}.pkl --hdf5path /data/chengxuz/nd_response/fdb_responses.hdf5
-        python cal_catRDM.py --key ${layer}_${time} --savepath /mnt/fs0/chengxuz/Data/nd_response/tnn_RDMs/RDM_${layer}_${time}.pkl --hdf5path /data/chengxuz/nd_response/tnn_responses.hdf5
+        #python cal_catRDM.py --key ${layer}_${time} --savepath /mnt/fs0/chengxuz/Data/nd_response/tnn_RDMs/RDM_${layer}_${time}.pkl --hdf5path /data/chengxuz/nd_response/tnn_responses.hdf5
+        python cal_catRDM.py --key ${layer}_${time} --savepath /mnt/fs0/chengxuz/Data/nd_response/byp_RDMs/RDM_${layer}_${time}.pkl --hdf5path /data/chengxuz/nd_response/byp_responses.hdf5
     done
 done

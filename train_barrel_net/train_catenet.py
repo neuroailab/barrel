@@ -443,7 +443,64 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
 # Change to a combined version
 #key_list = ['fc_add', 'fc7', 'fc6', 'conv5', 'conv4', 'conv3', 'conv2', 'conv1']
 key_list_default = ['fc_add', 'fc7', 'fc6', 'conv5', 'conv4', 'conv3', 'conv2', 'conv1']
-def save_features(inputs, outputs, key_list = key_list_default, special_set = False, only_labels = False):
+
+def add_layer_list(subnet, now_list, layer_offset = 0):
+    len_key = len(subnet.keys())
+    for indx_tmp in xrange(len_key):
+        now_layer = subnet['l%i' % indx_tmp]
+        if 'conv' in now_layer:
+            now_list.append('conv%i' % (indx_tmp + layer_offset + 1))
+        else:
+            now_list.append('fc%i' % (indx_tmp + layer_offset + 1))
+
+    return now_list
+
+def add_fc_add_list(addnet, now_list):
+    for indx_add in xrange(len(addnet.keys()) - 1):
+        now_list.append('fc_add%i' % (indx_add + 1))
+    return now_list
+
+def has_fc(now_net):
+    for layer_now in now_net:
+        if 'fc' in now_net[layer_now]:
+            return True
+    return False
+
+def get_layer_list(cfg_now):
+    if 'nodes' in cfg_now:
+        default_list = ['fc_add', 'fc8', 'fc7', 'conv6', 'conv5', 'conv4', 'conv3', 'conv2', 'conv1']
+        if not 'addnet' in cfg_now:
+            return default_list, True
+        else:
+            return add_fc_add_list(cfg_now['addnet'], default_list), True
+    else:
+        new_list = []
+        if 'subnet' in cfg_now:
+            new_list = add_layer_list(cfg_now['subnet'], new_list, len(new_list))
+        else:
+            net_list = ['spanet', 'tempnet']
+            if has_fc(cfg_now['spanet']):
+                net_list = ['tempnet', 'spanet']
+
+            for net_now_name in net_list:
+                new_list =  add_layer_list(cfg_now[net_now_name], new_list, len(new_list))
+
+        new_list.append('fc_add')
+        if 'addnet' in cfg_now:
+            new_list = add_fc_add_list(cfg_now['addnet'], new_list)
+
+        return new_list, False
+
+def get_size(curr_tensor):
+    shape_list = curr_tensor.get_shape().as_list()
+
+    curr_size = 1
+    for now_indx, now_shape in enumerate(shape_list[1:]):
+        curr_size = now_shape*curr_size
+
+    return curr_size
+
+def save_features(inputs, outputs, key_list = key_list_default, special_set = False, only_labels = False, just_count = False):
 
     ret_dict = {}
     ret_dict['label'] = inputs['category']
@@ -464,7 +521,13 @@ def save_features(inputs, outputs, key_list = key_list_default, special_set = Fa
     #print(all_name_list)
     #print(len(all_name_list))
 
+    if just_count:
+        num_units = 0
+
     for target in key_list:
+
+        divide_num = 1
+
         all_name_list = [n.name for n in tf.get_default_graph().as_graph_def().node]
 
         all_name_list = filter(lambda name_now: 'validation/topn' in name_now, all_name_list)
@@ -472,9 +535,17 @@ def save_features(inputs, outputs, key_list = key_list_default, special_set = Fa
         if (not special_set) or (target.startswith('fc_add')):
             #print(target, all_name_list)
             tmp_name_list = filter(lambda name_now: 'pool' in name_now, all_name_list)
-            if len(tmp_name_list) > 0:
+
+
+            if len(tmp_name_list) > 0 and not just_count:
                 all_name_list = tmp_name_list
+
             else:
+                if just_count and len(tmp_name_list) > 0:
+                    tensor_now = tf.get_default_graph().get_tensor_by_name("%s:0" % tmp_name_list[0])
+                    print(target, tensor_now.name, tensor_now.get_shape().as_list())
+                    num_units  = num_units + get_size(tensor_now)
+
                 tmp_name_list = filter(lambda name_now: 'relu' in name_now, all_name_list)
                 if (len(tmp_name_list) > 0) and (not target=='fc_add'):
                     all_name_list = tmp_name_list
@@ -502,6 +573,14 @@ def save_features(inputs, outputs, key_list = key_list_default, special_set = Fa
         for len_have in xrange(len(output_now_tmp)):
             gfs_key = '%s_%i' % (target, len_have)
             ret_dict[gfs_key] = output_now_tmp[len_have]
+
+        if len(output_now_tmp)>0 and just_count:
+            print(target, output_now_tmp[0].name, output_now_tmp[0].get_shape().as_list())
+            num_units = num_units + get_size(output_now_tmp[0])
+
+    if just_count:
+        print(num_units)
+        exit()
 
     if special_set:
         print(len(ret_dict))
@@ -854,6 +933,9 @@ def get_params_from_arg(args):
             key_list = ['fc_add', 'fc_add1', 'fc_add2', 'fc8', 'fc7', 'conv6', 'conv5', 'conv4', 'conv3', 'conv2', 'conv1']
             special_set = True
 
+        if args.whichtype==-2:
+            key_list, special_set = get_layer_list(cfg_initial)
+
         if args.whichpart>0:
             new_key_list = []
             for indx_which, item in enumerate(key_list):
@@ -867,11 +949,16 @@ def get_params_from_arg(args):
         if args.onlylabels==1:
             onlylabels = True
 
+        just_count = False
+        if args.justcount==1:
+            just_count = True
+
         validation_params['topn']['targets'] = {
                 'func': save_features,
                 'key_list': key_list,
                 'special_set': special_set,
                 'only_labels': onlylabels,
+                'just_count': just_count,
             }
         validation_params['topn']['online_agg_func'] = online_agg_genfeautre
         validation_params['topn']['num_steps'] = 10
@@ -1066,6 +1153,7 @@ def main():
     parser.add_argument('--whichpart', default = 0, type = int, action = 'store', help = 'Which part of the list, this will decide which part of the key_list used')
     parser.add_argument('--partnum', default = 2, type = int, action = 'store', help = 'Number of parts of the list, used when whichpart is larger than 0')
     parser.add_argument('--onlylabels', default = 0, type = int, action = 'store', help = 'Default is 0, not reporting only labels')
+    parser.add_argument('--justcount', default = 0, type = int, action = 'store', help = 'Default is 0, not just counting number of units')
 
     # Test parameters
     parser.add_argument('--num_fake', default = 0, type = int, action = 'store', help = 'Default is 0, no fake')
