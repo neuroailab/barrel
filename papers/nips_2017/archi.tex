@@ -5,50 +5,41 @@
 \caption{\textbf{Families of DNN Architectures tested:} \textbf{a.} Models with spatiotemporal integration at all stages. Convolution is performed on both spatial and temporal data dimensions, followed by one or several fully connected layers. \textbf{b.} Temporal-Spatial networks in which temporal integration is performed separately before spatial integration.  Temporal integration consists of one-dimensional convolution over the temporal dimension, separately for each whisker. the In spatial integration stages, outputs from each whisker are registered to their natural 2D spatial grid and spatial convolution performed.  \textbf{c.} In Spatial-Temporal networks, spatial convolution is performed first, replicated with shared weights across time points; this is then followed by temporal convolution. \textbf{d.} Recurrent networks with no explicitly separate units for handling for distinct timepoints, relying instead on state to build up memory traces.  These networks can have local recurrence (e.g. simple addition or more complicated motifs like LSTMs or GRUs), as well as long-range skip and feedback connections.~\label{fig_archi}}
 \end{figure}
 
-We trained deep neural networks of a variety of different architectural types on the shape-recognition task (Fig. \ref{fig_archi}).  
-These architectures represent differing hypotheses about the computations performed by neurons in 
-the subcortical and cortical areas downstream of the whisker follicles. 
-The fundamental questions explored by these hypotheses are how and where temporal and spatial information are integrated.   
+We trained deep neural networks of a variety of different architectural families (Fig. \ref{fig_archi}).  
+These architectures families can be thought of as representing qualitatively different classes of hypotheses about the computations performed by neural circuits downstream of the whisker follicles. 
+The fundamental questions explored by these hypotheses are how and where temporal and spatial information are integrated.
+Within each family, the differences in parameters relate to more nuanced refinements of the larger hypothesis, encoding the specific details of the model (e.g. how many layers, what specific kernel sizes, \&c). 
+ 
+\subsubsection*{Simultaneous Spatiotemporal integration}
+
+In this family of networks, networks consisted of convolution layers followed by one or more fully connected layers (Fig. \ref{fig_archi}a).  Convolution is performed on both temporal dimension and spatial dimensions of the input (and their corresponding downstream dimensions), so that that responses from nearby whiskers close in time are combined together simultaneously, with neurons in each successive layers having larger receptive field at both dimensions at once.
+We evaluated both 2-dimensional convolution, in which the spatial dimension is indexed linearly across the list of whiskers (first by vertical columns and then by lateral row on the $5\times7$ grid), as well as 3-dimensional convolution in which the two dimensions of the $5\times7$ spatial grid are explicitly represented.
+Data from top, middle, and bottom swipe of the same object combined to produce the final categorization, culminating in a standard softmax cross-entropy loss.  
 
 
-\subsection{Spatiotemporal integration}
+\subsubsection*{Separate Spatial and Temporal Integration}
 
-In this family of networks, we use CNNs where convolution is done simultaneously on temporal dimension and spatial dimension, which means that responses from different whiskers across a specific window of time will be combined together in neurons of every layer, while neurons at higher layer will have larger receptive field at both dimensions.
-We began with 2D-convolution on temporal and spatial dimension, where the spatial dimension is the indexing of the whiskers through going across the columns and then the rows on the $5\times7$ grid.
-We also tried expanding the spatial dimension into two dimensions of $5\times7$ and then doing a 3D-convolution instead, the results will be shown later in this section.
+In this family, networks begin by integrating temporal and spatial information separately.  
 
-The general structure of the networks includes several convolution layers followed by several fully connected layers. Each categorization is done towards a combination of top, middle, and bottom swipe of the same object under fixed setting.
-The same network will be applied to three swipes after which the outputs will be concatenated to give the final categorization label.
-For example, one structure in this family consists of 5 convolutional layers and 2 fully connected layers for each swipe with one additional fully connected layer for combining three swipes.
-We will call this network as base network, whose structure will be described in detail below.
-The convolutional layers of this network are named from \textit{conv1} to \textit{conv5}.
-And the filter size of \textit{conv1} is $9\times3$ and that of other convolutional layers is $3\times3$, where the first number is for temporal dimension and the second number is for spatial dimension.
-The strides of all convolutional layers for both dimensions are 1. The number of filters are 96, 256, 384, 384, and 256 respectively.
-There are max-pooling layers after \textit{conv1}, \textit{conv2}, and \textit{conv5}, called \textit{pool1}, \textit{pool2}, and \textit{pool5}. The filter size of \textit{pool1} is $3\times1$ and the stride of \textit{pool1} is the same.
-For \textit{pool2} and \textit{pool5}, the filter size is $3\times3$ while the stride is $2\times2$.
-After \textit{pool5}, the output is transformed by two fully connected layers \textit{fc6} and \textit{fc7}. Layer \textit{fc6} has an output shape of 4096 and layer \textit{fc7} has an output shape of 1024.
-Finally the three swipes are concatenated together and an additional fully connected layer \textit{fc\_add} is used to predict the category by giving an output with shape of 117.
-The network is trained using cross-entropy loss function with Adagrad algorithm~\cite{duchi2011adaptive}.
-And the learning rate remains at 0.01 for 15 epoches and then is adjusted to 0.005 for 10 extra epoches.
+One subclass of these networks are ``Temporal-Spatial'', which first integrate temporal information for each individual separately and then combine the information from different whiskers in higher layers (Fig. \ref{fig_archi}b).
+Temporal processing is implemented as 1-dimensional convolution over the temporal dimension. 
+After some number of layers of temporal-only processing, the outputs at each whisker are then reshaped into vectors and combined into a three-tensor in which the first two dimensions correspond to the $5\times7$ whisker grid spatial positions.  Subsequently, spatial convolutions are applied for some number of layers. 
+Finally, as with previous case, features from three swipes  are concatenated into a single fully connected layer which produces softmax category responses.
 
-Several modifications are made to the base network for further explorations. First, two smaller networks with less parameters or even less layers are trained to check whether depth and parameters are necessary.
-And as mentioned above, the base network with 3D-convolution rather than 2D-convolution is also trained.
-Besides, there is only one additional layer combining the information from three swipes in the base network while the combined information could benefit from more layers of processing, so we also tried another network with more fully connected layers upon combined information.
-Furthermore, the base network is only using top, middle, and bottom swipes of a fixed setting for categorization, while in the dataset, there are also three other groups of swipes towards the setting availabel, which means that the categorization could be done to 12 swipes. 
-We tried one simple way to use this extra information. It is similar to that of combining information of three swipes. Specifically, we applied the same network to each swipe, concatenated all 12 swipes, and then used one additional layer to get the final label.
+Conversely, ``Spatial-Temporal'' networks (Fig. \ref{fig_archi}c) first, for some number of layers, use two-dimensional spatial convolution to integrate across whiskers, sharing parameters between copies of the network for each timepoint, before combining across time and switching to one-dimensional convolution in that dimension.  
+Both Temporal-Spatial and Spatial-Temporal networks can be viewed as subclasses of three-dimensional simultaneous spatiotemporal integration in which initial and final portions of the network have kernel size 1 in the relevant dimensions.  
+These network families can thus be thought of as different strategies for allocating parameters between dimensions. 
 
 
-\subsection{Temporal integration first}
+\subsubsection*{Recurrent neural networks}
 
-Instead of integrating spatial and temporal information at the begining, we could let the networks concentrate on processing temporal information for each individual whisker first and then combine the information from different whiskers in higher layers.
-For each swipe, the networks in this family apply the same temporal convolutional network to the temporal signals of each whisker first. 
-The outputs of each whisker are then reshaped into one dimension vectors individually and then reorganized in the grid of $5\times7$ according to the actual positions of each whisker with vacancies in the grid filled by zero vectors. 
-Another spatial convolution network is applied after that to get a representation including both temporal and spatial information.
-Finally, similar to the base network, we concatnate the information from three swipes and use an additional one-layer network to give the final label.
+This family of network does not allocate units or parameters explicitly for the temporal dimension, and instead requires temporal processing to occur via the temporal update evolution of the system.  These networks (Fig. \ref{fig_archi}d) are built around a core feedforward 2-dimensional spatial convolution structure, with the addition of (i) local recurrent connections, (ii) long-range feedforward skips between non-neighboring layers, and (iii) long-range feedback connections.  
+The most basic update rule for the dynamic trajectory of such a network through (discrete) time is: 
 
-\subsection{Spatial integration first}
+$$H^i_{t+1} = F_i \left ( \oplus_{j \neq i} R^j_t \right )  + \tau_i H^i_t; R^i_t = A_i[H^i_t]$$
 
-Similar to the previous section, while this time the inputs the spatial convolution is applied to 
+where $R^i_t$ and $H^i_t$ are the output and hidden state of layer $i$ at time $t$ respectively,  $\tau_i$  are decay constants, $\oplus$ represents concatenation across the channel dimension with appropriate resizing to align dimensions, $F_i$ is the standard neural network update function (e.g. 2-D convolution), and $A_i$ is activation function at layer $i$.  
+The learned parameters of this type of network include the values of the parameters of $F_i$, which comprises both the feedforward and feedback weights from connections coming in to layer $i$, as well as the decay constants $\tau_i$. 
+More sophisticated dynamics can be incorporated by replacing the simple additive rule above with a local recurrent structure such as an LSTM~\cite{} or GRU~\cite{}.
 
 
-\subsection{Fully recurrent networks}

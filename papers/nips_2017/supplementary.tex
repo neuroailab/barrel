@@ -1,0 +1,34 @@
+The convolutional layers of this network are named from \textit{conv1} to \textit{conv5}.
+And the filter size of \textit{conv1} is $9\times3$ and that of other convolutional layers is $3\times3$, where the first number is for temporal dimension and the second number is for spatial dimension.
+The strides of all convolutional layers for both dimensions are 1. The number of filters are 96, 256, 384, 384, and 256 respectively.
+There are max-pooling layers after \textit{conv1}, \textit{conv2}, and \textit{conv5}, called \textit{pool1}, \textit{pool2}, and \textit{pool5}. The filter size of \textit{pool1} is $3\times1$ and the stride of \textit{pool1} is the same.
+For \textit{pool2} and \textit{pool5}, the filter size is $3\times3$ while the stride is $2\times2$.
+After \textit{pool5}, the output is transformed by two fully connected layers \textit{fc6} and \textit{fc7}. Layer \textit{fc6} has an output shape of 4096 and layer \textit{fc7} has an output shape of 1024.
+Finally the three swipes are concatenated together and an additional fully connected layer \textit{fc\_add} is used to predict the category by giving an output with shape of 117.
+The network is trained using cross-entropy loss function with Adagrad algorithm~\cite{duchi2011adaptive}.
+And the learning rate remains at 0.01 for 15 epoches and then is adjusted to 0.005 for 10 extra epoches.
+
+
+Several modifications are made to the base network for further explorations. First, two smaller networks with less parameters or even less layers are trained to check whether depth and parameters are necessary.
+And as mentioned above, the base network with 3D-convolution rather than 2D-convolution is also trained.
+Besides, there is only one additional layer combining the information from three swipes in the base network while the combined information could benefit from more layers of processing, so we also tried another network with more fully connected layers upon combined information.
+Furthermore, the base network is only using top, middle, and bottom swipes of a fixed setting for categorization, while in the dataset, there are also three other groups of swipes towards the setting availabel, which means that the categorization could be done to 12 swipes. 
+We tried one simple way to use this extra information. It is similar to that of combining information of three swipes. Specifically, we applied the same network to each swipe, concatenated all 12 swipes, and then used one additional layer to get the final label.
+
+
+
+For spatiotemporal family, we tried very shallow models, having only 1 layer or 2 layers intotal in the network ("BM\_1layer" and "BM\_2layer" in Fig~\ref{fig_main}). 
+We also started from the base model "BM" and varied from number of filters ("BM\_few" with fewer filters, "BM\_more" with more filters) and number of layers ("BM\_4conv" with only 4 convolution layers).
+As mentioned, 3D convolution rather than 2D convolution is also tried with base model ("BM\_3D").
+Besides, to show whether training is necessary, we also tried a network in the same structure of "BM\_more" with only the last output layer training while fixing the parameters of other layers as initialized ("BM\_ran\&more").
+For recurrent networks, we tried models with bypass connections ("TNN\_byp"), feedback connections ("TNN\_fdb"), and LSTM or GRU recurrent cells equiped on top of it("TNN\_lstm" and "TNN\_gru").
+Also, models with fewer filters are also tried for temporal first family ("TS\_few").
+
+
+The numbers of parameters trained for networks are among approximately 25M parameters, except for model "BM\_more", "BM\_few", "BM\_ran\&more" and "TS\_few", where "BM\_more" has around 83 million parameters, "BM\_few" has about 4 million paramters, "TS\_few" has 11 million parameters, and "BM\_ran\&more" only has 0.3 million parameters trained.
+
+
+
+show full confusion matrix labels 
+
+
