@@ -659,7 +659,7 @@ def get_params_from_arg(args):
                     'batch_size': 12,
                 }
     
-    if args.expand==1:
+    if args.expand==1 and args.parallel==0:
         train_data_param['expand_spatial'] = True
         val_data_param['expand_spatial'] = True
 
@@ -744,6 +744,9 @@ def get_params_from_arg(args):
         model_params['n_gpus'] = len(args.gpu.split(','))
         if args.inputthre>0:
             model_params['inputthre'] = args.inputthre
+
+        if args.expand==1:
+            model_params['expand'] = 1
 
     if args.fixweights==1:
         model_params['fixweights'] = True

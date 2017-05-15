@@ -663,8 +663,8 @@ def catenet_all3d(inputs, cfg_initial = None, train=True, **kwargs):
 
     return m
 
-def catenet_tnn(inputs, cfg_path, train = True, tnndecay = 0.1, decaytrain = 0, cfg_initial = None, cmu = 0, fixweights = False, **kwargs):
-    m = model.ConvNet(fixweights = fixweights, **kwargs)
+def catenet_tnn(inputs, cfg_path, train = True, tnndecay = 0.1, decaytrain = 0, cfg_initial = None, cmu = 0, fixweights = False, seed = 0, **kwargs):
+    m = model.ConvNet(fixweights = fixweights, seed = seed, **kwargs)
 
     params = {'input': inputs.name,
                'type': 'fc'
@@ -716,6 +716,12 @@ def catenet_tnn(inputs, cfg_path, train = True, tnndecay = 0.1, decaytrain = 0, 
             if node.startswith('fc'):
                 _, prememory_param = attr['kwargs']['pre_memory'][0]
                 attr['kwargs']['pre_memory'][0] = (model.fc_fix, prememory_param)
+
+        if not seed==0:
+            for sub_prememory in attr['kwargs']['pre_memory']:
+                prememory_func, prememory_param = sub_prememory
+                if 'kernel_init_kwargs' in prememory_param:
+                    prememory_param['kernel_init_kwargs']['seed'] = seed
 
 	if node in ['fc7', 'fc8']:
             attr['kwargs']['pre_memory'][0][1]['dropout'] = dropout
@@ -1086,7 +1092,24 @@ def catenet_tfutils_old(inputs, **kwargs):
 
         return m_final.output, m_final.params
 
-def parallel_net_builder(inputs, model_func, n_gpus = 2, gpu_offset = 0, inputthre = 0, with_modelprefix = None, **kwargs):
+def spatial_slice_concat(data):
+    shape_now = data.get_shape().as_list()
+    slice0 = tf.slice(data, [0, 0, 0, 0, 0], [-1, -1, 5, -1, -1])
+    slice1 = tf.slice(data, [0, 0, 5, 0, 0], [-1, -1, 6, -1, -1])
+    slice2 = tf.slice(data, [0, 0, 11, 0, 0], [-1, -1, 14, -1, -1])
+    slice3 = tf.slice(data, [0, 0, 25, 0, 0], [-1, -1, 6, -1, -1])
+
+    pad_ten0 = tf.zeros([shape_now[0], shape_now[1], 1, shape_now[3], shape_now[4]])
+    pad_ten1 = tf.zeros([shape_now[0], shape_now[1], 1, shape_now[3], shape_now[4]])
+    pad_ten2 = tf.zeros([shape_now[0], shape_now[1], 1, shape_now[3], shape_now[4]])
+    pad_ten3 = tf.zeros([shape_now[0], shape_now[1], 1, shape_now[3], shape_now[4]])
+
+    data = tf.concat([slice0, pad_ten0, pad_ten1, slice1, pad_ten2, slice2, pad_ten3, slice3], 2)
+    #data[new_key] = tf.concat([slice0, slice1, slice2, slice3], 2)
+
+    return data
+
+def parallel_net_builder(inputs, model_func, n_gpus = 2, gpu_offset = 0, inputthre = 0, with_modelprefix = None, expand = 0, **kwargs):
     with tf.variable_scope(tf.get_variable_scope()) as vscope:
         #assert n_gpus > 1, ('At least two gpus have to be used')
         outputs = []
@@ -1111,6 +1134,11 @@ def parallel_net_builder(inputs, model_func, n_gpus = 2, gpu_offset = 0, inputth
                 torque_inp = tf.maximum(torque_inp, tf.constant( -inputthre, dtype = torque_inp.dtype))
 
                 #force_inp = tf.Print(force_inp, [tf.reduce_max(force_inp)], message = 'Input max: ')
+
+            if expand==1:
+                force_inp = spatial_slice_concat(force_inp)
+                torque_inp = spatial_slice_concat(torque_inp)
+
             with tf.device('/gpu:%d' % (i + gpu_offset)):
                 with tf.name_scope('gpu_' + str(i)) as gpu_scope:
                     output, param = model_func({'Data_force': force_inp, 'Data_torque': torque_inp}, **kwargs)
