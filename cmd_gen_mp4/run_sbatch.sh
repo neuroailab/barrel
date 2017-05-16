@@ -33,6 +33,9 @@ bigsamnum=2
 
 len_tfr=100
 
+module load tensorflow/0.12.1
+module load anaconda/anaconda.4.2.0.python2.7
+
 #for k in $(seq 0 ${len_data} 9981)
 #for k in 9160
 #for k in 5554
@@ -41,10 +44,10 @@ len_tfr=100
 #for k in $(seq 6250 ${len_data} 9981)
 #for k in $(seq 5065 5069)
 #for k in $(seq 0 ${len_data} 399)
-#for k in 0
+for k in 0
 #for k in $(seq 0 ${len_tfr} 1711)
 #for k in $(seq 1 116)
-for k in $(seq 0 116)
+#for k in $(seq 0 116)
 #for k in 1
 #for k in 4119
 #for k in $(seq 0 ${len_data} 399)
@@ -60,7 +63,8 @@ do
     #sbatch --job-name=tfrecs${k} script_to_tfrecs_sher.sh ${k} ${len_data}
     #sbatch --job-name=tfrecs${k} script_to_tfr_bycat.sh ${k}
     #sbatch --job-name=tfrecs${k} script_to_tfr_bycat.sh ${k}
-    sbatch --job-name=tfrecs${k} script_to_tfr_bycat_om.sh ${k}
+    python cmd_to_tfr_bycat.py --catsta ${k} --catlen 117
+    #sbatch --job-name=tfrecs${k} script_to_tfr_bycat_om.sh ${k}
 
     #sbatch --job-name=compute${k} script_computestat.sh ${k} ${len_data} Data_force
     #sbatch --job-name=compute${k} script_computestat.sh ${k} ${len_data} Data_torque
