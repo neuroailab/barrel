@@ -97,7 +97,7 @@ def write_cate(writer, label_now, now_objlist, train_sta, real_obj_len, args):
                     curr_write_value = label_now[tmp_indx][0]
 
                     example = tf.train.Example(features=tf.train.Features(feature={
-                        'category': _int64_feature(curr_write_value)}))
+                        'objid': _int64_feature(curr_write_value)}))
 
                     print(curr_write_value)
 
