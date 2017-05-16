@@ -4,6 +4,7 @@ import os, sys
 
 import argparse
 import cPickle
+import time
 
 def main():
     parser = argparse.ArgumentParser(description='The script to compute category level RDM')
@@ -12,6 +13,9 @@ def main():
     parser.add_argument('--key', default = 'conv1_0', type = str, action = 'store', help = 'which key in the hdf5 file to use')
     parser.add_argument('--savepath', default = '/mnt/fs0/chengxuz/Data/nd_response/RDM_conv1_0.pkl', type = str, action = 'store', help = 'Path to store the final RDM')
     parser.add_argument('--numcat', default = 117, type = int, action = 'store', help = 'Number of categories')
+    parser.add_argument('--labelkey', default = 'label', type = str, action = 'store', help = 'Key used for label')
+    parser.add_argument('--labelfile', default = None, type = str, action = 'store', help = 'hdf5 file used for label')
+    parser.add_argument('--writeway', default = 0, type = int, action = 'store', help = '0 means cPickle, 1 means hdf5')
     #parser.add_argument('--hdf5list', default = [], type = str, action = 'append', help = 'Path to the list of hdf5 file storing all the information')
 
     args    = parser.parse_args()
@@ -27,7 +31,14 @@ def main():
     all_sum = np.zeros([args.numcat, fea_len])
     all_num = np.zeros(args.numcat)
 
-    all_label = np.asarray(fin['label'])
+    if args.labelfile is None:
+        label_fin = fin
+    else:
+        label_fin = h5py.File(args.labelfile, 'r')
+    all_label = np.asarray(label_fin[args.labelkey])
+
+
+    start_time = time.time()
 
     for indx_which in xrange(num_example):
         which_cat = int(all_label[indx_which])
@@ -40,11 +51,29 @@ def main():
 
     all_mean = all_sum/all_num[:, None]
 
+    load_time = time.time()
+    print('Loading time %f' % (load_time - start_time))
+
     dis_matrix = 1 - np.corrcoef(all_mean)
 
-    cPickle.dump(dis_matrix, open(args.savepath, 'w'))
+    dis_time = time.time()
+    print('Dis_mat time %f' % (dis_time - load_time))
+
+    if args.writeway==0:
+        cPickle.dump(dis_matrix, open(args.savepath, 'w'))
+    else:
+        fout = h5py.File(args.savepath, 'w')
+        dataset = fout.create_dataset('RDM', dis_matrix.shape, dtype='f')
+        dataset[...] = dis_matrix
+        fout.close()
+
+    dump_time = time.time()
+    print('Dump time %f' % (dump_time - dis_time))
+
 
     fin.close()
+    if not args.labelfile is None:
+        label_fin.close()
 
 if __name__ == '__main__':
     main()

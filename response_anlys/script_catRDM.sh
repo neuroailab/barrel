@@ -14,6 +14,7 @@ do
 done
 '
 
+:'
 for time in $(seq 0 21)
 do
     for layer in fc7 conv5 conv3 conv1
@@ -30,3 +31,23 @@ do
         python cal_catRDM.py --key ${layer}_${time} --savepath /mnt/fs0/chengxuz/Data/nd_response/byp_RDMs/RDM_${layer}_${time}.pkl --hdf5path /data/chengxuz/nd_response/byp_responses.hdf5
     done
 done
+'
+
+#layer_now=fc_add_0
+#python cal_catRDM.py --key ${layer_now} --savepath /mnt/fs0/chengxuz/Data/nd_response/temp_spa_RDMs_obj/RDM_${layer_now}.pkl --hdf5path /data2/chengxuz/nd_response/temp_spa_responses_add.hdf5 --labelkey objid --labelfile /data2/chengxuz/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 0
+#python cal_catRDM.py --key ${layer_now} --savepath /mnt/fs0/chengxuz/Data/nd_response/temp_spa_RDMs_obj/RDM_${layer_now}.hdf5 --hdf5path /data2/chengxuz/nd_response/temp_spa_responses_add.hdf5 --labelkey objid --labelfile /data2/chengxuz/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1
+#layer_now=fc12_0
+#layer_now=fc_add1_0
+#for layer_now in fc11 conv7 conv9 conv5 conv3 conv1
+#for layer_now in fc11_0 conv7_0
+#for layer_now in fc_add2_0 fc_add_0
+#for layer_now in conv9_0 conv5_0 conv3_0 conv1_0
+for layer_now in fc7_21 conv5_21 conv3_21 conv1_21
+do
+    #python cal_catRDM.py --key ${layer_now} --savepath /mnt/fs0/chengxuz/Data/nd_response/temp_spa_RDMs_obj/RDM_${layer_now}.hdf5 --hdf5path /data2/chengxuz/nd_response/temp_spa_responses.hdf5 --labelkey objid --labelfile /data2/chengxuz/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 &
+    python cal_catRDM.py --key ${layer_now} --savepath /mnt/fs0/chengxuz/Data/nd_response/fdb_RDMs_obj/RDM_${layer_now}.hdf5 --hdf5path /data/chengxuz/nd_response/fdb_responses_2.hdf5 --labelkey objid --labelfile /mnt/fs0/chengxuz/Data/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 &
+done
+
+
+
+
