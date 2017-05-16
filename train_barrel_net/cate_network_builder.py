@@ -1140,6 +1140,8 @@ def parallel_net_builder(inputs, model_func, n_gpus = 2, gpu_offset = 0, inputth
                 torque_inp = spatial_slice_concat(torque_inp)
 
             with tf.device('/gpu:%d' % (i + gpu_offset)):
+                print('On gpu %d' % (i + gpu_offset))
+                print(force_inp.get_shape().as_list())
                 with tf.name_scope('gpu_' + str(i)) as gpu_scope:
                     output, param = model_func({'Data_force': force_inp, 'Data_torque': torque_inp}, **kwargs)
                     outputs.append(output)

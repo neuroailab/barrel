@@ -52,6 +52,7 @@ NEW_DATA_PATH['val/Data_torque'] = new_data_path_prefix + '/Data_torque/'
 NEW_DATA_PATH['val/category'] = new_data_path_prefix + '/category/'
 
 #OTHER_LABELS_LIST = ['speed', 'orn', 'scale', 'position']
+#OTHER_LABELS_LIST = ['speed', 'orn', 'scale', 'position', 'objid']
 OTHER_LABELS_LIST = ['speed', 'orn', 'scale', 'position', 'objid']
 
 for other_label in OTHER_LABELS_LIST:
@@ -124,6 +125,7 @@ def parallel_softmax_cross_entropy_loss(labels, logits, gpu_offset = 0, **kwargs
 
     with tf.variable_scope(tf.get_variable_scope()) as vscope:
         n_gpus = len(logits)
+        print('Loss n gpus: %i' % n_gpus)
         if n_gpus>1:
             labels = tf.split(labels, axis=0, num_or_size_splits=n_gpus)
         else:
@@ -186,7 +188,7 @@ class ParallelClipOptimizer(object):
                 with tf.device('/gpu:%d' % (i + self.gpu_offset)):
                     with tf.name_scope('gpu_' + str(i)) as gpu_scope:
                         grads_and_vars.append(self.compute_gradients(loss))
-                        #tf.get_variable_scope().reuse_variables()
+
             grads_and_vars = self.average_gradients(grads_and_vars)
             return self._optimizer.apply_gradients(grads_and_vars,
                                                global_step=global_step)
@@ -514,7 +516,7 @@ def save_features(inputs, outputs, key_list = key_list_default, special_set = Fa
     ret_dict['label'] = inputs['category']
 
     if only_labels:
-        for other_label in OTHER_LABELS_LIST:
+        for other_label in OTHER_LABELS_LIST + ['Data_force', 'Data_torque']:
             if other_label in inputs:
                 ret_dict[other_label] = inputs[other_label]
         print(ret_dict)
