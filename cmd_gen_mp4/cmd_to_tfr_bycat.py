@@ -89,8 +89,17 @@ def write_cate(writer, label_now, now_objlist, train_sta, real_obj_len, args):
         for sam_indx in xrange(args.bigsamnum):
             for group_indx in SWIPE_ORDER:
 
-                example = tf.train.Example(features=tf.train.Features(feature={
-                    'category': _int64_feature(label_now)}))
+                if isinstance(label_now, int):
+                    example = tf.train.Example(features=tf.train.Features(feature={
+                        'category': _int64_feature(label_now)}))
+                if isinstance(label_now, list):
+
+                    curr_write_value = label_now[tmp_indx][0]
+
+                    example = tf.train.Example(features=tf.train.Features(feature={
+                        'category': _int64_feature(curr_write_value)}))
+
+                    print(curr_write_value)
 
                 writer.write(example.SerializeToString())
 
@@ -126,7 +135,8 @@ def main():
         u'speed'
         ]
     '''
-    key_list =[u'scale']
+    #key_list =[u'scale']
+    key_list =[]
 
     for which_cat in xrange(args.catsta, min(args.catsta + args.catlen, len(cat_dict.keys()))):
         now_objlist = cat_dict[which_cat]
@@ -171,12 +181,19 @@ def main():
             writer.close()
 
         #for key_now in ['category']:
-        for key_now in []:
+        #for key_now in []:
+        for key_now in ['objid']:
             dir_now = os.path.join(args.savedir, key_now)
             if not os.path.isdir(dir_now):
                 os.system('mkdir -p %s' % dir_now)
 
             train_len = len(now_objlist) - val_num_obj
+
+            if key_now=='objid':
+                label_now = now_objlist
+            else:
+                label_now = which_cat
+
             for train_sta in xrange(0, train_len, obj_len):
                 real_obj_len = min(obj_len, train_len - train_sta)
                 name_now = "ctrain_%i_%i_%i_%s.tfrecords" % (which_cat, train_sta, real_obj_len, args.suffix)
@@ -184,7 +201,8 @@ def main():
 
                 writer = tf.python_io.TFRecordWriter(path_now)
 
-                write_cate(writer, which_cat, now_objlist, train_sta, real_obj_len, args)
+                #write_cate(writer, which_cat, now_objlist, train_sta, real_obj_len, args)
+                write_cate(writer, label_now, now_objlist, train_sta, real_obj_len, args)
 
                 writer.close()
 
@@ -193,7 +211,8 @@ def main():
 
             writer = tf.python_io.TFRecordWriter(path_now)
 
-            write_cate(writer, which_cat, now_objlist, train_len, val_num_obj, args)
+            #write_cate(writer, which_cat, now_objlist, train_len, val_num_obj, args)
+            write_cate(writer, label_now, now_objlist, train_len, val_num_obj, args)
 
             writer.close()
 
