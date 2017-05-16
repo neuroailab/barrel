@@ -51,7 +51,8 @@ NEW_DATA_PATH['val/Data_force'] = new_data_path_prefix + '/Data_force/'
 NEW_DATA_PATH['val/Data_torque'] = new_data_path_prefix + '/Data_torque/'
 NEW_DATA_PATH['val/category'] = new_data_path_prefix + '/category/'
 
-OTHER_LABELS_LIST = ['speed', 'orn', 'scale', 'position']
+#OTHER_LABELS_LIST = ['speed', 'orn', 'scale', 'position']
+OTHER_LABELS_LIST = ['speed', 'orn', 'scale', 'position', 'objid']
 
 for other_label in OTHER_LABELS_LIST:
     for group in ['train', 'val']:
@@ -249,10 +250,11 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
 
             for other_label in self.otherlabel_list:
                 source_dirs.append(data_path["%s/%s" % (group, other_label)])
-                if other_label=='speed':
-                    postprocess[other_label] = [(self.postprocess_arrs_3, (), {})]
-                else:
-                    postprocess[other_label] = [(self.postprocess_arrs_4, (), {})]
+                if not other_label=='objid':
+                    if other_label=='speed':
+                        postprocess[other_label] = [(self.postprocess_arrs_3, (), {})]
+                    else:
+                        postprocess[other_label] = [(self.postprocess_arrs_4, (), {})]
 
         super(WhiskerWorld, self).__init__(
             source_dirs = source_dirs,
@@ -412,10 +414,16 @@ class WhiskerWorld(data.TFRecordsParallelByFileProvider):
 
             if self.otherlabels:
                 for other_label in self.otherlabel_list:
-                    if not self.split_12:
-                        self.input_ops[i] = self.slice_concat_ol(self.input_ops[i], other_label, other_label)
+                    if not other_label=='objid':
+                        if not self.split_12:
+                            self.input_ops[i] = self.slice_concat_ol(self.input_ops[i], other_label, other_label)
+                        else:
+                            self.input_ops[i] = self.slice_concat_12_ol(self.input_ops[i], other_label, other_label)
                     else:
-                        self.input_ops[i] = self.slice_concat_12_ol(self.input_ops[i], other_label, other_label)
+                        if not self.split_12:
+                            self.input_ops[i] = self.slice_label(self.input_ops[i], other_label, other_label)
+                        else:
+                            self.input_ops[i] = self.slice_label_12(self.input_ops[i], other_label, other_label)
 
         return self.input_ops
 
