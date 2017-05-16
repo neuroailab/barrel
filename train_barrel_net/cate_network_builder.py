@@ -1116,6 +1116,7 @@ def parallel_net_builder(inputs, model_func, n_gpus = 2, gpu_offset = 0, inputth
         params = []
 
         if n_gpus > 1:
+            #with tf.device('/cpu:0'):
             list_Data_force = tf.split(inputs['Data_force'], axis=0, num_or_size_splits=n_gpus)
             list_Data_torque = tf.split(inputs['Data_torque'], axis=0, num_or_size_splits=n_gpus)
         else:
@@ -1136,6 +1137,7 @@ def parallel_net_builder(inputs, model_func, n_gpus = 2, gpu_offset = 0, inputth
                 #force_inp = tf.Print(force_inp, [tf.reduce_max(force_inp)], message = 'Input max: ')
 
             if expand==1:
+                #with tf.device('/cpu:0'):
                 force_inp = spatial_slice_concat(force_inp)
                 torque_inp = spatial_slice_concat(torque_inp)
 

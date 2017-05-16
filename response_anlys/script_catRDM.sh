@@ -46,14 +46,14 @@ done
 #for layer_now in fc8_21 conv6_21 conv4_21 conv2_21
 #for layer_now in fc_add1_0
 #for layer_now in fc12_0 conv8_0 conv10_0 conv6_0
-for layer_now in conv4_0 conv2_0
+#for layer_now in conv4_0 conv2_0
+for layer_now in conv1_0 conv2_0 conv3_0 conv4_0 conv5_0 fc6_0 fc_add_0
+#for layer_now in fc7_0
 do
     #python cal_catRDM.py --key ${layer_now} --savepath /mnt/fs0/chengxuz/Data/nd_response/temp_spa_RDMs_obj/RDM_${layer_now}.hdf5 --hdf5path /data2/chengxuz/nd_response/temp_spa_responses.hdf5 --labelkey objid --labelfile /data2/chengxuz/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 &
-    python cal_catRDM.py --key ${layer_now} --savepath /mnt/fs0/chengxuz/Data/nd_response/temp_spa_RDMs_obj/RDM_${layer_now}.hdf5 --hdf5path /data2/chengxuz/nd_response/temp_spa_responses_2.hdf5 --labelkey objid --labelfile /data2/chengxuz/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 &
+    #python cal_catRDM.py --key ${layer_now} --savepath /mnt/fs0/chengxuz/Data/nd_response/temp_spa_RDMs_obj/RDM_${layer_now}.hdf5 --hdf5path /data2/chengxuz/nd_response/temp_spa_responses_2.hdf5 --labelkey objid --labelfile /data2/chengxuz/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 &
     #python cal_catRDM.py --key ${layer_now} --savepath /mnt/fs0/chengxuz/Data/nd_response/fdb_RDMs_obj/RDM_${layer_now}.hdf5 --hdf5path /data/chengxuz/nd_response/fdb_responses_2.hdf5 --labelkey objid --labelfile /mnt/fs0/chengxuz/Data/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 &
     #python cal_catRDM.py --key ${layer_now} --savepath /mnt/fs0/chengxuz/Data/nd_response/fdb_RDMs_obj/RDM_${layer_now}.hdf5 --hdf5path /data/chengxuz/nd_response/fdb_responses.hdf5 --labelkey objid --labelfile /mnt/fs0/chengxuz/Data/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 &
+
+    python cal_catRDM.py --key ${layer_now} --savepath /mnt/fs0/chengxuz/Data/nd_response/spatemp_sm2_RDMs_obj/RDM_${layer_now}.hdf5 --hdf5path /data2/chengxuz/nd_response/spatemp_sm2_responses.hdf5 --labelkey objid --labelfile /mnt/fs0/chengxuz/Data/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 & 
 done
-
-
-
-

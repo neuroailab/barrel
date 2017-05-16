@@ -189,7 +189,12 @@ class ParallelClipOptimizer(object):
                     with tf.name_scope('gpu_' + str(i)) as gpu_scope:
                         grads_and_vars.append(self.compute_gradients(loss))
 
-            grads_and_vars = self.average_gradients(grads_and_vars)
+            if len(losses)==1:
+                grads_and_vars = self.average_gradients(grads_and_vars)
+            else:
+                #with tf.device('/cpu:0'):
+                grads_and_vars = self.average_gradients(grads_and_vars)
+
             return self._optimizer.apply_gradients(grads_and_vars,
                                                global_step=global_step)
 
@@ -645,7 +650,8 @@ def get_params_from_arg(args):
     else:
         queue_capa  = 3840
 
-    queue_capa = queue_capa*50;
+    if args.test_queuecap==0:
+        queue_capa = queue_capa*50;
 
     n_threads   = 4
 
@@ -927,6 +933,9 @@ def get_params_from_arg(args):
     if args.parallel==0 and args.cmu==1:
         validation_params['topn']['targets']['func'] = cmu_in_top_k
 
+    if args.no_valid==1:
+        validation_params = {}
+
     if args.gen_feature==1:
         train_params['validate_first'] = True
         train_params['num_steps'] = 305005
@@ -1171,6 +1180,8 @@ def main():
     # Test parameters
     parser.add_argument('--num_fake', default = 0, type = int, action = 'store', help = 'Default is 0, no fake')
     parser.add_argument('--test_mult', default = 0, type = int, action = 'store', help = 'Default is 0, no multi')
+    parser.add_argument('--test_queuecap', default = 0, type = int, action = 'store', help = 'Default is 0, using default queue capacity')
+    parser.add_argument('--no_valid', default = 0, type = int, action = 'store', help = 'Default is 0, with validation')
 
     # Parameters for Multiple networks
     parser.add_argument('--innerargs', default = [], type = str, action = 'append', help = 'Arguments for every network')
