@@ -13,7 +13,8 @@ def get_file_list():
 
     print(len(file_list))
     file_list = sorted(file_list, key = lambda x: os.path.getmtime(x))
-    print(file_list)
+    #print(file_list)
+    return file_list
 
 if __name__ == '__main__':
     #main()
