@@ -33,9 +33,9 @@ do
 done
 '
 
-seed=1
+#seed=1
 #seed=0
-#seed=3
+seed=3
 #seed=4
 #seed=2
 keystart=11
@@ -61,22 +61,42 @@ keyend=22
 #for layer_now in fc11_0 conv7_0 conv9_0 conv5_0 conv3_0 conv1_0
 #for layer_now in fc_add_0 fc12_0 conv10_0 conv8_0 conv6_0 conv2_0
 #for layer_now in conv4_0
+#for layer_now in conv3_0
 #for layer_now in fc8_
-for layer_now in conv6_ conv4_ conv2_ 
+#for layer_now in conv6_ conv4_ conv2_ 
+#for layer_now in conv7_0 conv9_0 conv11_0 fc13_0 fc_add1_0
+#for layer_now in conv8_0 conv10_0 conv12_0 fc_add_0
+for layer_now in fc7_  conv5_ conv3_ conv1_
 do
     #python cal_catRDM.py --key ${layer_now} --savepath /mnt/fs0/chengxuz/Data/nd_response/temp_spa_RDMs_obj/RDM_${layer_now}.hdf5 --hdf5path /data2/chengxuz/nd_response/temp_spa_responses.hdf5 --labelkey objid --labelfile /data2/chengxuz/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 &
     #python cal_catRDM.py --key ${layer_now} --savepath /mnt/fs0/chengxuz/Data/nd_response/temp_spa_RDMs_obj/RDM_${layer_now}.hdf5 --hdf5path /data2/chengxuz/nd_response/temp_spa_responses_2.hdf5 --labelkey objid --labelfile /data2/chengxuz/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 &
     #python cal_catRDM.py --key ${layer_now} --savepath /mnt/fs0/chengxuz/Data/nd_response/fdb_RDMs_obj/RDM_${layer_now}.hdf5 --hdf5path /data/chengxuz/nd_response/fdb_responses_2.hdf5 --labelkey objid --labelfile /mnt/fs0/chengxuz/Data/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 &
     #python cal_catRDM.py --key ${layer_now} --savepath /mnt/fs0/chengxuz/Data/nd_response/fdb_RDMs_obj/RDM_${layer_now}.hdf5 --hdf5path /data/chengxuz/nd_response/fdb_responses.hdf5 --labelkey objid --labelfile /mnt/fs0/chengxuz/Data/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 &
-    python cal_catRDM.py --key ${layer_now}%i --savepath /mnt/fs0/chengxuz/Data/nd_response/fdb_RDMs_obj/RDM_${layer_now}${keystart}_${keyend}.hdf5 --hdf5path /data/chengxuz/nd_response/fdb_responses.hdf5 --labelkey objid --labelfile /mnt/fs0/chengxuz/Data/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 --keyaslist 1 --keystart ${keystart} --keyend ${keyend} &
 
+    # Feedback with aslist
+    #python cal_catRDM.py --key ${layer_now}%i --savepath /mnt/fs0/chengxuz/Data/nd_response/fdb_RDMs_obj/RDM_${layer_now}${keystart}_${keyend}.hdf5 --hdf5path /data/chengxuz/nd_response/fdb_responses.hdf5 --labelkey objid --labelfile /mnt/fs0/chengxuz/Data/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 --keyaslist 1 --keystart ${keystart} --keyend ${keyend} &
+    #python cal_catRDM.py --key ${layer_now}%i --savepath /mnt/fs0/chengxuz/Data/nd_response/fdb_RDMs_obj/RDM_${layer_now}${keystart}_${keyend}.hdf5 --hdf5path /data/chengxuz/nd_response/fdb_responses_2.hdf5 --labelkey objid --labelfile /mnt/fs0/chengxuz/Data/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 --keyaslist 1 --keystart ${keystart} --keyend ${keyend} &
+
+
+    # Feedback concatenating 
+    #python cal_catRDM.py --key ${layer_now}%i --savepath /mnt/fs0/chengxuz/Data/nd_response/fdb_RDMs_obj/RDM_${layer_now}concat${keystart}_${keyend}.hdf5 --hdf5path /data/chengxuz/nd_response/fdb_responses.hdf5 --labelkey objid --labelfile /mnt/fs0/chengxuz/Data/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 --keyaslist 1 --keystart ${keystart} --keyend ${keyend} --keyconcat 1 &
+    python cal_catRDM.py --key ${layer_now}%i --savepath /mnt/fs0/chengxuz/Data/nd_response/fdb_RDMs_obj/RDM_${layer_now}concat${keystart}_${keyend}.hdf5 --hdf5path /data/chengxuz/nd_response/fdb_responses_2.hdf5 --labelkey objid --labelfile /mnt/fs0/chengxuz/Data/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 --keyaslist 1 --keystart ${keystart} --keyend ${keyend} --keyconcat 1 &
+
+    # Spatemp network
     #python cal_catRDM.py --key ${layer_now} --savepath /mnt/fs0/chengxuz/Data/nd_response/spatemp_sm2_RDMs_obj/RDM_${layer_now}.hdf5 --hdf5path /data2/chengxuz/nd_response/spatemp_sm2_responses.hdf5 --labelkey objid --labelfile /mnt/fs0/chengxuz/Data/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 & 
 
+    # Temp_spa network
     #python cal_catRDM.py --key ${layer_now} --savepath /mnt/fs0/chengxuz/Data/nd_response/temp_spa_RDMs_s2_obj/RDM_${layer_now}.hdf5 --hdf5path /data/chengxuz/nd_response/resp_temp_spa_s2_1.hdf5 --labelkey objid --labelfile /mnt/fs0/chengxuz/Data/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 &
-    #python cal_catRDM.py --key ${layer_now} --savepath /mnt/fs0/chengxuz/Data/nd_response/temp_spa_RDMs_s${seed}_obj/RDM_${layer_now}.hdf5 --hdf5path /data/chengxuz/nd_response/resp_temp_spa_s${seed}_1.hdf5 --labelkey objid --labelfile /mnt/fs0/chengxuz/Data/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 &
 
+    #python cal_catRDM.py --key ${layer_now} --savepath /mnt/fs0/chengxuz/Data/nd_response/temp_spa_RDMs_s${seed}_obj/RDM_${layer_now}.hdf5 --hdf5path /data/chengxuz/nd_response/resp_temp_spa_s${seed}_1.hdf5 --labelkey objid --labelfile /mnt/fs0/chengxuz/Data/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 &
     #python cal_catRDM.py --key ${layer_now} --savepath /mnt/fs0/chengxuz/Data/nd_response/temp_spa_RDMs_s${seed}_obj/RDM_${layer_now}.hdf5 --hdf5path /data/chengxuz/nd_response/resp_temp_spa_s${seed}_2.hdf5 --labelkey objid --labelfile /mnt/fs0/chengxuz/Data/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 &
 
     #python cal_catRDM.py --key ${layer_now} --savepath /mnt/fs0/chengxuz/Data/nd_response/temp_spa_RDMs_s${seed}_obj/RDM_${layer_now}.hdf5 --hdf5path /data2/chengxuz/nd_response/resp_temp_spa_s${seed}_1.hdf5 --labelkey objid --labelfile /mnt/fs0/chengxuz/Data/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 &
     #python cal_catRDM.py --key ${layer_now} --savepath /mnt/fs0/chengxuz/Data/nd_response/temp_spa_RDMs_s${seed}_obj/RDM_${layer_now}.hdf5 --hdf5path /data2/chengxuz/nd_response/resp_temp_spa_s${seed}_2.hdf5 --labelkey objid --labelfile /mnt/fs0/chengxuz/Data/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 &
+
+    # Spa_temp network
+    #python cal_catRDM.py --key ${layer_now}%i --savepath /mnt/fs0/chengxuz/Data/nd_response/spa_temp_RDMs_obj/RDM_${layer_now}${keystart}_${keyend}.hdf5 --hdf5path /data/chengxuz/nd_response/resp_spa_temp_1.hdf5 --labelkey objid --labelfile /mnt/fs0/chengxuz/Data/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 --keyaslist 1 --keystart ${keystart} --keyend ${keyend} &
+    #python cal_catRDM.py --key ${layer_now}%i --savepath /mnt/fs0/chengxuz/Data/nd_response/spa_temp_RDMs_obj/RDM_${layer_now}${keystart}_${keyend}.hdf5 --hdf5path /data/chengxuz/nd_response/resp_spa_temp_2.hdf5 --labelkey objid --labelfile /mnt/fs0/chengxuz/Data/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 --keyaslist 1 --keystart ${keystart} --keyend ${keyend} &
+    #python cal_catRDM.py --key ${layer_now} --savepath /mnt/fs0/chengxuz/Data/nd_response/spa_temp_RDMs_obj/RDM_${layer_now}.hdf5 --hdf5path /data/chengxuz/nd_response/resp_spa_temp_1.hdf5 --labelkey objid --labelfile /mnt/fs0/chengxuz/Data/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 &
+    #python cal_catRDM.py --key ${layer_now} --savepath /mnt/fs0/chengxuz/Data/nd_response/spa_temp_RDMs_obj/RDM_${layer_now}.hdf5 --hdf5path /data/chengxuz/nd_response/resp_spa_temp_2.hdf5 --labelkey objid --labelfile /mnt/fs0/chengxuz/Data/nd_response/responses_otherlabels_2.hdf5 --numcat 9981 --writeway 1 &
 done
