@@ -515,7 +515,7 @@ def get_size(curr_tensor):
 
     return curr_size
 
-def save_features(inputs, outputs, key_list = key_list_default, special_set = False, only_labels = False, just_count = False):
+def save_features(inputs, outputs, key_list = key_list_default, special_set = False, only_labels = False, just_count = False, firstswipe = 0):
 
     ret_dict = {}
     ret_dict['label'] = inputs['category']
@@ -546,7 +546,7 @@ def save_features(inputs, outputs, key_list = key_list_default, special_set = Fa
         all_name_list = [n.name for n in tf.get_default_graph().as_graph_def().node]
 
         all_name_list = filter(lambda name_now: 'validation/topn' in name_now, all_name_list)
-        all_name_list = filter(lambda name_now: target in name_now, all_name_list)
+        all_name_list = filter(lambda name_now: (('%s/' % target) in name_now) or (('%s_' % target) in name_now), all_name_list)
         if (not special_set) or (target.startswith('fc_add')):
             #print(target, all_name_list)
             tmp_name_list = filter(lambda name_now: 'pool' in name_now, all_name_list)
@@ -585,7 +585,13 @@ def save_features(inputs, outputs, key_list = key_list_default, special_set = Fa
             gfs_key = '%s_%i' % (target, len_rep)
             ret_dict[gfs_key] = []
 
-        for len_have in xrange(len(output_now_tmp)):
+        vector_len = len(output_now_tmp)
+        vector_indx_iter = xrange(vector_len)
+        if firstswipe>0 and 'fc_add' not in target:
+            assert vector_len%3==0, "Must have three swipes for %s!" % target
+            vector_indx_iter = xrange(vector_len//3*firstswipe)
+
+        for len_have in vector_indx_iter:
             gfs_key = '%s_%i' % (target, len_have)
             ret_dict[gfs_key] = output_now_tmp[len_have]
 
@@ -981,6 +987,7 @@ def get_params_from_arg(args):
                 'special_set': special_set,
                 'only_labels': onlylabels,
                 'just_count': just_count,
+                'firstswipe': args.firstswipe,
             }
         validation_params['topn']['online_agg_func'] = online_agg_genfeautre
         validation_params['topn']['num_steps'] = 10
@@ -1000,6 +1007,12 @@ def get_params_from_arg(args):
         save_params = {'exp_id': exp_id,
                        'save_intermediate_freq': 1,
                        'save_to_gfs': save_to_gfs}
+
+        if not args.loadstep is None:
+            load_query = {'saved_filters': True, 'step': args.loadstep}
+            load_params['query'] = load_query
+            if not args.loadname is None:
+                load_params['query']['exp_id'] = args.loadname
 
         '''
         #load_query = {'saved_filters': True, 'step': 305000}
@@ -1088,7 +1101,10 @@ def get_params_from_arg(args):
 
     else:
         if args.parallel==1:
-            model_params['with_modelprefix'] = args.expId
+            if args.loadname is None:
+                model_params['with_modelprefix'] = args.expId
+            else:
+                model_params['with_modelprefix'] = args.loadname
             pass
 
         params = {
@@ -1176,6 +1192,8 @@ def main():
     parser.add_argument('--partnum', default = 2, type = int, action = 'store', help = 'Number of parts of the list, used when whichpart is larger than 0')
     parser.add_argument('--onlylabels', default = 0, type = int, action = 'store', help = 'Default is 0, not reporting only labels')
     parser.add_argument('--justcount', default = 0, type = int, action = 'store', help = 'Default is 0, not just counting number of units')
+    parser.add_argument('--firstswipe', default = 0, type = int, action = 'store', help = 'Default is 0, not just extracting the first swipe')
+    parser.add_argument('--loadstep', default = None, type = int, action = 'store', help = 'Specify the step to load')
 
     # Test parameters
     parser.add_argument('--num_fake', default = 0, type = int, action = 'store', help = 'Default is 0, no fake')
