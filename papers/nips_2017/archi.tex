@@ -8,19 +8,15 @@
 We trained deep neural networks of a variety of different architectural families (Fig. \ref{fig_archi}).  
 These architectures families can be thought of as representing qualitatively different classes of hypotheses about the computations performed by neural circuits downstream of the whisker follicles. 
 The fundamental questions explored by these hypotheses are how and where temporal and spatial information are integrated.
-Within each family, the differences in parameters relate to more nuanced refinements of the larger hypothesis, encoding the specific details of the model (e.g. how many layers, what specific kernel sizes, \&c). 
+Within each family, the differences between specific detailed architecture parameters represent nuanced refinements of the larger hypothesis of that family. 
  
-\subsubsection*{Simultaneous Spatiotemporal integration}
-
+\textbf{Simultaneous Spatiotemporal Integration.}
 In this family of networks, networks consisted of convolution layers followed by one or more fully connected layers (Fig. \ref{fig_archi}a).  Convolution is performed on both temporal dimension and spatial dimensions of the input (and their corresponding downstream dimensions), so that that responses from nearby whiskers close in time are combined together simultaneously, with neurons in each successive layers having larger receptive field at both dimensions at once.
 We evaluated both 2-dimensional convolution, in which the spatial dimension is indexed linearly across the list of whiskers (first by vertical columns and then by lateral row on the $5\times7$ grid), as well as 3-dimensional convolution in which the two dimensions of the $5\times7$ spatial grid are explicitly represented.
 Data from top, middle, and bottom swipe of the same object combined to produce the final categorization, culminating in a standard softmax cross-entropy loss.  
 
 
-\subsubsection*{Separate Spatial and Temporal Integration}
-
-In this family, networks begin by integrating temporal and spatial information separately.  
-
+\textbf{Separate Spatial and Temporal Integration.} In this family, networks begin by integrating temporal and spatial information separately.  
 One subclass of these networks are ``Temporal-Spatial'', which first integrate temporal information for each individual separately and then combine the information from different whiskers in higher layers (Fig. \ref{fig_archi}b).
 Temporal processing is implemented as 1-dimensional convolution over the temporal dimension. 
 After some number of layers of temporal-only processing, the outputs at each whisker are then reshaped into vectors and combined into a three-tensor in which the first two dimensions correspond to the $5\times7$ whisker grid spatial positions.  Subsequently, spatial convolutions are applied for some number of layers. 
@@ -31,13 +27,9 @@ Both Temporal-Spatial and Spatial-Temporal networks can be viewed as subclasses 
 These network families can thus be thought of as different strategies for allocating parameters between dimensions. 
 
 
-\subsubsection*{Recurrent neural networks}
-
-This family of network does not allocate units or parameters explicitly for the temporal dimension, and instead requires temporal processing to occur via the temporal update evolution of the system.  These networks (Fig. \ref{fig_archi}d) are built around a core feedforward 2-dimensional spatial convolution structure, with the addition of (i) local recurrent connections, (ii) long-range feedforward skips between non-neighboring layers, and (iii) long-range feedback connections.  
+\textbf{Recurrent Neural Networks with Skip and Feedback Connections.} This family of network does not allocate units or parameters explicitly for the temporal dimension, and instead requires temporal processing to occur via the temporal update evolution of the system.  These networks (Fig. \ref{fig_archi}d) are built around a core feedforward 2-dimensional spatial convolution structure, with the addition of (i) local recurrent connections, (ii) long-range feedforward skips between non-neighboring layers, and (iii) long-range feedback connections.  
 The most basic update rule for the dynamic trajectory of such a network through (discrete) time is: 
-
-$$H^i_{t+1} = F_i \left ( \oplus_{j \neq i} R^j_t \right )  + \tau_i H^i_t; R^i_t = A_i[H^i_t]$$
-
+$$H^i_{t+1} = F_i \left ( \bigoplus_{j \neq i} R^j_t \right )  + \tau_i H^i_t \quad ;\quad R^i_t = A_i[H^i_t]$$
 where $R^i_t$ and $H^i_t$ are the output and hidden state of layer $i$ at time $t$ respectively,  $\tau_i$  are decay constants, $\oplus$ represents concatenation across the channel dimension with appropriate resizing to align dimensions, $F_i$ is the standard neural network update function (e.g. 2-D convolution), and $A_i$ is activation function at layer $i$.  
 The learned parameters of this type of network include the values of the parameters of $F_i$, which comprises both the feedforward and feedback weights from connections coming in to layer $i$, as well as the decay constants $\tau_i$. 
 More sophisticated dynamics can be incorporated by replacing the simple additive rule above with a local recurrent structure such as an LSTM~\cite{} or GRU~\cite{}.
