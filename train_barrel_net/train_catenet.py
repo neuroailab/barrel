@@ -883,7 +883,7 @@ def get_params_from_arg(args):
             #'save_valid_freq': 5000,
             #'save_filters_freq': 5000,
             #'cache_filters_freq': 5000,
-            'save_valid_freq':  NUM_BATCHES_PER_EPOCH,
+            'save_valid_freq':  NUM_BATCHES_PER_EPOCH*args.valid_time,
             'save_filters_freq': NUM_BATCHES_PER_EPOCH,
             'cache_filters_freq': NUM_BATCHES_PER_EPOCH,
             'cache_dir': cache_dir,
@@ -1200,6 +1200,7 @@ def main():
     parser.add_argument('--test_mult', default = 0, type = int, action = 'store', help = 'Default is 0, no multi')
     parser.add_argument('--test_queuecap', default = 0, type = int, action = 'store', help = 'Default is 0, using default queue capacity')
     parser.add_argument('--no_valid', default = 0, type = int, action = 'store', help = 'Default is 0, with validation')
+    parser.add_argument('--valid_time', default = 1, type = int, action = 'store', help = 'Default is 1, every epoch')
 
     # Parameters for Multiple networks
     parser.add_argument('--innerargs', default = [], type = str, action = 'append', help = 'Arguments for every network')

@@ -18,4 +18,5 @@ def get_file_list():
 
 if __name__ == '__main__':
     #main()
-    get_file_list()
+    file_list = get_file_list()
+    print(len(file_list))
