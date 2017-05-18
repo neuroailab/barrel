@@ -1,17 +1,18 @@
 %sensory systems generally
 The sensory systems of brains do remarkable work in extracting behaviorally useful information from noisy and complex raw sense data. 
-Vision systems process retinal photoreceptor intensity arrays, auditory systems interpret hair-cell displacement amplitudes, and somatosensory systems integrate data from direct physical interactions.~\cite{purves2001neuroscience} 
-While these systems differ radically in their input modalities, number of overall neurons, specific neuronal microcircuits, and across species, they share two fundamental characteristics. 
-First, they are hierarchical sensory cascades, consisting of sequences of brain areas (cortical and subcortical), that together produce a complex transformation of the input data.  
-Second, they operate in inherently highly-structured spatiotemporal domains, and are often known to be laid out in the brain in maps reflecting this structure~\cite{felleman1991distributed}.
+Vision systems process intensities from retinal photoreceptor arrays, auditory systems interpret the amplitudes and frequencies of hair-cell displacements, and somatosensory systems integrate data from direct physical interactions.~\cite{purves2001neuroscience} 
+While these systems differ radically in their input modalities, total number neurons, and specific neuronal microcircuits, they share two fundamental characteristics. 
+First, they are hierarchical sensory cascades, albeit with extensive feedback, consisting of sequential processing stages that together produce a complex transformation of the input data.  
+Second, they operate in inherently highly-structured spatiotemporal domains, and are generally organized in maps that reflect this structure~\cite{felleman1991distributed}.
 
-Extensive experimental work in rodent barrel/somatosensory cortex has provided insights into how these principles help the rodent use their whiskers to learn about the objects in their environment.  
-Similar to the ventral stream of visual systems with hierarchical structures from V1, to V2, V4, and IT~\cite{felleman1991distributed, Goodale1992}, researchers have found evidence of hierarchical processing for somatosensory input in rodents, human, and primates\cite{Pons1987, Inui2004, Iwamura1998}. 
-For example, the second somatosensory area (S2) is found to rely on inputs from S1 (first somatosensory area) \cite{Pons1987, Petersen2007}. 
+Extensive experimental work in the rodent whisker-trigeminal system has provided insights into how these principles help rodents use their whiskers (also known as \emph{vibrissae}) to tactually explore objects in their environment.  
+Similar to the ventral stream of visual systems with hierarchical structures from V1, to V2, V4, and IT~\cite{felleman1991distributed, Goodale1992, Diamond2008, yu, moore, dosman, bensmaia}, researchers have found evidence of hierarchical processing for somatosensory input in rodents, human, and primates\cite{Pons1987, Inui2004, Iwamura1998}. 
+Information from the whiskers is relayed from primary sensory neurons in the trigeminal ganglion --- each of which responds to multiple trigeminal nuclei, which form the origin for multiple parallel pathways conveying information to thalamus and then primary somatosensory cortex (S1).
+Secondary somatosensory cortex (S2) is found to rely on inputs from S1 (first somatosensory area) \cite{Pons1987, Petersen2007}. 
 Barrel cortex, S1, and S2 accept input from subcortical cascade driven by  whiskers input \cite{Diamond2008}. 
-However, while the rodent somatosensory system has been the subject of extensive experimental efforts\cite{}, there have been comparatively few attempts at computational modeling of this important sensory area. 
+However, although the rodent somatosensory system has been the subject of extensive experimental efforts, there have been comparatively few attempts at computational modeling of this important sensory area. 
 
-Recent work has shown that deep neural networks (DNNs), which have hierarchy and spatial structure built into their architectures, can be effective models of neural processing in vision\cite{} and audition\cite{}.
+Recent work has shown that deep neural networks (DNNs), whose architectures inherently contain, can be effective models of neural processing in vision\cite{} and audition\cite{}.
 Motivated by these successes and by the known structure of rodent barrel cortex, in this work we illustrate initial steps toward using DNNs to model rodent somatosensory systems.
 Our driving hypothesis is that rodent barrel cortex is optimized to use whisker-based sensor data to solve somatosensory tasks in complex, variable real-world environments. 
 The basic idea in our approach is thus to use \emph{goal-driven} modeling (Fig \ref{fig_schematic}), in which the DNN parameters --- both discrete and continuous --- are optimized for performance on a challenging ethologically-relevant task\cite{}.  
