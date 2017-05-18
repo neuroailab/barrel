@@ -15,16 +15,21 @@ done
 
 xlen=1000
 ylen=1000
-#whichlayer=1
+whichlayer=1
 #whichlayer=6
-whichlayer=5
+#whichlayer=5
 
-for xstart in $(seq 0 ${xlen} 9981)
-#for xstart in 0
+#for whichlayer in 1 2 3 4
+for whichlayer in 5 6
 do
-    for ystart in $(seq ${xstart} ${ylen} 9981)
-    #for ystart in 0
+    for xstart in $(seq 0 ${xlen} 9981)
+    #for xstart in 0
     do
-        sbatch script_partRDM.sh ${xstart} ${xlen} ${ystart} ${ylen} ${whichlayer}
+        for ystart in $(seq ${xstart} ${ylen} 9981)
+        #for ystart in 0
+        do
+            #sbatch script_partRDM.sh ${xstart} ${xlen} ${ystart} ${ylen} ${whichlayer}
+            sbatch script_partRDM_om.sh ${xstart} ${xlen} ${ystart} ${ylen} ${whichlayer}
+        done
     done
 done
