@@ -16,6 +16,11 @@ def main():
     parser.add_argument('--labelkey', default = 'label', type = str, action = 'store', help = 'Key used for label')
     parser.add_argument('--labelfile', default = None, type = str, action = 'store', help = 'hdf5 file used for label')
     parser.add_argument('--writeway', default = 0, type = int, action = 'store', help = '0 means cPickle, 1 means hdf5')
+    parser.add_argument('--keyaslist', default = 0, type = int, action = 'store', help = '0 means not list, 1 means as list')
+    parser.add_argument('--keystart', default = 0, type = int, action = 'store', help = 'Start key')
+    parser.add_argument('--keyend', default = 0, type = int, action = 'store', help = 'End key')
+    parser.add_argument('--keyconcat', default = 0, type = int, action = 'store', help = '0 means no concat')
+    
     #parser.add_argument('--hdf5list', default = [], type = str, action = 'append', help = 'Path to the list of hdf5 file storing all the information')
 
     args    = parser.parse_args()
@@ -26,8 +31,14 @@ def main():
 
     #fin_list = []
 
-    num_example = fin[args.key].shape[0]
-    fea_len = fin[args.key].size/num_example
+    key_tmp = args.key
+    if args.keyaslist==1:
+        key_tmp = args.key % args.keystart
+
+    num_example = fin[key_tmp].shape[0]
+    fea_len = fin[key_tmp].size/num_example
+    if args.keyconcat==1:
+        fea_len = fea_len * (args.keyend - args.keystart)
     all_sum = np.zeros([args.numcat, fea_len])
     all_num = np.zeros(args.numcat)
 
@@ -40,11 +51,29 @@ def main():
 
     start_time = time.time()
 
+    if args.keyaslist==0:
+        key_list = [args.key]
+    else:
+        key_list = [args.key % v for v in xrange(args.keystart, args.keyend)]
+
     for indx_which in xrange(num_example):
         which_cat = int(all_label[indx_which])
-        tmp_arr = np.asarray(fin[args.key][indx_which])
-        all_sum[which_cat] = all_sum[which_cat] + tmp_arr.reshape(tmp_arr.size)
-        all_num[which_cat] = all_num[which_cat] + 1
+
+        if args.keyconcat==1:
+            now_concat = []
+
+        for key_now in key_list:
+            tmp_arr = np.asarray(fin[key_now][indx_which])
+
+            if args.keyconcat==0:
+                all_sum[which_cat] = all_sum[which_cat] + tmp_arr.reshape(tmp_arr.size)
+                all_num[which_cat] = all_num[which_cat] + 1
+            else:
+                now_concat.append(tmp_arr.reshape(tmp_arr.size))
+
+        if args.keyconcat==1:
+            all_sum[which_cat] = all_sum[which_cat] + np.concatenate(now_concat)
+            all_num[which_cat] = all_num[which_cat] + 1
 
         if indx_which%2000==0:
             print('Now num %i' % indx_which)
@@ -69,7 +98,6 @@ def main():
 
     dump_time = time.time()
     print('Dump time %f' % (dump_time - dis_time))
-
 
     fin.close()
     if not args.labelfile is None:
