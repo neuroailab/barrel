@@ -10,29 +10,29 @@ Similar to the ventral stream of visual systems with hierarchical structures fro
 Information from the whiskers is relayed from primary sensory neurons in the trigeminal ganglion --- each of which responds to multiple trigeminal nuclei, which form the origin for multiple parallel pathways conveying information to thalamus and then primary somatosensory cortex (S1).
 Secondary somatosensory cortex (S2) is found to rely on inputs from S1 (first somatosensory area) \cite{Pons1987, Petersen2007}. 
 Barrel cortex, S1, and S2 accept input from subcortical cascade driven by  whiskers input \cite{Diamond2008}. 
-However, although the rodent somatosensory system has been the subject of extensive experimental efforts, there have been comparatively few attempts at computational modeling of this important sensory area. 
+However, although the rodent somatosensory system has been the subject of extensive experimental efforts\cite{armstrong1992flow, petersen2003spatiotemporal, kerr2007spatial, von2007neuronal}, there have been comparatively few attempts at computational modeling of this important sensory area. 
 
-Recent work has shown that deep neural networks (DNNs), whose architectures inherently contain, can be effective models of neural processing in vision\cite{} and audition\cite{}.
+Recent work has shown that deep neural networks (DNNs), whose architectures inherently contain, can be effective models of neural processing in vision\cite{Yamins2014,khaligh2014deep} and audition\cite{kell_yamins_sfn}.
 Motivated by these successes and by the known structure of rodent barrel cortex, in this work we illustrate initial steps toward using DNNs to model rodent somatosensory systems.
-Our driving hypothesis is that rodent barrel cortex is optimized to use whisker-based sensor data to solve somatosensory tasks in complex, variable real-world environments. 
-The basic idea in our approach is thus to use \emph{goal-driven} modeling (Fig \ref{fig_schematic}), in which the DNN parameters --- both discrete and continuous --- are optimized for performance on a challenging ethologically-relevant task\cite{}.  
-Insofar as the shape recognition task is a strong constraint on network parameters, the resulting optimized neural network may be an effective model of real barrel cortex neural response patterns. 
- 
+Our driving hypothesis is that the vibrissal-trigeminal system is optimized to use whisker-based sensor data to solve somatosensory tasks in complex, variable real-world environments.
+The underlying idea in our approach is thus to use \emph{goal-driven} modeling (Fig \ref{fig_schematic}), in which the DNN parameters --- both discrete and continuous --- are optimized for performance on a challenging ethologically-relevant task\cite{yamins2016using}.
+Insofar as the shape recognition task is a strong constraint on network parameters, the resulting optimized neural network may be an effective model of real barrel cortex neural response patterns.
+
 \begin{figure}
 \centering
 \includegraphics [width=1\linewidth]{figures/schematic.pdf}
 \vspace{-2mm}
-\caption{\textbf{Goal-Driven Approach to Modeling Barrel Cortex:} \textbf{a.} Rodents have highly sensitive whisker arrays that provide input data about the animal's environment.  Whisker signals are is subsequently processed by a somatosensory cascade of brain areas knowns as barrel cortex. Barrel cortex is a prime target for modeling because it is likely to be richly representational, but its computational underpinnings are largely unknown. Our long-term approach to modeling barrel cortex is \emph{goal-driven}: using an artificial whisker-array input device built using extensive biophysical measurements (\textbf{b.}), we seek to optimize neural networks of various architectures (\textbf{c.}) to solve ethologically-relevant shape recognition tasks (\textbf{d.}), and then measure to what extent the networks predict fine-grained response patterns in real neural recordings. ~\label{fig_schematic}}
+\caption{\textbf{Goal-Driven Approach to Modeling Barrel Cortex:} \textbf{a.} Rodents have highly sensitive whisker (vibrissal) arrays that provide input data about the environment. Mechanical signals from the vibrissae are relayed by primary sensory neurons of the trigeminal ganglion to multiple parallel pathways known collectively as the vibrissal-trigeminal system.  This system is a prime target for modeling because it is likely to be richly representational, but its computational underpinnings are largely unknown. Our long-term approach to modeling the whisker-trigeminal system is \emph{goal-driven}: using an artificial whisker-array input device built using extensive biophysical measurements (\textbf{b.}), we seek to optimize neural networks of various architectures (\textbf{c.}) to solve ethologically-relevant shape recognition tasks (\textbf{d.}), and then measure to the extent to which these networks predict fine-grained response patterns in real neural recordings. ~\label{fig_schematic}}
 \end{figure}
 
-This idea is conceptually straightforward, but implementing it involves surmounting several major challenges.  
-Unlike the cases of vision or audition, where the contents of the retina or cochlea can for many purposes be approximated by a mathematically simple data array (namely, a uniform data array representing light or sound intensities), the equivalent mapping between stimuli (e.g. objects in a scene) and the sensor input to the whisker system is much less direct.   
-Thus, a biophysically-realistic embodied model of the whisker array is a critical first component of any barrel cortex model.
-Once the sensor is available, a second key problem is building a neural network that can accept whisker data input and use it solve relevant tasks. 
-Aside from the question of the neural network design itself, knowing what the ``relevant tasks'' are for training a rodent whisker system, in a way that is sufficiently concrete to be practically actionable, is a significant unknown, given the very limited amount of ethologically-relevant behavioral data on rodent sensory capacities\cite{}.
-Collecting neural data of sufficient coverage and resolution to quantitatively evaluate one or more task-optimized neural network models represents a third major challenge.   
+This idea is conceptually straightforward, but implementing it involves surmounting several major challenges.
+Unlike the cases of vision or audition, in which signals from the retina or cochlea can for many purposes be approximated by a mathematically simple data array (namely, a uniform data array representing light or sound intensities and frequencies), the equivalent mapping between stimuli (e.g. objects in a scene) and the sensor input to the whisker system is much less direct.
+Thus, a biophysically-realistic embodied model of the whisker array is a critical first component of any model of the vibrissal system.
+Once the sensor array is available, a second key problem is building a neural network that can accept whisker data input and use it to solve relevant tasks.
+Aside from the question of the neural network design itself, knowing what the ``relevant tasks'' are for training a rodent whisker system, in a way that is sufficiently concrete to be practically actionable, is a significant unknown, given the very limited amount of ethologically-relevant behavioral data on rodent sensory capacities\cite{von2007neuronal, Knutsen2006, OConnor2010, Arabzadeh2005, Diamond2008}.
+Collecting neural data of sufficient coverage and resolution to quantitatively evaluate one or more task-optimized neural network models represents a third major challenge.
 
-In this work, we show initial steps on the first two of these problems (sensor modeling and neural network design/training). 
+In this work, we show initial steps toward the first two of these problems (sensor modeling and neural network design/training).
 
 
 
