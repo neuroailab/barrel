@@ -7,11 +7,11 @@ To summarize, we have shown that a goal-driven deep neural network approach to m
 It is important to emphasize that the work at this stage is a proof-of-concept rather than a specific model of barrel cortex.  
 There are a number of critical issues to overcome before our true goal --- a full integration of modeling with experimental data --- becomes possible.    
 First, our sensor model itself, while biophysically informed, is far from perfect. 
-It will be useful to incorporate more realistic constraints about, e.g., ranges of whiskers in different planes of motion, as well as various other improvements~\cite{}.
+It will be useful to incorporate more realistic constraints about, e.g., ranges of whiskers in different planes of motion, as well as various other improvements~\cite{Quist2014, Huet2016}.
 An equally important problem at the other end of the spectrum is that the goal that we set for our network, ie. shape discrimination between 117 human-recognizable object classes, is obviously not directly ethologically relevant to rodents. 
 Our main reason for choosing the objects and classes we did was practical: ShapeNet is a readily available and high-variability source of three-dimensional objects. 
 If we had constructed a small set of objects by hand, it is likely that our task would be too simple to really constrain neural networks effectively. 
-By analogy from a visual case, training a deep net on 1000 image categories generates a visual basis that is useful for making distinctions among many categories the network has never seen~\cite{}.  
+By analogy from a visual case, training a deep net on 1000 image categories generates a visual basis that is useful for making distinctions among many categories the network has never seen~\cite{cadieu2014deep}.  
 Thus, we think it likely that the large and variable object set used here gets us at least someway toward a meaningful constraint on network structure, as the specific object geometries may be less important the having a wide spectrum of such geometries. 
 However, a key next priority is building an appropriately large and variable set of objects and class boundaries that more realistically models the discrimination tasks that a rodent faces.
 It is likely that the specifics of the results obtained (e.g. which families are better than others, and the exact structure of learned representations) will change significantly when these improvements are made.  

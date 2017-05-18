@@ -9,12 +9,12 @@ Extensive experimental work in rodent barrel/somatosensory cortex has provided i
 Similar to the ventral stream of visual systems with hierarchical structures from V1, to V2, V4, and IT~\cite{felleman1991distributed, Goodale1992}, researchers have found evidence of hierarchical processing for somatosensory input in rodents, human, and primates\cite{Pons1987, Inui2004, Iwamura1998}. 
 For example, the second somatosensory area (S2) is found to rely on inputs from S1 (first somatosensory area) \cite{Pons1987, Petersen2007}. 
 Barrel cortex, S1, and S2 accept input from subcortical cascade driven by  whiskers input \cite{Diamond2008}. 
-However, while the rodent somatosensory system has been the subject of extensive experimental efforts\cite{}, there have been comparatively few attempts at computational modeling of this important sensory area. 
+However, while the rodent somatosensory system has been the subject of extensive experimental efforts\cite{armstrong1992flow, petersen2003spatiotemporal, kerr2007spatial, von2007neuronal}, there have been comparatively few attempts at computational modeling of this important sensory area. 
 
-Recent work has shown that deep neural networks (DNNs), which have hierarchy and spatial structure built into their architectures, can be effective models of neural processing in vision\cite{} and audition\cite{}.
+Recent work has shown that deep neural networks (DNNs), which have hierarchy and spatial structure built into their architectures, can be effective models of neural processing in vision\cite{cadieu2014deep, Yamins2014} and audition\cite{kell_yamins_sfn}.
 Motivated by these successes and by the known structure of rodent barrel cortex, in this work we illustrate initial steps toward using DNNs to model rodent somatosensory systems.
 Our driving hypothesis is that rodent barrel cortex is optimized to use whisker-based sensor data to solve somatosensory tasks in complex, variable real-world environments. 
-The basic idea in our approach is thus to use \emph{goal-driven} modeling (Fig \ref{fig_schematic}), in which the DNN parameters --- both discrete and continuous --- are optimized for performance on a challenging ethologically-relevant task\cite{}.  
+The basic idea in our approach is thus to use \emph{goal-driven} modeling (Fig \ref{fig_schematic}), in which the DNN parameters --- both discrete and continuous --- are optimized for performance on a challenging ethologically-relevant task\cite{yamins2016using}.  
 Insofar as the shape recognition task is a strong constraint on network parameters, the resulting optimized neural network may be an effective model of real barrel cortex neural response patterns. 
  
 \begin{figure}
@@ -28,7 +28,7 @@ This idea is conceptually straightforward, but implementing it involves surmount
 Unlike the cases of vision or audition, where the contents of the retina or cochlea can for many purposes be approximated by a mathematically simple data array (namely, a uniform data array representing light or sound intensities), the equivalent mapping between stimuli (e.g. objects in a scene) and the sensor input to the whisker system is much less direct.   
 Thus, a biophysically-realistic embodied model of the whisker array is a critical first component of any barrel cortex model.
 Once the sensor is available, a second key problem is building a neural network that can accept whisker data input and use it solve relevant tasks. 
-Aside from the question of the neural network design itself, knowing what the ``relevant tasks'' are for training a rodent whisker system, in a way that is sufficiently concrete to be practically actionable, is a significant unknown, given the very limited amount of ethologically-relevant behavioral data on rodent sensory capacities\cite{}.
+Aside from the question of the neural network design itself, knowing what the ``relevant tasks'' are for training a rodent whisker system, in a way that is sufficiently concrete to be practically actionable, is a significant unknown, given the very limited amount of ethologically-relevant behavioral data on rodent sensory capacities\cite{von2007neuronal, Knutsen2006, OConnor2010, Arabzadeh2005, Diamond2008}.
 Collecting neural data of sufficient coverage and resolution to quantitatively evaluate one or more task-optimized neural network models represents a third major challenge.   
 
 In this work, we show initial steps on the first two of these problems (sensor modeling and neural network design/training). 

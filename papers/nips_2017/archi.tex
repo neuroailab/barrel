@@ -32,6 +32,6 @@ The most basic update rule for the dynamic trajectory of such a network through 
 $$H^i_{t+1} = F_i \left ( \bigoplus_{j \neq i} R^j_t \right )  + \tau_i H^i_t \quad ;\quad R^i_t = A_i[H^i_t]$$
 where $R^i_t$ and $H^i_t$ are the output and hidden state of layer $i$ at time $t$ respectively,  $\tau_i$  are decay constants, $\oplus$ represents concatenation across the channel dimension with appropriate resizing to align dimensions, $F_i$ is the standard neural network update function (e.g. 2-D convolution), and $A_i$ is activation function at layer $i$.  
 The learned parameters of this type of network include the values of the parameters of $F_i$, which comprises both the feedforward and feedback weights from connections coming in to layer $i$, as well as the decay constants $\tau_i$. 
-More sophisticated dynamics can be incorporated by replacing the simple additive rule above with a local recurrent structure such as an LSTM~\cite{} or GRU~\cite{}.
+More sophisticated dynamics can be incorporated by replacing the simple additive rule above with a local recurrent structure such as an LSTM~\cite{Hochreiter1997} or GRU~\cite{cho2014properties}.
 
 

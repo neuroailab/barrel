@@ -35,10 +35,10 @@ In other words, the strong performance constraint allows us to identify several 
 Given this result, a key biologically relevant follow-up question is then: how should we distinguish between the elements in the shortlist?   
 Obviously the models are architecturally distinct, but are there signatures of these differences that could be extracted from data that could be obtained from an experiment that is practically realizable with today's neurophysiological tools? 
 
-To help address this question, we used Relational Dissimilarity Matrice (RDM) analysis~\cite{}. 
+To help address this question, we used Representational Dissimilarity Matrice (RDM) analysis~\cite{Kriegeskorte2008}. 
 For a set of stimuli $S$, RDMs are $|S| \times |S|$-shaped correlation distance matrices taken over the feature dimensions of a representation, e.g. matrices with $ij$-th entry $RDM[i, j] = 1 - corr(F[i], F[j])$ for stimuli $i, j$ and corresponding feature output $F[i], F[j]$.  
 The RDM characterizes the geometry of how a given representation lays out stimuli in a way that is independent of the individual feature dimensions, and can thus be compared effectively between different feature representations of the same data.
-RDMs have been useful in establishing connections between deep neural networks and neural data from the ventral visual stream~\cite{}, and in general RDMs are readily computable from neural response pattern data samples. 
+RDMs have been useful in establishing connections between deep neural networks and neural data from the ventral visual stream~\cite{cadieu2014deep, Yamins2014, khaligh2014deep}, and in general RDMs are readily computable from neural response pattern data samples. 
 We obtained RDMs for several of our high-performing models, computing RDMs separately for each model layer (Fig. \ref{fig_rdms}a), averaging feature vectors over different swipes of the same object before computing the correlations.
 This lead to $9981\times9981$-sized matrices (since there were 9,981 distinct object in our dataset).
 We then computed distances between each layer of each model in this $9981\times9980/2$-dimensional RDM space. 
