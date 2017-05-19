@@ -1,12 +1,14 @@
 xlen=10
 ylen=10
-filelen=125
+#filelen=125
+filelen=119
 
 for xstart in $(seq 0 ${xlen} ${filelen})
 do
     for ystart in $(seq ${xstart} ${ylen} ${filelen})
     do
-        sbatch script_partdismat.sh ${xstart} ${xlen} ${ystart} ${ylen}
+        #sbatch script_partdismat.sh ${xstart} ${xlen} ${ystart} ${ylen}
+        sbatch --exclude=node12-neuroaicluster,render1-neuroaicluster,node1-neuroaicluster,node9-neuroaicluster script_partdismat.sh ${xstart} ${xlen} ${ystart} ${ylen}
     done
 done
 

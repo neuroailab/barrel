@@ -44,6 +44,11 @@ def main():
         assert args.filelen > len(file_list), "Must be smaller than whole length"
         file_list = file_list[:args.filelen]
 
+    tmp_path = os.path.join(args.savefolder, '%s_%i_%i_%i_%i_len%i_%s' % (args.saveprefix, args.xstart, args.xlen, args.ystart, args.ylen, args.filelen, args.savesuffix))
+
+    if os.path.exists(tmp_path):
+        return
+
     res_dict = {}
     x_indx_list = range(args.xstart, min(args.xstart + args.xlen, args.filelen))
     y_indx_list = range(args.ystart, min(args.ystart + args.ylen, args.filelen))
@@ -66,7 +71,6 @@ def main():
     res_dict['y_name_list'] = y_name_list
     res_dict['part_dismat'] = 1 - part_dismat
 
-    tmp_path = os.path.join(args.savefolder, '%s_%i_%i_%i_%i_len%i_%s' % (args.saveprefix, args.xstart, args.xlen, args.ystart, args.ylen, args.filelen, args.savesuffix))
     cPickle.dump(res_dict, open(tmp_path, 'w'))
     pass
 
