@@ -1,7 +1,7 @@
 \begin{figure}
 \includegraphics [width=1\linewidth]{figures/results.pdf}
 \vspace{-3mm}
-\caption{\footnotesize{\textbf{Performance results.} \textbf{a.} Each bar in this figure represents one model. The positive $y$-axis is performance measured in percent correct (top1=dark bar, chance=0.85\%, top5=light bar, chance=4.2\%).  The negative $y$-axis indicates the number of units in networks, in millions of units.  Model architecture family is indicated by color.  The definition of individual model labels can be found in the Results section. \textbf{b.} Confusion Matrix for the highest-performing model (in the Temporal-Spatial family).}~\label{fig_main}}
+\caption{\footnotesize{\textbf{Performance results.} \textbf{a.} Each bar in this figure represents one model. The positive $y$-axis is performance measured in percent correct (top1=dark bar, chance=0.85\%, top5=light bar, chance=4.2\%).  The negative $y$-axis indicates the number of units in networks, in millions of units.  Small italic numbers indicate number of model parameters, in millions. Model architecture family is indicated by color.  The definition of individual model labels can be found in the Results section. \textbf{b.} Confusion Matrix for the highest-performing model (in the Temporal-Spatial family).}~\label{fig_main}}
 \vspace{-5mm}
 \end{figure}
 
@@ -18,9 +18,9 @@ Our results (Fig. \ref{fig_main}) can be summarized with following conclusions:
    Overall, the best performance was obtained for the Temporal-Spatial model, with 15.2\% top-1 and 44.8\% top-5 accuracy.
    Visualizing a confusion matrix for this network (Fig. \ref{fig_main})b  and other high-performing networks indicate that the errors they make are generally reasonable.
    \item Training of filters was extremely important for performance; no architecture with random filters performed above chance levels.
-   \item Depth of the architecture was a very important factor in performance. Architectures with fewer than four layers achieved substanially lower performance than somewhat deeper ones.
-   \item Number of parameters in the model was a somewhat important factor in performance within an architecture family, but only to a point, and not between architectural families.
-   The Temporal-Spatial architecture, was able to outperform other classes while using significantly fewer parameters.
+   \item Depth of the architecture was a very important factor in performance. Architectures with fewer than four layers achieved substantially lower performance than somewhat deeper ones.
+   \item Number of parameters in the model was a somewhat important factor in performance within an architectural family, but only to a point, and not between architectural families.
+   The Temporal-Spatial architecture was able to outperform other classes while using significantly fewer parameters.
    \item Recurrent networks with long-range feedback were able to perform nearly as well as the Temporal-Spatial model with equivalent numbers of parameters, while using far fewer units.
    These long-range feedbacks appeared critical to performance, with purely local recurrent architectures (including LSTM and GRU) achieving significantly worse results.
 \end{itemize}
@@ -40,12 +40,12 @@ This lead to $9981\times9981$-sized matrices (since there were 9,981 distinct ob
 We then computed distances between each layer of each model in this $9981\times9980/2$-dimensional RDM space.
 To determine if differences in this space between models and/or layers were significant, we computed RDMs for multiple instances of each model trained with different initial conditions, and compared the between-model to within-model distances.
 We found that while the top layers of models were similar (likely owing to the fact that they were all trained on the same task), intermediate layers diverged substantially between models, by amount that was larger than both the initial-condition-induced variability within a model layer and between different layers of the same model (Fig. \ref{fig_rdms}b).
-This result is not surprising, given the fact that the models are quite structurally different, but its utility is that it strongly suggests that a conceptually simple and potentially feasible neuroscience experiment could distinguish between them: namely, measuring batteries of neural responses in several areas of the whisker trigeminal system, computing the RDMs from these data, and then comparing to those of the models. 
+This result is unsurprising since the models are quite structurally different, but its utility lies in that it suggests a conceptually simple and potentially feasible neuroscience experiment to distinguish between them: namely, measuring batteries of neural responses in several areas of the whisker trigeminal system, computing the RDMs from these data, and then comparing to those of the models. 
 
 \begin{figure}
 \includegraphics [width=1\linewidth]{figures/rdms.pdf}
-\vspace{-3mm}
-\caption{\footnotesize{\textbf{Using RDMs to Discriminate Between High-Performing Models.} \textbf{a.} Representational Dissimilarity Matrices (RDMs) for selected layers of a high-performing network from Fig. \ref{fig_main}a, showing early, intermediate and late model layers.  Model feature vectors are averaged over classes in the dataset prior to RDM computation, and RDMs are shown using the same ordering as in Fig. \ref{fig_main}b. \textbf{b.} Two-dimensional embedding of RDMs for several models.}~\label{fig_rdms}}
+\vspace{-5mm}
+\caption{\footnotesize{\textbf{Using RDMs to Discriminate Between High-Performing Models.} \textbf{a.} Representational Dissimilarity Matrices (RDMs) for selected layers of a high-performing network from Fig. \ref{fig_main}a, showing early, intermediate and late model layers.  Model feature vectors are averaged over classes in the dataset prior to RDM computation, and RDMs are shown using the same ordering as in Fig. \ref{fig_main}b. \textbf{b.} Two-dimensional MDS embedding of RDMs for the feedback RNN (green squares) and Temporal-Spatial (red circles) model.  Points correspond to layers, lines are drawn between adjacent layers, with darker color indicating earlier layers.  Multiple lines are models trained from different initial conditions, allowing within-model noise estimate.}~\label{fig_rdms}}
 \vspace{-5mm}
 \end{figure}
 

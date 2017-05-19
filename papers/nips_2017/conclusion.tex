@@ -1,9 +1,9 @@
-We have introduced a model of the rodent whisker sensor array that is informed by biophysical data, and used it to generate a large-scale high-variability synthetic sweep dataset. 
+We have introduced a model of the rodent whisker sensor array that is informed by biophysical data, and used it to generate a large high-variability synthetic sweep dataset. 
 While the raw sensor data is sufficiently powerful to separate objects at low amounts of variability, at higher variation levels it quickly becomes necessary to have deeper non-linear networks to untangle and extract object identity. 
 We then investigated the power of architectures from several distinct network structure families to perform this untangling, finding that while many particular architectures, especially shallow ones, fail to solve the shape recognition task, reasonable performance levels can be obtained for specific architectures within each structural family.
 We then showed that with a simple population-level observable that is in principle experimentally obtainable, it is possible to distinguish these higher-performing networks from each other. 
 To summarize, we have shown that a goal-driven deep neural network approach to modeling the whisker-trigeminal system might be feasible. 
-Code for all elements of our results, including the 3D whisker model and neural networks, are publicly available at [WEBSITE WITHHELD].
+Code for all results, including the whisker model and neural networks, is publicly available at [WITHHELD].
 
 It is important to emphasize that the work at this stage is a proof-of-concept rather than a specific model of the real brain system.  
 There are a number of critical issues to overcome before our true goal --- a full integration of modeling with experimental data --- becomes possible.    
@@ -14,7 +14,7 @@ Our main reason for choosing the objects and classes we did was practical: Shape
 If we had constructed a small set of objects by hand, it is likely that our task would be too simple to really constrain neural networks effectively. 
 By analogy from a visual case, training a deep net on 1000 image categories generates a visual basis that is useful for making distinctions among many categories the network has never seen~\cite{Yamins2014,cadieu2014deep,razavian2014cnn}.
 Thus, we think it likely that the large and variable object set used here gets us at least someway toward a meaningful constraint on network structure, as the specific object geometries may be less important the having a wide spectrum of such geometries. 
-However, a key next priority is building an appropriately large and variable set of objects and class boundaries that more realistically models the discrimination tasks that a rodent faces.
+However, a key next priority is building an appropriately large and variable set of objects, textures or other class boundaries that more realistically model the tasks that a rodent faces.
 It is likely that the specifics of the results obtained (e.g. which families are better than others, and the exact structure of learned representations) will change significantly when these improvements are made.  
 However, we believe that the outline of the approach as illustrated in this work will nonetheless remain useful. 
 
