@@ -252,10 +252,11 @@ def generate_iter_list(args):
             print(len(pos_list), len(speed_list), len(orn_list), len(scale_list))
         else:
             pos_list = [get_pos_list(3)]
+            #pos_list = [[-10.1199,15,-22.9956,0]]
             speed_list = [get_speed_list(3)]
             #speed_list = [[0,0.1,0]]
             orn_list = [get_orn_list(3)]
-            #orn_list = [[0,0,0,1]]
+            #orn_list = [[0,0,0,-1]]
             scale_list = [get_scale_list(3)]
 
         for indx_pos_now in xrange(args.pindxsta, min(args.pindxsta + args.pindxlen, len(pos_list))):

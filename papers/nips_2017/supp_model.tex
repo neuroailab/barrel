@@ -1,7 +1,7 @@
 \subsection{Training procedure}
 
-We searched the learning parameter spaces including the choices of learning algorithm, learning rates, and decay rates for that. 
-Among them, training using Adagrad~\cite{duchi2011adaptive} with a initial learning rates at 0.003 gave the best result. 
+We searched the learning parameter space including the choices of learning algorithm, learning rates, and decay rates. 
+Among them, training using Adagrad~\cite{duchi2011adaptive} with a initial learning rates at 0.003 and batch size of 128 gave the best result, which was then applied to the training of all networks. 
 The learning rate would not be changed to 0.0015 until the performance on validation saturated.
 Ten more epoches would be run after changing the learning rate to 0.0015.
 The reported performances were the best performances on validation during the whole training procedure.
@@ -19,46 +19,50 @@ A ReLu layer would always be added after convolution or fully connected layer.
 And for the fully connected layers, we would use a dropout of rate 0.5 during training.~\cite{Krizhevsky} 
 
 \textbf{Simultaneous Spatiotemporal Integration.}
-This family of networks will usually have several convolution layers followed by fully connected layers. The convolution is applied to both the temporal and spatial dimension.
+This family of networks (family S) will usually have several convolution layers followed by fully connected layers. The convolution is applied to both the temporal and spatial dimension.
 
 In Table~\ref{tab:struct_bm}, we showed the structure of all networks in this family, corresponding to the name used in the main paper.
 The output of previous layer will serve as the input to the next layer.
-And the layers before fc\_combine are shared across three swipes. For example, in model "BM", conv1 to fc7 are shared across swipes while the outputs of fc7 will be concatenated together as the input to fc\_combine8.
+And the layers before fc\_combine are shared across three sweeps. For example, in model "S", conv1 to fc7 are shared across sweeps while the outputs of fc7 will be concatenated together as the input to fc\_combine8.
+
+Separately, we trained another network based on S\_more combining 12 sweeps rather than 3 sweeps. The model shared the same structure as S\_more. 
+But fc\_combine8 there would combine information from 12 sweeps, which means that the input to fc\_combine8 is a vector of 1024$\times$12. 
+The performances of this network surpassed all other networks, with top1 being 0.20 and top5 being 0.53. This means that our network could utilize information from 12 sweeps to help finish the task.
 
 \begin{table}[h]
-\caption{Network structure for BM family} %title of the table
+\caption{Network structure for S family} %title of the table
 \centering % centering table
 \begin{tabularx}{\textwidth}{r|X}
 \hline\hline
 Name & Structure \\ [0.5ex]
 \hline
-BM & conv1($9\times3$, $96$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $128$), pool2($3\times3$, $2\times2$), conv3($3\times3$, $192$), conv4($3\times3$, $192$), conv5($3\times3$, $128$), pool5($3\times3$, $2\times2$), fc6(2048), fc7(1024), fc\_combine8(117)\\
+S & conv1($9\times3$, $96$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $128$), pool2($3\times3$, $2\times2$), conv3($3\times3$, $192$), conv4($3\times3$, $192$), conv5($3\times3$, $128$), pool5($3\times3$, $2\times2$), fc6(2048), fc7(1024), fc\_combine8(117)\\
 \hline
-BM\_more & conv1($9\times3$, $96$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $256$), pool2($3\times3$, $2\times2$), conv3($3\times3$, $384$), conv4($3\times3$, $384$), conv5($3\times3$, $256$), pool5($3\times3$, $2\times2$), fc6(4096), fc7(1024), fc\_combine8(117)\\
+S\_more & conv1($9\times3$, $96$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $256$), pool2($3\times3$, $2\times2$), conv3($3\times3$, $384$), conv4($3\times3$, $384$), conv5($3\times3$, $256$), pool5($3\times3$, $2\times2$), fc6(4096), fc7(1024), fc\_combine8(117)\\
 \hline
-BM\_few & conv1($9\times3$, $32$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $64$), pool2($3\times3$, $2\times2$), conv3($3\times3$, $96$), conv4($3\times3$, $96$), conv5($3\times3$, $64$), pool5($3\times3$, $2\times2$), fc6(256), fc7(128), fc\_combine8(117) \\
+S\_few & conv1($9\times3$, $32$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $64$), pool2($3\times3$, $2\times2$), conv3($3\times3$, $96$), conv4($3\times3$, $96$), conv5($3\times3$, $64$), pool5($3\times3$, $2\times2$), fc6(256), fc7(128), fc\_combine8(117) \\
 \hline
-BM\_4c2f & conv1($9\times3$, $96$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $128$), pool2($3\times3$, $2\times2$), conv3($3\times3$, $192$), conv4($3\times3$, $128$), pool4($3\times3$, $2\times2$), fc5(2048), fc6(1024), fc\_combine7(117)\\
+S\_4c2f & conv1($9\times3$, $96$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $128$), pool2($3\times3$, $2\times2$), conv3($3\times3$, $192$), conv4($3\times3$, $128$), pool4($3\times3$, $2\times2$), fc5(2048), fc6(1024), fc\_combine7(117)\\
 \hline
-BM\_3c2f & conv1($9\times3$, $96$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $388$), pool2($3\times3$, $2\times2$), conv3($3\times3$, $128$), pool3($3\times3$, $2\times2$), fc4(2048), fc5(1024), fc\_combine6(117)\\
+S\_3c2f & conv1($9\times3$, $96$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $388$), pool2($3\times3$, $2\times2$), conv3($3\times3$, $128$), pool3($3\times3$, $2\times2$), fc4(2048), fc5(1024), fc\_combine6(117)\\
 \hline
-BM\_2c2f & conv1($9\times3$, $96$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $144$), pool2($6\times6$, $4\times4$), fc3(2048), fc4(1024), fc\_combine5(117)\\
+S\_2c2f & conv1($9\times3$, $96$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $144$), pool2($6\times6$, $4\times4$), fc3(2048), fc4(1024), fc\_combine5(117)\\
 \hline
-BM\_1c2f & conv1($9\times3$, $96$), pool1($6\times3$, $6\times2$), fc2(896), fc3(512), fc\_combine4(117)\\
+S\_1c2f & conv1($9\times3$, $96$), pool1($6\times3$, $6\times2$), fc2(896), fc3(512), fc\_combine4(117)\\
 \hline
-BM\_3c1f & conv1($9\times3$, $96$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $128$), pool2($3\times3$, $2\times2$), conv3($3\times3$, $192$), pool3($3\times3$, $2\times2$), fc4(1532), fc\_combine5(117)\\
+S\_3c1f & conv1($9\times3$, $96$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $128$), pool2($3\times3$, $2\times2$), conv3($3\times3$, $192$), pool3($3\times3$, $2\times2$), fc4(1532), fc\_combine5(117)\\
 \hline
-BM\_2c1f & conv1($9\times3$, $96$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $128$), pool2($3\times3$, $2\times2$), fc3(708), fc\_combine4(117)\\
+S\_2c1f & conv1($9\times3$, $96$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $128$), pool2($3\times3$, $2\times2$), fc3(708), fc\_combine4(117)\\
 \hline
-BM\_3c0f & conv1($9\times3$, $72$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $144$), pool2($3\times3$, $2\times2$), fc\_combine3(117)\\
+S\_3c0f & conv1($9\times3$, $72$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $144$), pool2($3\times3$, $2\times2$), fc\_combine3(117)\\
 \hline
-BM\_2c0f & conv1($9\times3$, $72$), pool1($3\times1$, $3\times1$), fc\_combine2(117)\\
+S\_2c0f & conv1($9\times3$, $72$), pool1($3\times1$, $3\times1$), fc\_combine2(117)\\
 \hline
-BM\_1c0f & fc\_combine1(117)\\
+S\_1c0f & fc\_combine1(117)\\
 \hline
-BM\_3D & conv1($9\times2\times2$, $96$), pool1($4\times1\times1$, $4\times1\times1$), conv2($3\times2\times2$, $256$), pool2($3\times1\times1$, $2\times1\times1$), conv3($3\times2\times2$, $384$), conv4($3\times2\times2$, $384$), conv5($3\times2\times2$, $256$), pool5($3\times3\times3$, $2\times2\times2$), fc6(4096), fc7(1024), fc\_combine8(117)\\
+S\_3D & conv1($9\times2\times2$, $96$), pool1($4\times1\times1$, $4\times1\times1$), conv2($3\times2\times2$, $256$), pool2($3\times1\times1$, $2\times1\times1$), conv3($3\times2\times2$, $384$), conv4($3\times2\times2$, $384$), conv5($3\times2\times2$, $256$), pool5($3\times3\times3$, $2\times2\times2$), fc6(4096), fc7(1024), fc\_combine8(117)\\
 \hline
-BM\_deep & conv1($5\times3$, $64$), conv2($5\times3$, $64$), pool2($3\times1$, $3\times1$), conv3($2\times2$, $128$), conv4($2\times2$, $128$), pool4($3\times3$, $2\times2$), conv5($3\times3$, $192$), conv6($3\times3$, $192$), conv7($3\times3$, $192$), conv8($3\times3$, $192$), conv9($3\times3$, $128$), pool9($3\times3$, $2\times2$), fc10(2048), fc11(1024), fc12(512), fc\_combine13(512), fc\_combine14(117)\\
+S\_deep & conv1($5\times3$, $64$), conv2($5\times3$, $64$), pool2($3\times1$, $3\times1$), conv3($2\times2$, $128$), conv4($2\times2$, $128$), pool4($3\times3$, $2\times2$), conv5($3\times3$, $192$), conv6($3\times3$, $192$), conv7($3\times3$, $192$), conv8($3\times3$, $192$), conv9($3\times3$, $128$), pool9($3\times3$, $2\times2$), fc10(2048), fc11(1024), fc12(512), fc\_combine13(512), fc\_combine14(117)\\
 \hline
 \end{tabularx}
 \label{tab:struct_bm}
@@ -114,8 +118,8 @@ RNN\_fdb & conv1($2\times2$, 96), conv2($2\times2$, 128), conv3($2\times2$, 256)
 \label{sec:visual}
 
 \textbf{Calculating category and object level RDMs.} After the network training finished, we took the network with best performances in each family and generated the responses of each layer on validation set. 
-For category RDM, we calculated the category mean of responses for each layer and then calculate the RDM based on that using pearson correlation between each category.
-For object level RDM, the average was computed for each object for each layer and then the RDM was calculated from that using pearson correlation between each object.
+For category RDM, we calculated the category mean of responses for each layer and then calculate the RDM based on that using Pearson correlation coefficient between each category.
+For object level RDM, the average was computed for each object for each layer and then the RDM was calculated from that using Pearson correlation coefficient between each object.
 
 \textbf{Object grouping.} The categories are regrouped using category level RDM to show that the categorization is reasonable. 
 The group is shown in the confusion matrix visualization in main paper, with 117 categories into 10 groups.
@@ -152,3 +156,10 @@ Group & Categories\\ [0.5ex]
 \end{tabularx}
 \label{tab:cat_regruop}
 \end{table}
+
+\textbf{MDS embedding of RDMs.} In order to estimate variance caused by initialization of the DNNs, we trained 5 networks for both "TS" model and "RNN\_fdb" model from different initializations. 
+We then generated the responses of these 10 models on validation set and computed object level RDMs based on the responses. 
+For "RNN\_fdb", we take the responses of last time point of each layer to compute the RDMs. 
+We also tried RDMs computed from averages and concatenations of responses from last half of time points, the results are similar.
+
+After calculating RDMs, we computed Pearson correlation coefficient between RDMs to get a distance matrix between them. Then we used MDS algorithm for to get a 2D embedding~\cite{borg2005modern}. 
