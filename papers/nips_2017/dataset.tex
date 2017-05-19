@@ -8,7 +8,7 @@ To simulate observed rat whisking behavior in which animals often sample an obje
 
 Latent variables settings are sampled randomly and independently on each group of sweeps, with object rotation sampled uniformly within the space of all 3D rotations, object scale sampled uniformly between 25-135mm, and sweep speed sampled randomly between 77-154mm/s.  
 Once these variables are chosen, the object is placed at a position that is chosen uniformly in a  $20 \times 8 \times 20$mm$^{3}$ volume centered in front of the whisker array at the chosen vertical height, and is moved along the ray toward the center of the whisker array at the chosen speed. 
-The position of the object may be adjusted to avoid collisions with the fixed whisker base ellipsoid during the sweep. 
+The position of the object may be adjusted to avoid collisions with the fixed whisker base ellipsoid during the sweep. See implementary information for details.
 
 The data collected during a sweep includes, for each whisker, the forces and torques from all springs connecting to the three cuboids most proximate to the base of the whisker.  This choice reflects the idea that mechanoreceptors are distributed along the entire length of the follicle at the whisker base~\cite{}.  
 The collected data comprises a matrix of shape $110 \times 31 \times 3 \times 2 \times 3$, with dimensions respectively corresponding to: the 110 time samples;  the 31 spatially distinct whiskers; the 3 recorded cuboids; the forces and torques from each cuboid; and the three directional components of force/torque.   
@@ -25,7 +25,7 @@ Out of these 26 sweep groups, 24 were added to a training subset, while the rema
 We also produced multiple easier versions of this dataset in which variation along one or several latent variables was suppressed. 
 We then trained binary support vector machine (SVM) classifiers to report object identity in these datasets, using only the raw sensor data as input, and testing classification accuracy on held-out sweeps (Fig. \ref{fig_whiskers}d).  We found that with scale and object rotation variability suppressed (but with speed and position variability retained), the sensor was able to nearly perfectly identify the objects.  
 However, with all sources of variability present, the SVM was just above chance in its performance,  
-while combinations of variability are more challenging for the sensor than others. 
+while combinations of variability are more challenging for the sensor than others (details can be found in supplementary information). 
 Thus, we concluded that our virtual whisker array was basically functional, but that unprocessed sensor data cannot be used to directly read out object shape in anything but the most highly controlled circumstances.
 As in the case of vision, it is exactly this circumstance that calls for a deep cascade of sensory processing stages. 
 

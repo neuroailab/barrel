@@ -24,6 +24,8 @@ This family of networks (family S) will usually have several convolution layers 
 In Table~\ref{tab:struct_bm}, we showed the structure of all networks in this family, corresponding to the name used in the main paper.
 The output of previous layer will serve as the input to the next layer.
 And the layers before fc\_combine are shared across three sweeps. For example, in model "S", conv1 to fc7 are shared across sweeps while the outputs of fc7 will be concatenated together as the input to fc\_combine8.
+Besides, S\_rand is the same model with S\_more except that the weights of conv1 to fc7 there are not trained.
+Only fc\_combine8 is trained to prove that training of weights is necessary.
 
 Separately, we trained another network based on S\_more combining 12 sweeps rather than 3 sweeps. The model shared the same structure as S\_more. 
 But fc\_combine8 there would combine information from 12 sweeps, which means that the input to fc\_combine8 is a vector of 1024$\times$12. 
