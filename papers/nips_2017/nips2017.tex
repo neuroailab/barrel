@@ -27,7 +27,7 @@
 \setlist[itemize]{leftmargin=-5ex}
 \setlist[itemize]{itemsep=-1ex}
 
-\title{Toward Goal-Driven Neural Network Models for Rodent Whisker-Trigeminal System}
+\title{Toward Goal-Driven Neural Network Models for the Rodent Whisker-Trigeminal System}
 
 \author{
 Chengxu Zhuang\\
@@ -64,16 +64,16 @@ Stanford, CA 94305 \\
 \maketitle
 
 \begin{abstract}
-In large part, rodents ``see'' the world through their whiskers, a powerful sense enabled by a series of brain areas called the whisker-trigeminal system. 
-Raw data arrives in the form of mechanical input to the exquisitely sensitive, actively-controllable whisker array, and is processed up through a hierarchy of neural circuits, eventually arriving in cortical regions that communicate with decision-making and memory areas.
-Although a long history of experimental studies has characterized many aspects of these processing stages, the computational operations in whisker-trigeminal system, especially further downstream of the sensor, remain largely unknown.
-In this work, we take a \emph{goal-driven} deep neural network (DNN) approach to modeling these computations.
+In large part, rodents ``see'' the world through their whiskers, a powerful tactile sense enabled by a series of brain areas that form the whisker-trigeminal system. 
+Raw sensory data arrives in the form of mechanical input to the exquisitely sensitive, actively-controllable whisker array, and is processed through a sequence of neural circuits, eventually arriving in cortical regions that communicate with decision-making and memory areas.
+Although a long history of experimental studies has characterized many aspects of these processing stages, the computational operations of the whisker-trigeminal system remain largely unknown.
+In the present work, we take a \emph{goal-driven} deep neural network (DNN) approach to modeling these computations.
 First, we construct a biophysically-realistic model of the rat whisker array.  
-We then generate a large-scale data of whisker sweeps across a wide variety of 3D objects in highly-varying poses, angles, and speeds.
+We then generate a large dataset of whisker sweeps across a wide variety of 3D objects in highly-varying poses, angles, and speeds.
 Next, we train DNNs from several distinct architectural families to solve a shape recognition task in this dataset. 
-Each architectural family represents a structurally-distinct hypothesis for processing in the whisker-trigeminal system,  corresponding different ways in which spatial and temporal information can be integrated.
+Each architectural family represents a structurally-distinct hypothesis for processing in the whisker-trigeminal system,  corresponding to different ways in which spatial and temporal information can be integrated.
 We find that most networks perform poorly on the challenging shape recognition task, but that specific architectures from several families can achieve reasonable performance levels.
-Finally, we show that using Representational Dissimilarity Matrices (RDMs), a tool for comparing population codes between neural systems, we can separate these higher-performing networks with data of a type that could plausibly be collected in a neurophysiology experiment.
+Finally, we show that Representational Dissimilarity Matrices (RDMs), a tool for comparing population codes between neural systems, can separate these higher-performing networks with data of a type that could plausibly be collected in a neurophysiological or imaging experiment.
 Our results are a proof-of-concept that goal-driven DNN networks of the whisker-trigeminal system are potentially within reach.
 \end{abstract}
 
@@ -81,29 +81,28 @@ Our results are a proof-of-concept that goal-driven DNN networks of the whisker-
 %An additional ninth page containing only cited references is allowed.
 
 \section{Introduction} %~750 words
+\vspace{-4mm}
 \input{intro.tex}
-
+\vspace{-3mm}
 \section{Modeling the Whisker Array Sensor} %~500 words
+\vspace{-4mm}
 \input{whisk_model.tex}
-
+\vspace{-3mm}
 \section{A Large-Scale Whisker Sweep Dataset} %~750 words
+\vspace{-4mm}
 \input{dataset.tex}
-
+\vspace{-3mm}
 \section{Computational Architectures} %~1250 words
+\vspace{-4mm}
 \input{archi.tex}
-
+\vspace{-3mm}
 \section{Results} %~500 words
+\vspace{-4mm}
 \input{results.tex}
-
+\vspace{-3mm}
 \section{Conclusion}  %~250 words
+\vspace{-4mm}
 \input{conclusion.tex}
-
-%\begin{figure}[h]
-%\centering
-%\includegraphics [width=1\linewidth]{figures/model_class.pdf}
-%\vspace{-2mm}
-%\caption{\textbf{(a)} Figure caption~\label{figname}}
-%\end{figure}
 
 
 {\small

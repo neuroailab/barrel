@@ -1,8 +1,8 @@
 \begin{figure}
 \centering
 \includegraphics [width=1\linewidth]{figures/whiskers.pdf}
-\vspace{-2mm}
-\caption{\textbf{Dynamic Three-Dimensional Whisker Model:} \textbf{a.} Each whisker element is composed of a set of cuboid elements. 
+\vspace{-3mm}
+\caption{\footnotesize{\textbf{Dynamic Three-Dimensional Whisker Model:} \textbf{a.} Each whisker element is composed of a set of cuboid elements. 
 The follicle cuboid has a fixed location, and is attached to movable cuboids making up the rest of the whisker. 
 Motion is constrained by linear and torsional springs between each pair of cuboids. 
 The number of cuboid elements and spring equilibrium displacements are chosen to match known whisker length and curvature~\cite{Towal2011}, while damping and spring stiffness parameters are chosen to ensure mechanically plausible whisker motion trajectories.  
@@ -10,7 +10,8 @@ The number of cuboid elements and spring equilibrium displacements are chosen to
 \textbf{c.} During dataset construction, the whisker is brought into contact with each object at three vertical heights (top, middle bottom), at each of 4 approach angles separated by 90$^{\circ}$, for a total of 12 sweeps.  
 The object's size, initial orientation angle, as well as sweep speed, vary randomly between each group of 12 sweeps. 
 Forces and torques are recorded at the three cuboids closest to to the follicle, for a total of 18 measurements per whisker at each timepoint. 
-\textbf{d.} Basic validation of performance of binary linear classifier trained on raw sensor output to distinguish between two shapes (in this case, a duck versus a teddybear).  The classifier was trained/tested on several equal-sized datasets in which variation on one or more latent variable axes is been suppressed. ``None'' indicates that all variations are present.  Dotted line represents chance performance (50\%).~\label{fig_whiskers}}
+\textbf{d.} Basic validation of performance of binary linear classifier trained on raw sensor output to distinguish between two shapes (in this case, a duck versus a teddybear).  The classifier was trained/tested on several equal-sized datasets in which variation on one or more latent variable axes is been suppressed. ``None'' indicates that all variations are present.  Dotted line represents chance performance (50\%).}~\label{fig_whiskers}}
+\vspace{-6mm}
 \end{figure}
 
 In order to provide our neural networks inputs similar to those of the rodent vibrissal system, we constructed a physically-realistic three-dimensional (3D) model of the rodent vibrissal array (Fig. \ref{fig_whiskers}).  

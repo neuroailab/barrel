@@ -1,7 +1,8 @@
 \begin{figure}
 \includegraphics [width=1\linewidth]{figures/results.pdf}
-\vspace{-2mm}
-\caption{\textbf{Performance results.} \textbf{a.} Each bar in this figure represents one model. The positive $y$-axis is performance measured in percent correct (top1=dark bar, chance=0.85\%, top5=light bar, chance=4.2\%).   The negative $y$-axis indicates the number of units in networks, in millions of units.  Model architecture family is indicated by color.  The definition of individual model labels can be found in the Results section. \textbf{b.} Confusion Matrix for the highest-performing model (in the Temporal-Spatial family).~\label{fig_main}}
+\vspace{-3mm}
+\caption{\footnotesize{\textbf{Performance results.} \textbf{a.} Each bar in this figure represents one model. The positive $y$-axis is performance measured in percent correct (top1=dark bar, chance=0.85\%, top5=light bar, chance=4.2\%).  The negative $y$-axis indicates the number of units in networks, in millions of units.  Model architecture family is indicated by color.  The definition of individual model labels can be found in the Results section. \textbf{b.} Confusion Matrix for the highest-performing model (in the Temporal-Spatial family).}~\label{fig_main}}
+\vspace{-5mm}
 \end{figure}
 
 \textbf{Model Performance:} 
@@ -24,12 +25,6 @@ Our results (Fig. \ref{fig_main}) can be summarized with following conclusions:
    These long-range feedbacks appeared critical to performance, with purely local recurrent architectures (including LSTM and GRU) achieving significantly worse results.
 \end{itemize}
 
-\begin{figure}
-%\includegraphics [width=1\linewidth]{figures/rdms.pdf}
-\vspace{-2mm}
-\caption{\textbf{Using RDMs to Discriminate Between High-Performing Models.} \textbf{a.} Representational Dissimilarity Matrices (RDMs) for selected layers of a high-performing network from Fig. \ref{fig_main}a, showing low, intermediate and higher model layers.  Model feature vectors are averaged over classes in the dataset prior to RDM computation, and RDMs are shown using the same ordering as in Fig. \ref{fig_main}b. \textbf{b.} Two-dimensional embedding of RDMs for several models.   ~\label{fig_rdms}}
-\end{figure}
-
 \textbf{Model Discrimination:}  The above results indicated that we had identified several high-performing networks in quite distinct architecture families.
 In other words, the strong performance constraint allows us to identify several specific candidate model networks for the biological system, cutting down a much larger set of mostly non-performing neural networks into a kind of ``shortlist''.
 Given this result, the key biologically relevant follow-up question is then: how should we distinguish between the elements in the shortlist?
@@ -47,5 +42,11 @@ To determine if differences in this space between models and/or layers were sign
 We found that while the top layers of models were similar (likely owing to the fact that they were all trained on the same task), intermediate layers diverged substantially between models, by amount that was larger than both the initial-condition-induced variability within a model layer and between different layers of the same model (Fig. \ref{fig_rdms}b).
 This result is not surprising, given the fact that the models are quite structurally different, but its utility is that it strongly suggests that a conceptually simple and potentially feasible neuroscience experiment could distinguish between them: namely, measuring batteries of neural responses in several areas of the whisker trigeminal system, computing the RDMs from these data, and then comparing to those of the models. 
 
+\begin{figure}
+\includegraphics [width=1\linewidth]{figures/rdms.pdf}
+\vspace{-3mm}
+\caption{\footnotesize{\textbf{Using RDMs to Discriminate Between High-Performing Models.} \textbf{a.} Representational Dissimilarity Matrices (RDMs) for selected layers of a high-performing network from Fig. \ref{fig_main}a, showing early, intermediate and late model layers.  Model feature vectors are averaged over classes in the dataset prior to RDM computation, and RDMs are shown using the same ordering as in Fig. \ref{fig_main}b. \textbf{b.} Two-dimensional embedding of RDMs for several models.}~\label{fig_rdms}}
+\vspace{-5mm}
+\end{figure}
 
 
