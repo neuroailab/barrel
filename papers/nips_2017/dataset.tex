@@ -1,30 +1,29 @@
-With the whisker array as described above, we generated a large-scale dataset of whisker responses to a variety of objects.   
+Using the whisker array, we generated a dataset of whisker responses to a variety of objects.   
 
-\textbf{Swipe Configuration.}  The dataset consists of series of simulated swipes, mimicking one action in which the mouse draws its whiskers across an object.  
-During each simulated swipe, a single three-dimensional object moves through the whisker array from front to back at a constant speed.  
-Each swipe lasts a total of one second, and data is sampled at 110Hz. 
-Swipe scenarios vary both in terms of the identity of the object presented, as well as the position, angle, scale, and speed at which the object is presented.  
-To simulate observed mouse whisking behavior~\cite{hobbs2015spatiotemporal}, swipes are performed at each of three heights along the vertical axis (bottom, middle, and top) and at each of 4 positions around the object (0$^{\circ}$, 90$^{\circ}$, 180$^{\circ}$, and 270$^{\circ}$ relative to the vertical axis), for a group of 12 total swipes per object/latent variable setting (Fig. \ref{fig_whiskers}c). 
+\textbf{Sweep Configuration.}  The dataset consists of series of simulated sweeps, mimicking one action in which the rat runs its whiskers past an object while holding its whiskers fixed (no active whisking).   
+During each sweep, a single 3D object moves through the whisker array from front to back (rostral to caudal) at a constant speed.  
+Each sweep lasts a total of one second, and data is sampled at 110Hz. 
+Sweep scenarios vary both in terms of the identity of the object presented, as well as the position, angle, scale (defined as the length of longest axis), and speed at which it is presented.   
+To simulate observed rat whisking behavior in which animals often sample an object at several vertical locations (head pitches)~\cite{hobbs2015spatiotemporal}, sweeps are performed at three different heights along the vertical axis and at each of four positions around the object (0$^{\circ}$, 90$^{\circ}$, 180$^{\circ}$, and 270$^{\circ}$ around the vertical axis), for a total of 12 sweeps per object/latent variable setting (Fig. \ref{fig_whiskers}c). 
 
-Latent variables settings are sampled randomly and independently on each group of swipes, with object rotation sampled uniformly within the space of all 3-d rotations, object scale (defined as the length of longest axis) sampled uniformly between 25-135mm, and swipe speed sampled randomly between 77-154mm/s.  
-Once these variables are chosen, the object is placed at a position that is chosen uniformly in a  $20 \times 8 \times 20$mm$^{3}$ region centered in front of the whisker array at the chosen vertical height, and is moved along the ray toward the center of the whisker array at the chosen speed. 
-The position of the object may be adjusted to avoid collisions with the fixed whisker base ellipsoid during the swipe. 
+Latent variables settings are sampled randomly and independently on each group of sweeps, with object rotation sampled uniformly within the space of all 3D rotations, object scale sampled uniformly between 25-135mm, and sweep speed sampled randomly between 77-154mm/s.  
+Once these variables are chosen, the object is placed at a position that is chosen uniformly in a  $20 \times 8 \times 20$mm$^{3}$ volume centered in front of the whisker array at the chosen vertical height, and is moved along the ray toward the center of the whisker array at the chosen speed. 
+The position of the object may be adjusted to avoid collisions with the fixed whisker base ellipsoid during the sweep. 
 
-The data collected during a swipe includes, for each whisker, the forces and torques from all springs connecting to three cuboids most proximate to the base of the whisker, a choice reflecting the known neurophysiological results about the signals measured by whisker follicles~\cite{Quist2014, Huet2016}.  
-This data comprises a matrix of shape $110 \times 31 \times 3 \times 2 \times 3$, with dimensions respectively corresponding to: the 110 time samples;  the 31 spatially distinct whiskers; the 3 recorded cuboids; the forces and torques from each cuboid; and the three directional components of force/torque.   
+The data collected during a sweep includes, for each whisker, the forces and torques from all springs connecting to the three cuboids most proximate to the base of the whisker.  This choice reflects the idea that mechanoreceptors are distributed along the entire length of the follicle at the whisker base~\cite{}.  
+The collected data comprises a matrix of shape $110 \times 31 \times 3 \times 2 \times 3$, with dimensions respectively corresponding to: the 110 time samples;  the 31 spatially distinct whiskers; the 3 recorded cuboids; the forces and torques from each cuboid; and the three directional components of force/torque.   
 
+\textbf{Object Set.} The objects used in each sweep are chosen from a subset of the ShapeNet~\cite{Chang2015} dataset, which contains over 50,000 3D objects, each with a distinct geometry, belonging to 55 categories.
+Because the 55 ShapeNet categories are at a variety of levels of within-category semantic similarity, we refined the original 55 categories into a taxonomy of 117 (sub)categories that we felt had a more uniform amount of within-category shape similarity. 
+The distribution of number of ShapeNet objects is highly non-uniform across categories, so we randomly subsampled objects from large categories.  
+This procedure ensured that all categories contained approximately the same number of objects.  
+Our final object set included 9,981 objects in 117 categories, ranging between 41 and 91 object exemplars per category (mean=85.3, median=91, std=10.2). 
+To create the final dataset, for every object, 26 independent samples of rotation, scaling, and speed were drawn and the corresponding group of 12 sweeps created.   
+Out of these 26 sweep groups, 24 were added to a training subset, while the remainder were reserved for testing.
 
-\textbf{Object Set.} The objects used in each swipe are chosen from a subset of the ShapeNet~\cite{Chang2015} dataset, which contains over 50,000 3-dimensional objects, each with a distinct geometry, belonging to 55 categories.
-Because the 55 ShapeNet categories are at a variety of levels of within-category semantic similarity, we refined the original 55 categories into a taxonomy of 117 (sub)categories which we felt had a more uniform amount of within-category similarity. 
-The distribution of number of ShapeNet objects is very non-uniform across categories, so we randomly subsampled objects from big categories, to ensure a comparatively more balanced distribution.  
-This resulted in a choice of 9,981 objects, with most of the 117 categories containing approximately 91 objects exemplars (though there were a few smaller categories, with the smallest category containing 42 exemplars).
-To create the final dataset, for every object, 26 independent samples of rotation, scaling, and speed were drawn and the corresponding group of 12 swipes created.   
-For each object, the first 24 samples were designated a training subset, while the remaining 2 were added to a testing dataset. 
-
-
-\textbf{Basic Sensor Validation.} To validate that our sensor was at least minimally functional before proceeding to more complex models, we produced a smaller versions of our dataset in which swipes were sampled more densely for two randomly chosen objects (a bear and a duck).  
+\textbf{Basic Sensor Validation.} To confirm that the whisker array was minimally functional before proceeding to more complex models, we produced smaller versions of our dataset in which sweeps were sampled densely for two objects (a bear and a duck).  
 We also produced multiple easier versions of this dataset in which variation along one or several latent variables was suppressed. 
-We then trained binary SVM classifier to report object identity in these datasets, using just the raw sensor data, and testing classification accuracy on held-out swipes (Fig. \ref{fig_whiskers}d).  We found that with scale and object rotation variability suppressed (but with speed and position variability retained), the sensor was able to nearly perfectly identify the objects.  
+We then trained binary support vector machine (SVM) classifiers to report object identity in these datasets, using only the raw sensor data as input, and testing classification accuracy on held-out sweeps (Fig. \ref{fig_whiskers}d).  We found that with scale and object rotation variability suppressed (but with speed and position variability retained), the sensor was able to nearly perfectly identify the objects.  
 However, with all sources of variability present, the SVM was just above chance in its performance,  
 while combinations of variability are more challenging for the sensor than others. 
 Thus, we concluded that our virtual whisker array was basically functional, but that unprocessed sensor data cannot be used to directly read out object shape in anything but the most highly controlled circumstances.

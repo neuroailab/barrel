@@ -1,0 +1,165 @@
+\subsection{Training procedure}
+
+We searched the learning parameter space including the choices of learning algorithm, learning rates, and decay rates. 
+Among them, training using Adagrad~\cite{duchi2011adaptive} with a initial learning rates at 0.003 and batch size of 128 gave the best result, which was then applied to the training of all networks. 
+The learning rate would not be changed to 0.0015 until the performance on validation saturated.
+Ten more epoches would be run after changing the learning rate to 0.0015.
+The reported performances were the best performances on validation during the whole training procedure.
+
+\subsection{Model structures}
+
+To make the description of model structures easier, we would use conv(\textit{filter size}, \textit{number of filters}), pool(\textit{filter size}, \textit{stride}), and fc(\textit{dimension of outputs}) to represent convolution layer, pooling layer, and fully connected layer respectively.
+The size of stride in convolution layers is set to be $1\times1$ for all networks and the pooling used in our networks is always max-pooling.
+For example, conv($3\times3$, 384) represents a convolution layer with filter size of $3\times3$, stride of $1\times1$, and 384 filters.
+
+We used Xavier initialization~\cite{glorot2010understanding} for the weight matrix in convolution layers while the bias was all initialized to 1.
+The weight matrix in fully connected layer was initialized using truncated normal distribution with mean being 0 and standard deviation being 0.01, where values deviated from mean for more than two standard deviations would be discarded and redrawn.
+The bias in fully connected layer was initialized to 0.1.
+A ReLu layer would always be added after convolution or fully connected layer.
+And for the fully connected layers, we would use a dropout of rate 0.5 during training.~\cite{Krizhevsky} 
+
+\textbf{Simultaneous Spatiotemporal Integration.}
+This family of networks (family S) will usually have several convolution layers followed by fully connected layers. The convolution is applied to both the temporal and spatial dimension.
+
+In Table~\ref{tab:struct_bm}, we showed the structure of all networks in this family, corresponding to the name used in the main paper.
+The output of previous layer will serve as the input to the next layer.
+And the layers before fc\_combine are shared across three sweeps. For example, in model "S", conv1 to fc7 are shared across sweeps while the outputs of fc7 will be concatenated together as the input to fc\_combine8.
+
+Separately, we trained another network based on S\_more combining 12 sweeps rather than 3 sweeps. The model shared the same structure as S\_more. 
+But fc\_combine8 there would combine information from 12 sweeps, which means that the input to fc\_combine8 is a vector of 1024$\times$12. 
+The performances of this network surpassed all other networks, with top1 being 0.20 and top5 being 0.53. This means that our network could utilize information from 12 sweeps to help finish the task.
+
+\begin{table}[h]
+\caption{Network structure for S family} %title of the table
+\centering % centering table
+\begin{tabularx}{\textwidth}{r|X}
+\hline\hline
+Name & Structure \\ [0.5ex]
+\hline
+S & conv1($9\times3$, $96$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $128$), pool2($3\times3$, $2\times2$), conv3($3\times3$, $192$), conv4($3\times3$, $192$), conv5($3\times3$, $128$), pool5($3\times3$, $2\times2$), fc6(2048), fc7(1024), fc\_combine8(117)\\
+\hline
+S\_more & conv1($9\times3$, $96$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $256$), pool2($3\times3$, $2\times2$), conv3($3\times3$, $384$), conv4($3\times3$, $384$), conv5($3\times3$, $256$), pool5($3\times3$, $2\times2$), fc6(4096), fc7(1024), fc\_combine8(117)\\
+\hline
+S\_few & conv1($9\times3$, $32$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $64$), pool2($3\times3$, $2\times2$), conv3($3\times3$, $96$), conv4($3\times3$, $96$), conv5($3\times3$, $64$), pool5($3\times3$, $2\times2$), fc6(256), fc7(128), fc\_combine8(117) \\
+\hline
+S\_4c2f & conv1($9\times3$, $96$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $128$), pool2($3\times3$, $2\times2$), conv3($3\times3$, $192$), conv4($3\times3$, $128$), pool4($3\times3$, $2\times2$), fc5(2048), fc6(1024), fc\_combine7(117)\\
+\hline
+S\_3c2f & conv1($9\times3$, $96$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $388$), pool2($3\times3$, $2\times2$), conv3($3\times3$, $128$), pool3($3\times3$, $2\times2$), fc4(2048), fc5(1024), fc\_combine6(117)\\
+\hline
+S\_2c2f & conv1($9\times3$, $96$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $144$), pool2($6\times6$, $4\times4$), fc3(2048), fc4(1024), fc\_combine5(117)\\
+\hline
+S\_1c2f & conv1($9\times3$, $96$), pool1($6\times3$, $6\times2$), fc2(896), fc3(512), fc\_combine4(117)\\
+\hline
+S\_3c1f & conv1($9\times3$, $96$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $128$), pool2($3\times3$, $2\times2$), conv3($3\times3$, $192$), pool3($3\times3$, $2\times2$), fc4(1532), fc\_combine5(117)\\
+\hline
+S\_2c1f & conv1($9\times3$, $96$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $128$), pool2($3\times3$, $2\times2$), fc3(708), fc\_combine4(117)\\
+\hline
+S\_3c0f & conv1($9\times3$, $72$), pool1($3\times1$, $3\times1$), conv2($3\times3$, $144$), pool2($3\times3$, $2\times2$), fc\_combine3(117)\\
+\hline
+S\_2c0f & conv1($9\times3$, $72$), pool1($3\times1$, $3\times1$), fc\_combine2(117)\\
+\hline
+S\_1c0f & fc\_combine1(117)\\
+\hline
+S\_3D & conv1($9\times2\times2$, $96$), pool1($4\times1\times1$, $4\times1\times1$), conv2($3\times2\times2$, $256$), pool2($3\times1\times1$, $2\times1\times1$), conv3($3\times2\times2$, $384$), conv4($3\times2\times2$, $384$), conv5($3\times2\times2$, $256$), pool5($3\times3\times3$, $2\times2\times2$), fc6(4096), fc7(1024), fc\_combine8(117)\\
+\hline
+S\_deep & conv1($5\times3$, $64$), conv2($5\times3$, $64$), pool2($3\times1$, $3\times1$), conv3($2\times2$, $128$), conv4($2\times2$, $128$), pool4($3\times3$, $2\times2$), conv5($3\times3$, $192$), conv6($3\times3$, $192$), conv7($3\times3$, $192$), conv8($3\times3$, $192$), conv9($3\times3$, $128$), pool9($3\times3$, $2\times2$), fc10(2048), fc11(1024), fc12(512), fc\_combine13(512), fc\_combine14(117)\\
+\hline
+\end{tabularx}
+\label{tab:struct_bm}
+\end{table}
+
+\textbf{Separate Spatial and Temporal Integration.} The network structures for those two families are shown in Table~\ref{tab:struct_ts_st}. 
+For the "Temporal-Spatial" family, temporal convolution is applied to the inputs first for each whisker using shared weights and then "spatial regroup" in Table~\ref{tab:struct_ts_st} means that the outputs from previous layer for each whisker will be grouped according to the spatial position of each whisker in $5\times7$ grid, with vacant positions filled by zeros.
+For the "Spatial-Temporal" family, the input is first split into 22 vectors on temporal dimension and each vectore is further reshaped into 2D spatial grid, which means the final shape of each vector would be $5\times7\times90$.
+Spatial convolution networks with shared weights will be applied to each vector.
+After that, the "temporal concatenating" in Table~\ref{tab:struct_ts_st} means that the outputs from spatial networks will first be reshaped to one dimension vector and then be concatenated in the temporal dimension to form a new input for further processing. 
+Then temporal convolution will be applied to the new input.
+
+\begin{table}[h]
+\caption{Network structure for "Temporal-Spatial" and "Spatial-Temporal" family} %title of the table
+\centering % centering table
+\begin{tabularx}{\textwidth}{r|X}
+\hline\hline
+Name & Structure \\ [0.5ex]
+\hline
+TS & conv1(9, $64$), pool1(3, 3), conv2(3, 256), pool2(3, 2), conv3(3, 384), conv4(3, 384), conv5(3, 256), pool5(3, 2), spatial regroup, conv6($1\times1$, $896$), conv7($1\times1$, $512$), conv8($3\times3$, $384$), conv9($3\times3$, $384$), conv10($3\times3$, 256), fc11(2048), fc12(512), fc\_combine13(512), fc\_combine14(117)\\
+\hline
+TS\_few & conv1(9, $64$), pool1(3, 3), conv2(3, 192), pool2(3, 2), conv3(3, 256), conv4(3, 256), conv5(3, 192), pool5(3, 2), spatial regroup, conv6($1\times1$, $512$), conv7($1\times1$, $384$), conv8($3\times3$, $256$), conv9($3\times3$, $256$), conv10($3\times3$, 192), fc11(1024), fc12(512), fc\_combine13(512), fc\_combine14(117)\\
+\hline\hline
+ST & conv1($2\times2$, 256), conv2($2\times2$, 384), conv3($2\times2$, 512), conv4($2\times2$, 512), conv5($2\times2$, 512), conv6($2\times2$, 384), temporal concatenating, conv7(1, 1024), conv8(1, 512), conv9(3, 512), conv10(3, 512), conv11(3, 512), conv12(3, 512), pool12(3, 2), fc13(1024), fc\_combine14(512), fc\_combine15(117)\\
+\hline
+\end{tabularx}
+\label{tab:struct_ts_st}
+\end{table}
+
+\textbf{Recurrent Neural Networks with Skip and Feedback Connections.} Similar to "Spatial-Temporal" family, the input is first split and reshaped into 22 vectors of size $5\times7\times90$. 
+And then the vectors are fed into the network one by one in order of time.
+The structures of networks in this family are shown in Table~\ref{tab:struct_rnn} with additional edges.
+The "RNN\_lstm" and "RNN\_gru" is just adding LSTM/GRU between fc8 and fc\_combine9 with number hidden units being 512.
+
+\begin{table}[h]
+\caption{Network structure for Recurrent Neural Networks family} %title of the table
+\centering % centering table
+\begin{tabularx}{\textwidth}{r|X|X}
+\hline\hline
+Name & Structure & Additional Edges\\ [0.5ex]
+\hline
+RNN & conv1($2\times2$, 96), conv2($2\times2$, 256), conv3($2\times2$, 384), conv4($2\times2$, 384), conv5($2\times2$, 384), conv6($2\times2$, 256), fc7(2048), fc8(1024), fc\_combine9(1024), fc\_combine10(512), fc\_combine11(117) & \\
+\hline
+RNN\_byp & conv1($2\times2$, 96), conv2($2\times2$, 128), conv3($2\times2$, 256), conv4($2\times2$, 384), conv5($2\times2$, 384), conv6($2\times2$, 256), fc7(1024), fc8(512), fc\_combine9(1024), fc\_combine10(512), fc\_combine11(117) & conv1$\rightarrow$conv3, conv1$\rightarrow$conv4, conv2$\rightarrow$conv4, conv2$\rightarrow$conv5, conv3$\rightarrow$conv5, conv3$\rightarrow$conv6, conv4$\rightarrow$conv6, conv2$\rightarrow$fc7, conv4$\rightarrow$fc7\\
+\hline
+RNN\_fdb & conv1($2\times2$, 96), conv2($2\times2$, 128), conv3($2\times2$, 256), conv4($2\times2$, 384), conv5($2\times2$, 384), conv6($2\times2$, 256), fc7(1024), fc8(512), fc\_combine9(1024), fc\_combine10(512), fc\_combine11(117) & conv3$\rightarrow$conv2, conv4$\rightarrow$conv2, conv4$\rightarrow$conv3, conv5$\rightarrow$conv3, conv5$\rightarrow$conv4, conv6$\rightarrow$conv4, conv6$\rightarrow$conv5, conv2$\rightarrow$fc7, conv4$\rightarrow$fc7\\
+\hline
+\end{tabularx}
+\label{tab:struct_rnn}
+\end{table}
+
+\subsection{Visualization related}
+\label{sec:visual}
+
+\textbf{Calculating category and object level RDMs.} After the network training finished, we took the network with best performances in each family and generated the responses of each layer on validation set. 
+For category RDM, we calculated the category mean of responses for each layer and then calculate the RDM based on that using Pearson correlation coefficient between each category.
+For object level RDM, the average was computed for each object for each layer and then the RDM was calculated from that using Pearson correlation coefficient between each object.
+
+\textbf{Object grouping.} The categories are regrouped using category level RDM to show that the categorization is reasonable. 
+The group is shown in the confusion matrix visualization in main paper, with 117 categories into 10 groups.
+Specifically, we took the RDM of the highest hidden layer in our best network ("TS") and used affinity propagation to group them~\cite{frey2007clustering} with parameter "damping" being 0.9.
+The results are shown in Table~\ref{tab:cat_regruop}.
+
+\begin{table}[h]
+\caption{Results for category regroup based on RDM} %title of the table
+\centering % centering table
+\begin{tabularx}{\textwidth}{r|X}
+\hline\hline
+Group & Categories\\ [0.5ex]
+\hline
+1 & table-tennis table, folding chair, grand piano, lawn chair, rocking chair, windsor chair, swivel chair, park bench, armchair, straight chair, chair\\
+\hline
+2 & drafting table, kitchen table, secretary, pool table, piano, berth, worktable, console table, easy chair, laptop, bench, coffee table, desk, table\\
+\hline
+3 & upright, basket, birdhouse, platform bed, vertical file, dishwasher, convertible, monitor, love seat, printer, microwave, washer, file, stove, bookshelf, dresser, tweeter, bathtub, loudspeaker, cabinet, sofa\\
+\hline
+4 & camera, school bus, bag, pendulum clock, mailbox, planter, bus\\
+\hline
+5 & floor lamp, dagger, delta wing, revolver, propeller plane, carbine, knife, sniper rifle, guitar, rifle, airplane, jet\\
+\hline
+6 & ferry, cabin cruiser, sea boat, cruise ship, yacht, wheeled vehicle, pistol, ship, tender, train, boat\\
+\hline
+7 & limousine, ambulance, stock car, roadster, jeep, beach wagon, wine bottle, cruiser, sports car, convertible, bottle, racer, sport utility, sedan, coupe, car\\
+\hline
+8 & cap, soda can, coffee mug, jar, mug, helmet, bowl, pot, ashcan, vase\\
+\hline
+9 & data input device, remote control, pillow, telephone, screen, clock, liquid crystal display, cellular telephone\\
+\hline
+10 & microphone, earphone, sailboat, motorcycle, table lamp, faucet, lamp\\
+\hline
+\end{tabularx}
+\label{tab:cat_regruop}
+\end{table}
+
+\textbf{MDS embedding of RDMs.} In order to estimate variance caused by initialization of the DNNs, we trained 5 networks for both "TS" model and "RNN\_fdb" model from different initializations. 
+We then generated the responses of these 10 models on validation set and computed object level RDMs based on the responses. 
+For "RNN\_fdb", we take the responses of last time point of each layer to compute the RDMs. 
+We also tried RDMs computed from averages and concatenations of responses from last half of time points, the results are similar.
+
+After calculating RDMs, we computed Pearson correlation coefficient between RDMs to get a distance matrix between them. Then we used MDS algorithm for to get a 2D embedding~\cite{borg2005modern}. 

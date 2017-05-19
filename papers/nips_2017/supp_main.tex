@@ -1,0 +1,37 @@
+\documentclass{article}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{graphicx}
+\usepackage{amsmath, amssymb, amsthm, epsfig}
+\usepackage{tabularx}
+
+\usepackage{enumitem}
+\setlist[itemize]{leftmargin=-5ex}
+\setlist[itemize]{itemsep=-1ex}
+
+\title{Supplementary information}
+\date{\vspace{-5ex}}
+%\date{}  % Toggle commenting to test
+
+\begin{document}
+
+\maketitle
+
+\section{Dataset generation}
+\input{supp_dataset.tex}
+
+\section{Model training and visualization}
+\input{supp_model.tex}
+
+{\small
+\bibliography{refs}}
+\bibliographystyle{plain}
+
+\end{document}

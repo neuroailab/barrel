@@ -1,23 +1,24 @@
-We have introduced a model of the rodent whisker sensor array that is matched to biophysical data, and used it to generate a large-scale high-variability synthetic swipe dataset. 
+We have introduced a model of the rodent whisker sensor array that is informed by biophysical data, and used it to generate a large high-variability synthetic sweep dataset. 
 While the raw sensor data is sufficiently powerful to separate objects at low amounts of variability, at higher variation levels it quickly becomes necessary to have deeper non-linear networks to untangle and extract object identity. 
 We then investigated the power of architectures from several distinct network structure families to perform this untangling, finding that while many particular architectures, especially shallow ones, fail to solve the shape recognition task, reasonable performance levels can be obtained for specific architectures within each structural family.
 We then showed that with a simple population-level observable that is in principle experimentally obtainable, it is possible to distinguish these higher-performing networks from each other. 
-To summarize, we have shown that a goal-driven deep neural network approach to modeling the barrel cortex system might be feasible. 
+To summarize, we have shown that a goal-driven deep neural network approach to modeling the whisker-trigeminal system might be feasible. 
+Code for all results, including the whisker model and neural networks, is publicly available at [WITHHELD].
 
-It is important to emphasize that the work at this stage is a proof-of-concept rather than a specific model of barrel cortex.  
+It is important to emphasize that the work at this stage is a proof-of-concept rather than a specific model of the real brain system.  
 There are a number of critical issues to overcome before our true goal --- a full integration of modeling with experimental data --- becomes possible.    
 First, our sensor model itself, while biophysically informed, is far from perfect. 
 It will be useful to incorporate more realistic constraints about, e.g., ranges of whiskers in different planes of motion, as well as various other improvements~\cite{Quist2014, Huet2016}.
 An equally important problem at the other end of the spectrum is that the goal that we set for our network, ie. shape discrimination between 117 human-recognizable object classes, is obviously not directly ethologically relevant to rodents. 
 Our main reason for choosing the objects and classes we did was practical: ShapeNet is a readily available and high-variability source of three-dimensional objects. 
 If we had constructed a small set of objects by hand, it is likely that our task would be too simple to really constrain neural networks effectively. 
-By analogy from a visual case, training a deep net on 1000 image categories generates a visual basis that is useful for making distinctions among many categories the network has never seen~\cite{cadieu2014deep}.  
+By analogy from a visual case, training a deep net on 1000 image categories generates a visual basis that is useful for making distinctions among many categories the network has never seen~\cite{Yamins2014,cadieu2014deep,razavian2014cnn}.
 Thus, we think it likely that the large and variable object set used here gets us at least someway toward a meaningful constraint on network structure, as the specific object geometries may be less important the having a wide spectrum of such geometries. 
-However, a key next priority is building an appropriately large and variable set of objects and class boundaries that more realistically models the discrimination tasks that a rodent faces.
+However, a key next priority is building an appropriately large and variable set of objects, textures or other class boundaries that more realistically model the tasks that a rodent faces.
 It is likely that the specifics of the results obtained (e.g. which families are better than others, and the exact structure of learned representations) will change significantly when these improvements are made.  
-However, we believe that the outline of the approach as illustrated in this work will nonetheless remain essentially correct. 
+However, we believe that the outline of the approach as illustrated in this work will nonetheless remain useful. 
 
-In the longer run, we hope to use detailed encoding models of barrel cortex as a plugin for investigating issues of representation learning and sensory-based decision making. 
+In the longer run, we hope to use detailed encoding models of the whisker-trigeminal system as a platform for investigating issues of representation learning and sensory-based decision making in the rodent. 
 A particularly attractive option is to go beyond beyond fixed class discrimination problems and situate a synthetic whisker system on a mobile animal in a navigational environment where it will be faced with a variety of actively-controlled discrete and continuous estimation problems.
 By doing this work with a rich sensory domain in rodents, we seek to leverage the sophisticated neuroscience tools available in these systems to go beyond what might would be possible in other model systems.  
 
