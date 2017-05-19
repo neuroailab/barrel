@@ -1,7 +1,7 @@
 \begin{figure}
 \includegraphics [width=1\linewidth]{figures/results.pdf}
 \vspace{-3mm}
-\caption{\footnotesize{\textbf{Performance results.} \textbf{a.} Each bar in this figure represents one model. The positive $y$-axis is performance measured in percent correct (top1=dark bar, chance=0.85\%, top5=light bar, chance=4.2\%).  The negative $y$-axis indicates the number of units in networks, in millions of units.  Small italic numbers indicate number of model parameters, in millions. Model architecture family is indicated by color.  The definition of individual model labels can be found in the Results section. \textbf{b.} Confusion Matrix for the highest-performing model (in the Temporal-Spatial family).}~\label{fig_main}}
+\caption{\footnotesize{\textbf{Performance results.} \textbf{a.} Each bar in this figure represents one model. The positive $y$-axis is performance measured in percent correct (top1=dark bar, chance=0.85\%, top5=light bar, chance=4.2\%).  The negative $y$-axis indicates the number of units in networks, in millions of units.  Small italic numbers indicate number of model parameters, in millions. Model architecture family is indicated by color. "ncmf" means n convolution and m fully connected layers. Detailed definition of individual model labels can be found in supplementary material. \textbf{b.} Confusion Matrix for the highest-performing model (in the Temporal-Spatial family). The objects are regrouped using methods described in supplementary material.}~\label{fig_main}}
 \vspace{-5mm}
 \end{figure}
 
@@ -42,7 +42,6 @@ To determine if differences in this space between models and/or layers were sign
 We found that while the top layers of models partially converged (likely because they were all trained on the same task), intermediate layers diverged substantially between models, by amounts larger than either the initial-condition-induced variability within a model layer or the distance between nearby layers of the same model (Fig. \ref{fig_rdms}b).
 This result is not entirely surprising since the models are quite structurally distinct.  
 However, it establishes the initial computational validity for a conceptually simple and potentially feasible neuroscience experiment to distinguish between models: RDMs computed from neural recordings in multiple areas of the whisker-trigeminal system could be compared to model RDMs.
-
 
 \begin{figure}
 \includegraphics [width=1\linewidth]{figures/rdms.pdf}
