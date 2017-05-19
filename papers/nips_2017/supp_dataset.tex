@@ -7,12 +7,12 @@ The deeper for one synset in the tree, more refined that synset would be.
 The label provided is usually not the deepest synset in the tree, which give rise for refinement. 
 Specifically, we regrouped the objects in ShapeNet using their deepest synset in synset tree.
 Then we manually combined some of them as they represents the same thing, such as "liquid crystal display" and "computer monitor".
-In order to get a dataset with balanced category distribution, we dropped the subcategories containing less than 30 objects, which left 117 subcategories. 
+In order to get a dataset with balanced category distribution, we dropped the subcategories containing less than 30 objects, which left 117 subcategories (a full list of the categories can be found in Section~\ref{sec:visual}).
 Furthermore, with the aim of including roughly 10000 objects with balanced category distribution, we first sorted the categories by the number of objects contained and then sampled objects from smallest category to largest category sequentially. 
 For every sampling, we would first multiply the number of objects in this category with the number of categories left ($c_l$). 
 If the result was smaller than 10000 minus the number of objects already sampled ($n_a$), we would just take all of objects in this category.
 Otherwise, we would randomly sample $(10000 - n_a)/c_l$ objects from each category left.
-Finally, we got 9981 objects in 117 categories, with most categories containing 91 objects and smallest category containing 42 objects.
+Finally, we got 9981 objects in 117 categories, with most categories containing 91 objects and smallest category containing 41 objects.
 
 The correct collision simulation in Bullet~\cite{wiki:bullet} requires the object to be composed of several convex shapes.
 Therefore, we used V-HACD~\cite{mamou2009simple} to decompose every object.
@@ -24,9 +24,9 @@ Two technical details about swipe simulatin would be described in this section, 
 
 For each object, we first computed a cuboid cover for the whole shape by getting the maximal and minimal positions in three dimensions. 
 The longest distance in the cuboid cover would then be used as the current scale of this object. 
-And scaling factor was computed by divide the desired scale by the longest distance. 
+And scaling factor was computed by dividing the desired scale by the longest distance. 
 
 After rescaling, the object was moved to make the center of cuboid cover to be placed at the desired position and then the nearest point on the object to the center of whisker array was computed.
 The object was moved again to make the nearest point to be placed at the desired position.
 To avoid collision, we sampled points on the surfaces of cuboid cover and then computed the trajectories of these points. 
-We would move the object to the right to make the nearest distance from every fixed base to every trajectory larger than 4mm.
+We would move the object to right to make the nearest distance from every fixed base to every trajectory larger than 4mm.
