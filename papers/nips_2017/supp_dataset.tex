@@ -1,13 +1,13 @@
 \subsection{ShapeNet category refinement and object preprocessing}
 
 Starting from the original 55 categories in ShapeNet~\cite{Chang2015}, we further split them into 117 categories based on the information provided by ShapeNet.
-For every object in ShapeNet, beside the label from 55 categories, a tree of synsets in WordNet~\cite{miller1995wordnet} is provided where the object will be described in more and more detail. 
+For every object in ShapeNet, beside the label from 55 categories, a tree of synsets in WordNet~\cite{miller1995wordnet} is also provided where the object will be described in more and more detail. 
 For example, one tree could include "artifact", "instrumentation", "transport", "vehicle", "craft", "vessel", and finally "ship". 
-The deeper for one synset in the tree, more refined that synset would be. 
-The label provided is usually not the deepest synset in the tree, which give rise for refinement. 
-Specifically, we regrouped the objects in ShapeNet using their deepest synset in synset tree.
-Then we manually combined some of them as they represents the same thing, such as "liquid crystal display" and "computer monitor".
-In order to get a dataset with balanced category distribution, we dropped the subcategories containing less than 30 objects, which left 117 subcategories (a full list of the categories can be found in Section~\ref{sec:visual}).
+The deeper for one synset in the tree, more refined that synset will be. 
+The label provided is usually not the deepest synset in the tree, which gives rise for refinement. 
+Therefore, we first regrouped the objects in ShapeNet using their deepest synset in synset tree.
+Then we manually combined some of them as they represent the same thing, such as "liquid crystal display" and "computer monitor".
+In order to get a dataset with balanced category distribution, we dropped the subcategories containing less than 30 objects, which left 117 subcategories (a full list of the categories can be found in Table~\ref{tab:cat_regruop}).
 Furthermore, with the aim of including roughly 10000 objects with balanced category distribution, we first sorted the categories by the number of objects contained and then sampled objects from smallest category to largest category sequentially. 
 For every sampling, we would first multiply the number of objects in this category with the number of categories left ($c_l$). 
 If the result was smaller than 10000 minus the number of objects already sampled ($n_a$), we would just take all of objects in this category.
@@ -16,13 +16,13 @@ Finally, we got 9981 objects in 117 categories, with most categories containing 
 
 The correct collision simulation in Bullet~\cite{wiki:bullet} requires the object to be composed of several convex shapes.
 Therefore, we used V-HACD~\cite{mamou2009simple} to decompose every object.
-The decomposation is done to each object using V-HACD with "resolution" parameter being 500000, "maxNumVerticesPerCH" being 64, and other parameters being default.
+The decomposation is done to each object with "resolution" parameter being 500000, "maxNumVerticesPerCH" being 64, and other parameters being default.
 
-\subsection{Swipe simulation procedure}
+\subsection{Sweep simulation procedure}
 
-Two technical details about swipe simulatin would be described in this section, including rescaling of the object and the adjusting of the position to avoid collision with fixed whisker bases.
+Two technical details about sweep simulatin would be described in this section, including rescaling of the object and the adjusting of the position to avoid collision with fixed whisker bases.
 
-For each object, we first computed a cuboid cover for the whole shape by getting the maximal and minimal positions in three dimensions. 
+For each object, we first computed a cuboid cover for the whole shape by getting the maximal and minimal values of points on the object in three dimensions. 
 The longest distance in the cuboid cover would then be used as the current scale of this object. 
 And scaling factor was computed by dividing the desired scale by the longest distance. 
 
