@@ -1,5 +1,6 @@
 \begin{figure}
-\includegraphics [width=1\linewidth]{figures/results.pdf}
+\FigCenter
+\includegraphics [width=\DefaultFigSize\linewidth]{figures/results.pdf}
 \vspace{-3mm}
 \caption{\footnotesize{\textbf{Performance results.} \textbf{a.} Each bar in this figure represents one model. The positive $y$-axis is performance measured in percent correct (top1=dark bar, chance=0.85\%, top5=light bar, chance=4.2\%).  The negative $y$-axis indicates the number of units in networks, in millions of units.  Small italic numbers indicate number of model parameters, in millions. Model architecture family is indicated by color. "ncmf" means n convolution and m fully connected layers. Detailed definition of individual model labels can be found in supplementary material. \textbf{b.} Confusion Matrix for the highest-performing model (in the Temporal-Spatial family). The objects are regrouped using methods described in supplementary material.}~\label{fig_main}}
 \vspace{-5mm}
@@ -44,7 +45,8 @@ This result is not entirely surprising since the models are quite structurally d
 However, it establishes the initial computational validity for a conceptually simple and potentially feasible neuroscience experiment to distinguish between models: RDMs computed from neural recordings in multiple areas of the whisker-trigeminal system could be compared to model RDMs.
 
 \begin{figure}
-\includegraphics [width=1\linewidth]{figures/rdms.pdf}
+\FigCenter
+\includegraphics [width=\DefaultFigSize\linewidth]{figures/rdms.pdf}
 \vspace{-5mm}
 \caption{\footnotesize{\textbf{Using RDMs to Discriminate Between High-Performing Models.} \textbf{a.} Representational Dissimilarity Matrices (RDMs) for selected layers of a high-performing network from Fig. \ref{fig_main}a, showing early, intermediate and late model layers.  Model feature vectors are averaged over classes in the dataset prior to RDM computation, and RDMs are shown using the same ordering as in Fig. \ref{fig_main}b. \textbf{b.} Two-dimensional MDS embedding of RDMs for the feedback RNN (green squares) and Temporal-Spatial (red circles) model.  Points correspond to layers, lines are drawn between adjacent layers, with darker color indicating earlier layers.  Multiple lines are models trained from different initial conditions, allowing within-model noise estimate.}~\label{fig_rdms}}
 \vspace{-5mm}

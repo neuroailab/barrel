@@ -1,6 +1,6 @@
 \begin{figure}
-\centering
-\includegraphics [width=.9\linewidth]{figures/architectures.pdf}
+\FigCenter
+\includegraphics [width=\ArchiFigSize\linewidth]{figures/architectures.pdf}
 \vspace{-3mm}
 \caption{\footnotesize{\textbf{Families of DNN Architectures tested:} \textbf{a.} ``Spatiotemporal'' models include spatiotemporal integration at all stages. Convolution is performed on both spatial and temporal data dimensions, followed by one or several fully connected layers. \textbf{b.} ``Temporal-Spatial'' networks in which temporal integration is performed separately before spatial integration.  Temporal integration consists of one-dimensional convolution over the temporal dimension, separately for each whisker. In spatial integration stages, outputs from each whisker are registered to their natural two-dimensional (2D) spatial grid and spatial convolution performed.  \textbf{c.} In ``Spatial-Temporal'' networks, spatial convolution is performed first, replicated with shared weights across time points; this is then followed by temporal convolution. \textbf{d.} Recurrent networks do not explicitly contain separate units to handle different discrete timepoints, relying instead on the states of the units to encode memory traces.  These networks can have local recurrence (e.g. simple addition or more complicated motifs like LSTMs or GRUs), as well as long-range skip and feedback connections.}~\label{fig_archi}}
 \vspace{-5mm}

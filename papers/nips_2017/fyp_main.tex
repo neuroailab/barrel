@@ -27,8 +27,22 @@
 \usepackage{graphicx}
 \usepackage{amsmath, amssymb, amsthm, epsfig}
 \usepackage{enumitem}
-\setlist[itemize]{leftmargin=-5ex}
-\setlist[itemize]{itemsep=-1ex}
+%\setlist[itemize]{leftmargin=-5ex}
+%\setlist[itemize]{itemsep=-1ex}
+
+\newcommand{\DefaultFigSize}{1.2}
+\newcommand{\ArchiFigSize}{1.2}
+\newcommand{\SchFigSize}{1.2}
+
+\makeatletter
+\newcommand*{\centerfloat}{%
+  \parindent \z@
+  \leftskip \z@ \@plus 1fil \@minus \textwidth
+  \rightskip\leftskip
+  \parfillskip \z@skip}
+\makeatother
+
+\newcommand{\FigCenter}{\centerfloat}
 
 \title{Toward Goal-Driven Neural Network Models for the Rodent Whisker-Trigeminal System}
 
