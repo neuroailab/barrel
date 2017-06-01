@@ -46,3 +46,4 @@ papers/*/*.out
 papers/*/*.pdf
 ipython_note_anlys/*.pdf
 *.mexw64
+fyp_docs/fyp_final/*.pdf
