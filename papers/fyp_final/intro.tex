@@ -10,12 +10,12 @@ Similar to hierarchical processing in the visual system (e.g., from V1 to V2, V4
 For example, in the whisker trigeminal system, information from the whiskers is relayed from primary sensory neurons in the trigeminal ganglion to multiple trigeminal nuclei; these nuclei are the origin of several parallel pathways conveying information to the thalamus~\cite{yu2006parallel, moore2015vibrissa} and then to primary and secondary somatosensory cortex (S1 and S2)~\cite{bosman2011anatomical}.  
 However, although the rodent somatosensory system has been the subject of extensive experimental efforts\cite{armstrong1992flow, petersen2003spatiotemporal, kerr2007spatial, von2007neuronal}, there have been comparatively few attempts at computational modeling of this important sensory system. 
 
-\begin{figure}
+\begin{figure}[h]
 \FigCenter
 \includegraphics[width=\SchFigSize\linewidth]{figures/schematic.pdf}
 \vspace{-3mm}
 \caption{\footnotesize{\textbf{Goal-Driven Approach to Modeling Barrel Cortex:} \textbf{a.} Rodents have highly sensitive whisker (vibrissal) arrays that provide input data about the environment. Mechanical signals from the vibrissae are relayed by primary sensory neurons of the trigeminal ganglion to the trigeminal nuclei, the original of multiple parallel pathways to S1 and S2. (Figure modified from \cite{deschenes2009vibrissal}.) This system is a prime target for modeling because it is likely to be richly representational, but its computational underpinnings are largely unknown. Our long-term approach to modeling the whisker-trigeminal system is \emph{goal-driven}: using an artificial whisker-array input device built using extensive biophysical measurements (\textbf{b.}), we seek to optimize neural networks of various architectures (\textbf{c.}) to solve ethologically-relevant shape recognition tasks (\textbf{d.}), and then measure to the extent to which these networks predict fine-grained response patterns in real neural recordings.} ~\label{fig_schematic}}
-\vspace{-5mm}
+\vspace{-3mm}
 \end{figure}
 
 Recent work has shown that deep neural networks (DNNs), whose architectures inherently contain hierarchy and spatial structure, can be effective models of neural processing in vision\cite{Yamins2014,khaligh2014deep} and audition\cite{kell_yamins_sfn}.

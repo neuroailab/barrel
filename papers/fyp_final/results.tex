@@ -1,4 +1,4 @@
-\begin{figure}
+\begin{figure}[h]
 \FigCenter
 \includegraphics [width=\DefaultFigSize\linewidth]{figures/results.pdf}
 \vspace{-3mm}
@@ -6,7 +6,13 @@
 \vspace{-5mm}
 \end{figure}
 
-\begin{figure}
+\textbf{Model Performance:} 
+Our strategy in identifying potential models of the whisker-trigeminal system is to explore many specific architectures within each architecture family, evaluating each specific architecture both in terms of its ability to solve the shape recognition task in our training dataset, and its efficiency (number of parameters and number of overall units).
+Because it can be misleading to compare models with different numbers of parameters, we generally evaluated models with similar numbers of parameters: exceptions are noted where they occur.
+As we evaluated many individual structures within each family, a list of the specific models and parameters are given in the supplementary materials.
+
+
+\begin{figure}[h]
 \FigCenter
 \includegraphics [width=\SmallFigSize\linewidth]{figures/confusion.pdf}
 \vspace{-3mm}
@@ -14,10 +20,6 @@
 \vspace{-5mm}
 \end{figure}
 
-\textbf{Model Performance:} 
-Our strategy in identifying potential models of the whisker-trigeminal system is to explore many specific architectures within each architecture family, evaluating each specific architecture both in terms of its ability to solve the shape recognition task in our training dataset, and its efficiency (number of parameters and number of overall units).
-Because it can be misleading to compare models with different numbers of parameters, we generally evaluated models with similar numbers of parameters: exceptions are noted where they occur.
-As we evaluated many individual structures within each family, a list of the specific models and parameters are given in the supplementary materials.
 
 Our results (Fig. \ref{fig_main}) can be summarized with following conclusions:
 
