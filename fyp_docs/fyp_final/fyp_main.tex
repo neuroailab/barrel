@@ -1,0 +1,117 @@
+\documentclass{article}
+
+% if you need to pass options to natbib, use, e.g.:
+% \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading nips_2017
+%
+% to avoid loading the natbib package, add option nonatbib:
+% \usepackage[nonatbib]{nips_2017}
+
+%\usepackage{nips_2017}
+
+% to compile a camera-ready version, add the [final] option, e.g.:
+%\usepackage[final]{nips_2017}
+
+\newenvironment{sciabstract}{%
+\begin{quote} \bf}
+{\end{quote}}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{graphicx}
+\usepackage{amsmath, amssymb, amsthm, epsfig}
+\usepackage{enumitem}
+%\setlist[itemize]{leftmargin=-5ex}
+%\setlist[itemize]{itemsep=-1ex}
+
+\newcommand{\DefaultFigSize}{1.1}
+\newcommand{\ArchiFigSize}{1.1}
+\newcommand{\SchFigSize}{1.05}
+\newcommand{\SmallFigSize}{.5}
+
+\makeatletter
+\newcommand*{\centerfloat}{%
+  \parindent \z@
+  \leftskip \z@ \@plus 1fil \@minus \textwidth
+  \rightskip\leftskip
+  \parfillskip \z@skip}
+\makeatother
+
+\newcommand{\FigCenter}{\centerfloat}
+\newcommand{\WEBSITE}{\url{https://github.com/neuroailab/barrel}}
+
+\title{Toward Goal-Driven Neural Network Models for the Rodent Whisker-Trigeminal System}
+
+\author{
+Chengxu Zhuang\\
+Department of Psychology\\
+Stanford University\\
+Stanford, CA 94305 \\
+\texttt{chengxuz@stanford.edu} \\
+}
+
+
+\begin{document}
+% \nipsfinalcopy is no longer used
+
+\maketitle
+
+%\begin{abstract}
+\begin{sciabstract}
+In large part, rodents ``see'' the world through their whiskers, a powerful tactile sense enabled by a series of brain areas that form the whisker-trigeminal system. 
+Raw sensory data arrives in the form of mechanical input to the exquisitely sensitive, actively-controllable whisker array, and is processed through a sequence of neural circuits, eventually arriving in cortical regions that communicate with decision-making and memory areas.
+Although a long history of experimental studies has characterized many aspects of these processing stages, the computational operations of the whisker-trigeminal system remain largely unknown.
+In the present work, we take a \emph{goal-driven} deep neural network (DNN) approach to modeling these computations.
+First, we construct a biophysically-realistic model of the rat whisker array.  
+We then generate a large dataset of whisker sweeps across a wide variety of 3D objects in highly-varying poses, angles, and speeds.
+Next, we train DNNs from several distinct architectural families to solve a shape recognition task in this dataset. 
+Each architectural family represents a structurally-distinct hypothesis for processing in the whisker-trigeminal system,  corresponding to different ways in which spatial and temporal information can be integrated.
+We find that most networks perform poorly on the challenging shape recognition task, but that specific architectures from several families can achieve reasonable performance levels.
+Finally, we show that Representational Dissimilarity Matrices (RDMs), a tool for comparing population codes between neural systems, can separate these higher-performing networks with data of a type that could plausibly be collected in a neurophysiological or imaging experiment.
+Our results are a proof-of-concept that DNN models of the whisker-trigeminal system are potentially within reach.
+\end{sciabstract}
+%\end{abstract}
+
+%Papers may be only up to eight pages long, including figures.
+%An additional ninth page containing only cited references is allowed.
+
+\section{Introduction} %~750 words
+\vspace{-4mm}
+\input{intro.tex}
+\vspace{-3mm}
+\section{Modeling the Whisker Array Sensor} %~500 words
+\vspace{-4mm}
+\input{whisk_model.tex}
+\vspace{-3mm}
+\section{A Large-Scale Whisker Sweep Dataset} %~750 words
+\vspace{-4mm}
+\input{dataset.tex}
+\vspace{-3mm}
+\section{Computational Architectures} %~1250 words
+\vspace{-4mm}
+\input{archi.tex}
+\vspace{-3mm}
+\section{Results} %~500 words
+\vspace{-4mm}
+\input{results.tex}
+\vspace{-3mm}
+\section{Conclusion}  %~250 words
+\vspace{-4mm}
+\input{conclusion.tex}
+\section{Acknowledgement}
+\vspace{-4mm}
+
+Thanks to my advisor Daniel Yamins for tremendous help and suggestions. 
+Also, this project is a joint work with Jonas Kubilius from Department of Brain and Cognitive Sciences of MIT and Mitra Hartmann from Departments of Biomedical Engineering and Mechanical Engineering of Northwestern University.
+
+{\small
+\bibliography{refs}}
+\bibliographystyle{plain}
+
+\end{document}

@@ -1,0 +1,49 @@
+
+
+use of DNNs makes sense because of structure
+
+core challenge: get a model of the sensor
+
+goal driven approach
+
+
+The dataset we created was meant to sustain a highly variable object shape recognition task for use in training the neural networks.  
+
+It is likely that the choice of the tasks is believed to be critical for whether the trained networks will be a good model for that cortex or not.
+For example, it has been shown that one of the important reasons that the neural networks trained for object recognition could predict responses of IT cortex in visual cortex well~\cite{Yamins2014, cadieu2014deep} is that object recognition is believed to be a major function performed by IT cortex~\cite{hung2005fast, yamins2016using}. 
+
+Although the functions performed by rodent somatosensory systems are poorly understood, it is found that rodents could use their whiskers to detect object shape, position, and texture of object surface\cite{Boubenec2012,Diamond2008,Arabzadeh2005,OConnor2010}.
+Therefore, we are temporarily using object recognition as the task to generate the dataset and optimize the neural networks. But meanwhile, we also make other information such as object shapes as surface normals and speed of object moving available for further task switching.
+
+
+
+=======
+
+
+A hypothesis linking these commonalities is that to extract ethologically-relevant information, sensory systems must use complex non-linear operations computed massively in parallel.  The need for significant non-linearies arises because many of the most ethologically-useful properties are highly \emph{tangled up} in the original sensory input space: for example, in vision, where this phenomenon is best understood, images of two different individual's faces from a head-on view can be much closer together in retinal image space than a single individual's face from multiple views, and powerful nonlinear operations, thought to be implemented by the mammalian ventral visual stream, are needed to reformat retinal inputs to allow robust face identification\cite{}.  Similar idea can be useful in audition have also begun to prove useful in understanding audition\cite{}. The need for massive parallelization arises from the constraint that sensory systems must produce answers within tens or hundreds of milliseconds, leaving no time for explicit sequential evaluation of multiple alternative data parsings.   
+
+
+
+
+a process which could be described as untangling the behavior-related dimensions (such as category) from other orthogonal dimensions (such as translation and rotation of the objects)~\cite{yamins2016using}.
+
+Recent work using deep neural networks (DNNs) has achieved significant improvements on object recognition, speech recognition, and numerous other artificial intelligence tasks\cite{Krizhevsky, hinton2012deep, lecun2015deep}.
+These deep neural networks are all composed of multiple simple neural network layers in series, where the computation in single layer is usually simple but non-linear and stacks of those simple non-linear computations make up a highly complicated non-linear computation.
+
+
+
+Utilizing the goal-driven modeling method which has been proven to be successful for visual ventral stream, we will show how we can use hierarchical models for modeling the rodent somatosensory systems.
+In order to do that, we need to first have a large-scale dataset for training the DNNs.
+The dataset is supposed to teach the DNNs to perform the tasks that rodent somatosensory systems are doing using the responses from whisker arrays.
+Therefore, the dataset should simulate the situations faced by rodent somatosensory systems as similar as possible. 
+Nevertheless, it is impossible to directly collect the data from real whisker arrays as the data required is too much, so we decide to build a virtual whisker array which is supposed to be as similar as real arrays both in static shapes and dynamic behaviors during the collision with other objects.
+Given that, we then need to find the tasks performed by rodent somatosensory systems to help design the dataset. 
+For example, if we believe the task is object recognition, then we should use whisker array to sense different objects and the DNNs should be trained to predict the labels from the responses.
+However, what rodent somatosensory systems are doing is still unknown, while there are many possible candidates, including detecting object shape, position, and texture of object surface\cite{Boubenec2012,Diamond2008,Arabzadeh2005,OConnor2010}.
+In this paper, we will work with the assumption of object recognition, while the dataset will also be available for other tasks. 
+Based on that, we generate a large-scale dataset and then train DNNs with different structures corresponding to different hypotheses of the computations done by neurons in the somatosensory cortex.
+After the DNNs trained, one will need a neural response dataset which is collected from neurons in rodent somatosensory systems to examine the performances of neural fitting by these networks as well as distinguish different network structures.
+Nonetheless, this kind of dataset has not been availabel. Hence we use the performances on the dataset with current task to try to do the comparisions between various structures under the assumption that the better the network is on the task, the better it will be to predict neural responses, as did for models of visual ventral stream.
+
+In summary, we will show how to use goal-driven modeling method for rodent somatosensory systems. In next few sections, we will show how we build the virtual whisker array, generate the dataset, and train the networks. Our codes for the whisker array and dataset will also be availabel in public later.
+

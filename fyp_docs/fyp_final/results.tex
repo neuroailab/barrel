@@ -1,0 +1,69 @@
+\begin{figure}
+\FigCenter
+\includegraphics [width=\DefaultFigSize\linewidth]{figures/results.pdf}
+\vspace{-3mm}
+\caption{\footnotesize{\textbf{Performance results.} Each bar in this figure represents one model. The positive $y$-axis is performance measured in percent correct (top1=dark bar, chance=0.85\%, top5=light bar, chance=4.2\%).  The negative $y$-axis indicates the number of units in networks, in millions of units.  Small italic numbers indicate number of model parameters, in millions. Model architecture family is indicated by color. "ncmf" means n convolution and m fully connected layers. Detailed definition of individual model labels can be found in supplementary material.}~\label{fig_main}}
+\vspace{-5mm}
+\end{figure}
+
+\begin{figure}
+\FigCenter
+\includegraphics [width=\SmallFigSize\linewidth]{figures/confusion.pdf}
+\vspace{-3mm}
+\caption{\footnotesize{\textbf{Confusion Matrix.} Confusion Matrix for the highest-performing model (in the Temporal-Spatial family). The objects are regrouped using methods described in supplementary material.}~\label{fig_confusion}}
+\vspace{-5mm}
+\end{figure}
+
+\textbf{Model Performance:} 
+Our strategy in identifying potential models of the whisker-trigeminal system is to explore many specific architectures within each architecture family, evaluating each specific architecture both in terms of its ability to solve the shape recognition task in our training dataset, and its efficiency (number of parameters and number of overall units).
+Because it can be misleading to compare models with different numbers of parameters, we generally evaluated models with similar numbers of parameters: exceptions are noted where they occur.
+As we evaluated many individual structures within each family, a list of the specific models and parameters are given in the supplementary materials.
+
+Our results (Fig. \ref{fig_main}) can be summarized with following conclusions:
+
+\begin{itemize}[leftmargin=*,itemsep=0ex,topsep=1ex]
+   \item Many specific network choices within all families do a poor job at the task, achieving just-above-chance performance.
+   \item However, within each family, certain specific choices of parameters lead to much better network performance.
+   Overall, the best performance was obtained for the Temporal-Spatial model, with 15.2\% top-1 and 44.8\% top-5 accuracy.
+   Visualizing a confusion matrix for this network (Fig. \ref{fig_confusion})  and other high-performing networks indicate that the errors they make are generally reasonable.
+   \item Training the filters was extremely important for performance; no architecture with random filters performed above chance levels.
+   \item Architecture depth was an important factor in performance. Architectures with fewer than four layers achieved substantially lower performance than somewhat deeper ones.
+   \item Number of model parameters was a somewhat important factor in performance within an architectural family, but only to a point, and not between architectural families.
+   The Temporal-Spatial architecture was able to outperform other classes while using significantly fewer parameters.
+   \item Recurrent networks with long-range feedback were able to perform nearly as well as the Temporal-Spatial model with equivalent numbers of parameters, while using far fewer units.
+   These long-range feedbacks appeared critical to performance, with purely local recurrent architectures (including LSTM and GRU) achieving significantly worse results.
+\end{itemize}
+
+\textbf{Model Discrimination:}  The above results indicated that we had identified several high-performing networks in quite distinct architecture families.
+In other words, the strong performance constraint allows us to identify several specific candidate model networks for the biological system, reducing a much larger set of mostly non-performing neural networks into a ``shortlist''.
+The key biologically relevant follow-up question is then: how should we distinguish between the elements in the shortlist? 
+That is, what signatures of the differences between these architectures could be extracted from data obtainable from experiments that use today's neurophysiological tools?
+
+To address this question, we used Representational Dissimilarity Matrix (RDM) analysis~\cite{Kriegeskorte2008}.
+For a set of stimuli $S$, RDMs are $|S| \times |S|$-shaped correlation distance matrices taken over the feature dimensions of a representation, e.g. matrices with $ij$-th entry $RDM[i, j] = 1 - corr(F[i], F[j])$ for stimuli $i, j$ and corresponding feature output $F[i], F[j]$.
+The RDM characterizes the geometry of stimulus representation in a way that is independent of the individual feature dimensions.  RDMs can thus be quantitatively compared between different feature representations of the same data.
+RDMs have been useful in establishing connections between deep neural networks and neural data from the ventral visual stream~\cite{cadieu2014deep, Yamins2014, khaligh2014deep}. 
+RDMs are readily computable from neural response pattern data samples, and are in general are comparatively robust to variability due to experimental randomness (e.g. electrode/voxel sampling).
+We obtained RDMs for several of our high-performing models, computing RDMs separately for each model layer (Fig. \ref{fig_rdms}), averaging feature vectors over different sweeps of the same object before computing the correlations.
+This procedure lead to $9981\times9981$-sized matrices (there were 9,981 distinct object in our dataset).
+We then computed distances between each layer of each model in RDM space, as in (e.g.) \cite{khaligh2014deep}.
+To determine if differences in this space between models and/or layers were significant, we computed RDMs for multiple instances of each model trained with different initial conditions, and compared the between-model to within-model distances.
+We found that while the top layers of models partially converged (likely because they were all trained on the same task), intermediate layers diverged substantially between models, by amounts larger than either the initial-condition-induced variability within a model layer or the distance between nearby layers of the same model (Fig. \ref{fig_rdmsembd}).
+This result is not entirely surprising since the models are quite structurally distinct.  
+However, it establishes the initial computational validity for a conceptually simple and potentially feasible neuroscience experiment to distinguish between models: RDMs computed from neural recordings in multiple areas of the whisker-trigeminal system could be compared to model RDMs.
+
+\begin{figure}
+\FigCenter
+\includegraphics [width=\DefaultFigSize\linewidth]{figures/rdms.pdf}
+\vspace{-5mm}
+\caption{\footnotesize{\textbf{RDMs visualization for High-Performing Models.} Representational Dissimilarity Matrices (RDMs) for selected layers of a high-performing network from Fig. \ref{fig_main}a, showing early, intermediate and late model layers.  Model feature vectors are averaged over classes in the dataset prior to RDM computation, and RDMs are shown using the same ordering as in Fig. \ref{fig_main}b.}~\label{fig_rdms}}
+\vspace{-5mm}
+\end{figure}
+
+\begin{figure}
+\FigCenter
+\includegraphics [width=\SmallFigSize\linewidth]{figures/rdm_embd.pdf}
+\vspace{-5mm}
+\caption{\footnotesize{\textbf{Using RDMs to Discriminate Between High-Performing Models.} Two-dimensional MDS embedding of RDMs for the feedback RNN (green squares) and Temporal-Spatial (red circles) model.  Points correspond to layers, lines are drawn between adjacent layers, with darker color indicating earlier layers.  Multiple lines are models trained from different initial conditions, allowing within-model noise estimate.}~\label{fig_rdmsembd}}
+\vspace{-5mm}
+\end{figure}
