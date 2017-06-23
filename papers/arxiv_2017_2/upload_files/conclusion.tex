@@ -1,0 +1,23 @@
+We have introduced a model of the rodent whisker array informed by biophysical data, and used it to generate a large high-variability synthetic sweep dataset. 
+While the raw sensor data is sufficiently powerful to separate objects at low amounts of variability, at higher variation levels deeper non-linear neural networks are required to extract object identity. 
+We found further that while many particular network architectures, especially shallow ones, fail to solve the shape recognition task, reasonable performance levels can be obtained for specific architectures within each distinct network structural family tested.
+We then showed that a population-level measurement that is in principle experimentally obtainable can distinguish between these higher-performing networks. 
+To summarize, we have shown that a goal-driven DNN approach to modeling the whisker-trigeminal system is feasible. 
+Code for all results, including the whisker model and neural networks, is publicly available at \WEBSITE.
+
+We emphasize that the present work is proof-of-concept rather than a model of the real nervous system.
+A number of critical issues must be overcome before our true goal --- a full integration of modeling with experimental data --- becomes possible.    
+First, although our sensor model was biophysically informed, it does not include active whisking, and the mechanical signals at the whisker bases are approximate~\cite{Quist2014, Huet2016}.
+
+An equally important problem is that the goal that we set for our network, i.e. shape discrimination between 117 human-recognizable object classes, is not directly ethologically relevant to rodents. 
+The primary reason for this task choice was practical: ShapeNet is a readily available and high-variability source of 3D objects. 
+If we had instead used a small, manually constructed, set of highly simplified objects that we hoped were more ``rat-relevant'', it is likely that our task would have been too simple to constrain neural networks at the scale of the real whisker-trigeminal system. 
+Extrapolating from modeling of the visual system, training a deep net on 1000 image categories yields a feature basis that can readily distinguish between previously-unobserved categories~\cite{Yamins2014,cadieu2014deep,razavian2014cnn}.
+Similarly, we suggest that the large and variable object set used here may provide a meaningful constraint on network structure, as the specific object geometries may be less important then having a wide spectrum of such geometries. 
+However, a key next priority is systematically building an appropriately large and variable set of objects, textures or other class boundaries that more realistically model the tasks that a rodent faces.
+The specific results obtained (e.g. which families are better than others, and the exact structure of learned representations) are likely to change significantly when these improvements are made.  
+
+In the longer term, we expect to use detailed encoding models of the whisker-trigeminal system as a platform for investigating issues of representation learning and sensory-based decision making in the rodent. 
+A particularly attractive option is to go beyond fixed class discrimination problems and situate a synthetic whisker system on a mobile animal in a navigational environment where it will be faced with a variety of actively-controlled discrete and continuous estimation problems.
+By doing this work with a rich sensory domain in rodents, we seek to leverage the sophisticated neuroscience tools available in these systems to go beyond what might would be possible in other model systems.  
+
