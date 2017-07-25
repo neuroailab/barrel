@@ -530,6 +530,12 @@ void TestHingeTorque::stepSimulation(float deltaTime){
                 float force_needed = initial_str * pass_time;
                 if (force_needed > max_str ) force_needed = max_str;
                 m_allbones[m_allbones.size()-1]->applyForce(force_needed*direc_f, btVector3(0,0,0));
+            } else if (force_mode==3){
+                direc_f = base_ball_location - base_ball_trans( btVector3(0,0,-1));
+                direc_f.normalize();
+                float force_needed = initial_str * pass_time;
+                if (force_needed > max_str ) force_needed = max_str;
+                m_allbones[m_allbones.size()/2]->applyForce(force_needed*direc_f, btVector3(0,0,0));
             }
 
         }

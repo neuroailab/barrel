@@ -292,7 +292,8 @@ def get_config_dict():
 config_dict = get_config_dict()
 orig_config_dict = copy.deepcopy(config_dict)
 
-inner_loop = {0: {'force_mode': 0, "initial_str": 30000}, 1: {'force_mode': 1, "initial_str": 10000}, 2: {'force_mode': 2, "initial_str": 10000}, 3: {'force_mode': 2, "initial_str": 8000}}
+#inner_loop = {0: {'force_mode': 0, "initial_str": 30000}, 1: {'force_mode': 1, "initial_str": 10000}, 2: {'force_mode': 2, "initial_str": 10000}, 3: {'force_mode': 2, "initial_str": 8000}}
+inner_loop = {0: {'force_mode': 0, "initial_str": 30000}, 1: {'force_mode': 1, "initial_str": 10000}, 2: {'force_mode': 2, "initial_str": 10000}, 3: {'force_mode': 2, "initial_str": 8000}, 4: {'force_mode': 3, "initial_str": -20000}}
 
 def get_value(kwargs, pathconfig =default_pathconfig, pathexe =default_pathexe,  
         coe_curr_dis = 1.0/40.0, coe_min_dis = 1.0, coe_all_time = 20.0, coe_ave_speed = -2):
