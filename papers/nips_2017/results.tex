@@ -35,7 +35,7 @@ To address this question, we used Representational Dissimilarity Matrix (RDM) an
 For a set of stimuli $S$, RDMs are $|S| \times |S|$-shaped correlation distance matrices taken over the feature dimensions of a representation, e.g. matrices with $ij$-th entry $RDM[i, j] = 1 - corr(F[i], F[j])$ for stimuli $i, j$ and corresponding feature output $F[i], F[j]$.
 The RDM characterizes the geometry of stimulus representation in a way that is independent of the individual feature dimensions.  RDMs can thus be quantitatively compared between different feature representations of the same data.
 RDMs have been useful in establishing connections between deep neural networks and neural data from the ventral visual stream~\cite{cadieu2014deep, Yamins2014, khaligh2014deep}. 
-RDMs are readily computable from neural response pattern data samples, and are in general are comparatively robust to variability due to experimental randomness (e.g. electrode/voxel sampling).
+RDMs are readily computable from neural response pattern data samples, and are in general comparatively robust to variability due to experimental randomness (e.g. electrode/voxel sampling).
 We obtained RDMs for several of our high-performing models, computing RDMs separately for each model layer (Fig. \ref{fig_rdms}a), averaging feature vectors over different sweeps of the same object before computing the correlations.
 This procedure lead to $9981\times9981$-sized matrices (there were 9,981 distinct object in our dataset).
 We then computed distances between each layer of each model in RDM space, as in (e.g.) \cite{khaligh2014deep}.

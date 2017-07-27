@@ -9,14 +9,14 @@ The number of cuboid links and spring equilibrium displacements are chosen to ma
 \textbf{b.} We constructed a 31-whisker array, arranged in a rough 5x7 grid (with 4 missing elements) on an ellipsoid representing the rodent's mystacial pad.  Whisker number and placement was matched to the known anatomy of the rat~\cite{Towal2011}.
 \textbf{c.} During dataset construction, the array is brought into contact with each object at three vertical heights, and four 90$^{\circ}$-separated angles, for a total of 12 sweeps.  
 The object's size, initial orientation angle, as well as sweep speed, vary randomly between each group of 12 sweeps. 
-Forces and torques are recorded at the three cuboids closest to to the follicle, for a total of 18 measurements per whisker at each timepoint. 
-\textbf{d.} Basic validation of performance of binary linear classifier trained on raw sensor output to distinguish between two shapes (in this case, a duck versus a teddy bear).  The classifier was trained/tested on several equal-sized datasets in which variation on one or more latent variable axes is been suppressed. ``None'' indicates that all variations are present.  Dotted line represents chance performance (50\%).}~\label{fig_whiskers}}
+Forces and torques are recorded at the three cuboids closest to the follicle, for a total of 18 measurements per whisker at each timepoint. 
+\textbf{d.} Basic validation of performance of binary linear classifier trained on raw sensor output to distinguish between two shapes (in this case, a duck versus a teddy bear).  The classifier was trained/tested on several equal-sized datasets in which variation on one or more latent variable axes has been suppressed. ``None'' indicates that all variations are present.  Dotted line represents chance performance (50\%).}~\label{fig_whiskers}}
 \vspace{-6mm}
 \end{figure}
 
 In order to provide our neural networks inputs similar to those of the rodent vibrissal system, we constructed a physically-realistic three-dimensional (3D) model of the rodent vibrissal array (Fig. \ref{fig_whiskers}).  
 To help ensure biological realism, we used an anatomical model of the rat head and whisker array that quantifies whisker number, length, and intrinsic curvature as well as relative position and orientation on the rat's face~\cite{Towal2011}.
-We wanted the mechanics of each whisker to the reasonably accurate, but at the same time, also needed simulations to be fast enough to generate a large training dataset.   
+We wanted the mechanics of each whisker to be reasonably accurate, but at the same time, also needed simulations to be fast enough to generate a large training dataset.   
 We therefore used the Bullet~\cite{wiki:bullet}, an open-source real-time physics engine used in many video games. 
 
 \textbf{Statics.} Individual whiskers were each modeled as chains of ``cuboid'' links with a square cross-section and length of 2mm.   
