@@ -72,7 +72,7 @@ void Whisker::createWhisker(std::string w_name){
 	/// create whisker
 	/// ====================================
 
-	btTransform baseTransform = createFrame();
+	btTransform baseTransform = createFrame(config.base_pos);
 	btCollisionShape* baseShape = createSphereShape(para->BLOW*unit_radius[0]);
 	m_collisionShapes->push_back(baseShape);
 	
@@ -80,14 +80,107 @@ void Whisker::createWhisker(std::string w_name){
 	base = createDynamicBody(0.1,baseTransform,baseShape);
 	m_dynamicsWorld->addRigidBody(base);
 
+	// set up constraint for whole whisker to head
+	// ===========================================================
+	btTransform baseFrame = createFrame();	
+	btTransform refFrame = createFrame();
+	btGeneric6DofConstraint* fixedConstraint = new btGeneric6DofConstraint(*refBody, *base, refFrame, baseFrame, false);
+
+	// make whisker base fixed
+	if(para->TEST || para->OPT){
+		fixedConstraint->setLinearLowerLimit(btVector3(0,0,0));
+		fixedConstraint->setLinearUpperLimit(btVector3(0,0,0));
+
+	}
+	else{
+		fixedConstraint->setLinearLowerLimit(config.base_pos*SCALE);
+		fixedConstraint->setLinearUpperLimit(config.base_pos*SCALE);
+
+	}
+	
+	// set rotation in respect to origin
+		fixedConstraint->setAngularLowerLimit(btVector3(0,0,0));
+		fixedConstraint->setAngularUpperLimit(btVector3(0,0,0));
+
+	// add constraint to world
+	m_dynamicsWorld->addConstraint(fixedConstraint,true);
+	fixedConstraint->setDbgDrawSize(btScalar(5.f));
+
+	// set up constraint for whisker base and first unit
+	// ===========================================================
+	
+	// set whisker orientation
+	btVector3 orientation = btVector3(config.base_rot[2],config.base_rot[1],config.base_rot[0]);
+	rotateFrame(baseTransform,orientation);
+
 	// calculate distance between unit COMs
 	float unit_offset = unit_length/2;
 
-	// set up geometry of whisker
-	for(int i=0;i<NUM_UNITS;++i) {
+	// set unit mass
+	btScalar  mass(unit_mass[0]);
+	std::cout << unit_radius[0] << std::endl;
+	
+	// generate shape for unit
+	btConvexHullShape* unitShape = createFrostumShapeX(unit_length/2, para->BLOW*unit_radius[0], para->BLOW*unit_radius[1], 12);
+	unitShape->setSafeMargin(unit_radius[1]);
+	m_collisionShapes->push_back(unitShape);
+
+	if(para->NO_CURVATURE){ // set all angles between units to zero
+		link_angles[0]=0.;
+	}
+
+	// set position and rotation of current unit
+	btTransform unitTransform = createFrame(btVector3(unit_offset,0.,0.));
+	
+	// add unit to whisker and world
+	btRigidBody* unit_first = createDynamicBody(mass,baseTransform*unitTransform,unitShape);
+	whisker.push_back(unit_first);	
+	m_dynamicsWorld->addRigidBody(unit_first);
+
+	// make units active
+	base->setActivationState(DISABLE_DEACTIVATION);
+	unit_first->setActivationState(DISABLE_DEACTIVATION);
+
+	// initialize transforms and set frames at end of frostum
+	btTransform unitFrame = createFrame(btVector3(-unit_length/2,0,0),btVector3(0,0,0));
+		
+
+	// create link (between units) constraint
+	baseConstraint = new btGeneric6DofSpring2Constraint(*base, *unit_first, baseFrame, unitFrame);
+
+
+	// make whisker base fixed
+	baseConstraint->setLinearLowerLimit(btVector3(0,0,0));
+	baseConstraint->setLinearUpperLimit(btVector3(0,0,0));
+
+	if(para->TEST || para->OPT){
+		// set rotation of whisker base to zero
+		baseConstraint->setAngularLowerLimit(btVector3(0,0,0));
+		baseConstraint->setAngularUpperLimit(btVector3(0,0,0));
+	}
+	else{
+		// set rotation about z axis
+		baseConstraint->setAngularLowerLimit(-orientation);
+		baseConstraint->setAngularUpperLimit(-orientation);
+	}
+	
+	
+	// add constraint to world
+	m_dynamicsWorld->addConstraint(baseConstraint,true);
+	baseConstraint->setDbgDrawSize(btScalar(5.f));
+ 
+	// enable feedback (mechanical response)
+	baseConstraint->setJointFeedback(&baseFeedback);
+
+	// add remaining units
+	for(int i=1;i<NUM_UNITS;++i) {
+
+		// compute COM offset for next unit
+		unit_offset = unit_offset + unit_length;
 
 		// set unit mass
 		btScalar  mass(unit_mass[i]);
+		// btScalar  mass(0);
 		std::cout << unit_radius[i] << std::endl;
 		
 		// generate shape for unit
@@ -103,39 +196,27 @@ void Whisker::createWhisker(std::string w_name){
 		btTransform unitTransform = createFrame(btVector3(unit_offset,0.,0.));
 		
 		// add unit to whisker and world
-		btRigidBody* unit = createDynamicBody(mass,unitTransform,unitShape);
-		whisker.push_back(unit);	
-		m_dynamicsWorld->addRigidBody(unit);	 
+		btRigidBody* unit_curr = createDynamicBody(mass,baseTransform*unitTransform,unitShape);
+		whisker.push_back(unit_curr);	
+		m_dynamicsWorld->addRigidBody(unit_curr);	 
 
-		// compute COM offset for next unit
-		unit_offset = unit_offset + unit_length;
-
-	} 
-	 
-	
-	// set up constraints for whisker links (between units)
-	// ==============================================================
-
-	for(int i=NUM_LINKS;i>0;--i) {
-
-		// get neighboring units
-		btRigidBody* unitA = whisker[i];   // get unit i
-		btRigidBody* unitB = whisker[i-1]; // get unit i+1
+		// get previous unit
+		btRigidBody* unit_prev = whisker[i-1];   // get unit i
 
 		// make units active
-		unitA->setActivationState(DISABLE_DEACTIVATION);
-		unitB->setActivationState(DISABLE_DEACTIVATION);
+		// unit_prev->setActivationState(DISABLE_DEACTIVATION);
+		unit_curr->setActivationState(DISABLE_DEACTIVATION);
 
 		// create frames for constraint
-		btTransform frameInA;				
-		btTransform frameInB;
+		btTransform frameInPrev;				
+		btTransform frameInCurr;
 
 		// initialize transforms of both units and set frames at end of frostums
-		frameInA = createFrame(btVector3(-unit_length/2,0,0),btVector3(0,0,0));				
-		frameInB = createFrame(btVector3(unit_length/2,0,0),btVector3(0,0,0));
+		frameInPrev = createFrame(btVector3(unit_length/2,0,0),btVector3(0,0,0));				
+		frameInCurr = createFrame(btVector3(-unit_length/2,0,0),btVector3(0,0,0));
 				
 		// create link (between units) constraint
-		btGeneric6DofSpring2Constraint* link = new btGeneric6DofSpring2Constraint(*unitA, *unitB, frameInA,frameInB);
+		btGeneric6DofSpring2Constraint* link = new btGeneric6DofSpring2Constraint(*unit_prev, *unit_curr, frameInPrev,frameInCurr);
 		// links.push_back(link); // save constraint
 
 
@@ -176,81 +257,163 @@ void Whisker::createWhisker(std::string w_name){
 		link->enableSpring(5,true);
 		link->setStiffness(5,para->stiffness_z[i],false);
 		link->setDamping(5,para->damping_z[i],false);
-		link->setEquilibriumPoint(5,link_angles[i]);
+		link->setEquilibriumPoint(5,-link_angles[i]);
 		
 		
 		// link->setParam(BT_CONSTRAINT_CFM, 0.000001, 3);
 		// link->setParam(BT_CONSTRAINT_CFM, 0.000001 ,4);
 		// link->setParam(BT_CONSTRAINT_CFM, 0.000001 ,5);
 
-		
-	}
 
-	// set up constraint for whisker base
-	// ===========================================================
 
-	// make units active
-	base->setActivationState(DISABLE_DEACTIVATION);
 
-	// initialize transforms of both units and set frames at end of frostum
-	btTransform baseFrame = createFrame();				
-	btTransform whiskerFrame = createFrame(btVector3(-unit_length/2,0,0),btVector3(0,0,0));
+
+
+
+
 		
 
-	// create link (between units) constraint
-	baseConstraint = new btGeneric6DofSpring2Constraint(*base, *whisker[0], baseFrame, whiskerFrame);
+	} 
+	 
+	
+	// // set up constraints for whisker links (between units)
+	// // ==============================================================
+
+	// for(int i=NUM_LINKS;i>0;--i) {
+
+	// 	// get neighboring units
+	// 	btRigidBody* unitA = whisker[i];   // get unit i
+	// 	btRigidBody* unitB = whisker[i-1]; // get unit i+1
+
+	// 	// make units active
+	// 	unitA->setActivationState(DISABLE_DEACTIVATION);
+	// 	unitB->setActivationState(DISABLE_DEACTIVATION);
+
+	// 	// create frames for constraint
+	// 	btTransform frameInA;				
+	// 	btTransform frameInB;
+
+	// 	// initialize transforms of both units and set frames at end of frostums
+	// 	frameInA = createFrame(btVector3(-unit_length/2,0,0),btVector3(0,0,0));				
+	// 	frameInB = createFrame(btVector3(unit_length/2,0,0),btVector3(0,0,0));
+				
+	// 	// create link (between units) constraint
+	// 	btGeneric6DofSpring2Constraint* link = new btGeneric6DofSpring2Constraint(*unitA, *unitB, frameInA,frameInB);
+	// 	// links.push_back(link); // save constraint
 
 
-	// make whisker base fixed
-	baseConstraint->setLinearLowerLimit(btVector3(0,0,0));
-	baseConstraint->setLinearUpperLimit(btVector3(0,0,0));
+	// 	// set spring parameters of links - are not physical measures
+	// 	// ----------------------------------------------------------
 
-	if(para->TEST || para->OPT){
-		// set rotation of whisker base to zero
-		baseConstraint->setAngularLowerLimit(btVector3(0,0,0));
-		baseConstraint->setAngularUpperLimit(btVector3(0,0,0));
-	}
-	else{
-		// set rotation about z axis
-		btVector3 joint_rot = btVector3(-config.base_rot[2],-config.base_rot[1],-config.base_rot[0]);
-		// btVector3 joint_rot = btVector3(0,0,0);
-		baseConstraint->setAngularLowerLimit(joint_rot);
-		baseConstraint->setAngularUpperLimit(joint_rot);
-	}
+	// 	if(para->NO_CURVATURE){
+	// 		link_angles[i]=0.0;
+	// 	}
+		
+	// 	link->setLinearLowerLimit(btVector3(0., 0.0, 0.0)); // lock the units
+	// 	link->setLinearUpperLimit(btVector3(0., 0.0, 0.0));
+
+	// 	link->setAngularLowerLimit(btVector3(0.,1.,1.)); // lock angles between units at x axis but free around y and z axis
+	// 	link->setAngularUpperLimit(btVector3(0.,0.,0.));
+
+	// 	// add constraint to world
+	// 	m_dynamicsWorld->addConstraint(link, true); // true -> collision between linked bodies disabled
+	// 	link->setDbgDrawSize(btScalar(5.f));
+
+	// 	// enable springs at constraints between units
+	// 	std::cout << "stiffness x: " << para->stiffness_x[i] << std::endl;
+	// 	std::cout << "damping x: " << para->damping_x[i] << std::endl;
+	// 	link->enableSpring(3,true);
+	// 	link->setStiffness(3,para->stiffness_x[i],false);
+	// 	link->setDamping(3,para->damping_x[i],false);
+	// 	link->setEquilibriumPoint(3,0.);
+
+	// 	std::cout << "stiffness y: " << para->stiffness_y[i] << std::endl;
+	// 	std::cout << "damping y: " << para->damping_y[i] << std::endl;
+	// 	link->enableSpring(4,true);
+	// 	link->setStiffness(4,para->stiffness_y[i],false);
+	// 	link->setDamping(4,para->damping_y[i],false);
+	// 	link->setEquilibriumPoint(4,0.);
+
+	// 	std::cout << "stiffness z: " << para->stiffness_z[i] << std::endl;
+	// 	std::cout << "damping z: " << para->damping_z[i] << std::endl;
+	// 	link->enableSpring(5,true);
+	// 	link->setStiffness(5,para->stiffness_z[i],false);
+	// 	link->setDamping(5,para->damping_z[i],false);
+	// 	link->setEquilibriumPoint(5,link_angles[i]);
+		
+		
+	// 	// link->setParam(BT_CONSTRAINT_CFM, 0.000001, 3);
+	// 	// link->setParam(BT_CONSTRAINT_CFM, 0.000001 ,4);
+	// 	// link->setParam(BT_CONSTRAINT_CFM, 0.000001 ,5);
+
+		
+	// }
+
+	// // set up constraint for whisker base
+	// // ===========================================================
+
+	// // make units active
+	// base->setActivationState(DISABLE_DEACTIVATION);
+
+	// // initialize transforms of both units and set frames at end of frostum
+	// btTransform baseFrame = createFrame();				
+	// btTransform whiskerFrame = createFrame(btVector3(-unit_length/2,0,0),btVector3(0,0,0));
+		
+
+	// // create link (between units) constraint
+	// baseConstraint = new btGeneric6DofSpring2Constraint(*base, *whisker[0], baseFrame, whiskerFrame);
+
+
+	// // make whisker base fixed
+	// baseConstraint->setLinearLowerLimit(btVector3(0,0,0));
+	// baseConstraint->setLinearUpperLimit(btVector3(0,0,0));
+
+	// if(para->TEST || para->OPT){
+	// 	// set rotation of whisker base to zero
+	// 	baseConstraint->setAngularLowerLimit(btVector3(0,0,0));
+	// 	baseConstraint->setAngularUpperLimit(btVector3(0,0,0));
+	// }
+	// else{
+	// 	// set rotation about z axis
+	// 	btVector3 joint_rot = btVector3(-config.base_rot[2],-config.base_rot[1],-config.base_rot[0]);
+	// 	// btVector3 joint_rot = btVector3(0,0,0);
+	// 	baseConstraint->setAngularLowerLimit(joint_rot);
+	// 	baseConstraint->setAngularUpperLimit(joint_rot);
+	// }
 	
 	
-	// add constraint to world
-	m_dynamicsWorld->addConstraint(baseConstraint,true);
-	baseConstraint->setDbgDrawSize(btScalar(5.f));
+	// // add constraint to world
+	// m_dynamicsWorld->addConstraint(baseConstraint,true);
+	// baseConstraint->setDbgDrawSize(btScalar(5.f));
  
-	// enable feedback (mechanical response)
-	baseConstraint->setJointFeedback(&baseFeedback);
+	// // enable feedback (mechanical response)
+	// baseConstraint->setJointFeedback(&baseFeedback);
 
 
-	// set up constraint for whole whisker to head
-	// ===========================================================
-	btTransform refFrame = createFrame();
-	btGeneric6DofConstraint* fixedConstraint = new btGeneric6DofConstraint(*refBody, *base, refFrame, baseFrame, false);
+	// // set up constraint for whole whisker to head
+	// // ===========================================================
+	// btTransform refFrame = createFrame();
+	// btGeneric6DofConstraint* fixedConstraint = new btGeneric6DofConstraint(*refBody, *base, refFrame, baseFrame, false);
 
-	// make whisker base fixed
-	if(para->TEST || para->OPT){
-		fixedConstraint->setLinearLowerLimit(btVector3(0,0,0));
-		fixedConstraint->setLinearUpperLimit(btVector3(0,0,0));
+	// // make whisker base fixed
+	// if(para->TEST || para->OPT){
+	// 	fixedConstraint->setLinearLowerLimit(btVector3(0,0,0));
+	// 	fixedConstraint->setLinearUpperLimit(btVector3(0,0,0));
 
-	}
-	else{
-		fixedConstraint->setLinearLowerLimit(config.base_pos*SCALE);
-		fixedConstraint->setLinearUpperLimit(config.base_pos*SCALE);
+	// }
+	// else{
+	// 	fixedConstraint->setLinearLowerLimit(config.base_pos*SCALE);
+	// 	fixedConstraint->setLinearUpperLimit(config.base_pos*SCALE);
 
-	}
+	// }
 	
-	// set rotation in respect to origin
-		fixedConstraint->setAngularLowerLimit(btVector3(0,0,0));
-		fixedConstraint->setAngularUpperLimit(btVector3(0,0,0));
+	// // set rotation in respect to origin
+	// 	fixedConstraint->setAngularLowerLimit(btVector3(0,0,0));
+	// 	fixedConstraint->setAngularUpperLimit(btVector3(0,0,0));
 
-	// add constraint to world
-	m_dynamicsWorld->addConstraint(fixedConstraint,true);
-	fixedConstraint->setDbgDrawSize(btScalar(5.f));
+	// // add constraint to world
+	// m_dynamicsWorld->addConstraint(fixedConstraint,true);
+	// fixedConstraint->setDbgDrawSize(btScalar(5.f));
 
 	
 	std::cout << "done." << std::endl;
