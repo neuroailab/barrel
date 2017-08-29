@@ -1,38 +1,34 @@
 # whiskerBullet
 
 
-In this repository, we're building a simulation tool for active whisking based on the open source Bullet physics engine and OpenGL (Freeglut3). 
+In this repository, we're building a simulation tool for active whisking based on the open source Bullet physics engine and OpenGL. 
 
 ## Installation Instructions:
 
-1. Install Freeglut with `sudo apt-get install freeglut3 freeglut3-dev`
+1. Clone bullet from https://github.com/bulletphysics/bullet3
 
-2. Clone bullet from https://github.com/bulletphysics/bullet3
-
-3. Follow installation instructions on http://bulletphysics.org/mediawiki-1.5.8/index.php/Installation or on Linux do:
+2. Follow installation instructions on http://bulletphysics.org/mediawiki-1.5.8/index.php/Installation or on Linux do:
 ```
 	cd path/to/bullet
-	mkdir bullet-build
-	cd bullet-build
+	mkdir bullet_build
+	cd bullet_build
 	cmake .. -G "Unix Makefiles" -DINSTALL_LIBS=ON -DBUILD_SHARED_LIBS=ON
 	make -j4
 	sudo make install
 ```
-4. Install Boost 1.62 library with `sudo apt-get install libboost1.62-all-dev`
+3. Install Boost 1.62 library with `sudo apt-get install libboost1.62-all-dev`
 
-5. Install Hdf5 library with `sudo apt-get install libhdf5-cpp-100`
+4. Install Hdf5 library with `sudo apt-get install libhdf5-cpp-100`
 
-4. Clone WhiskerBullet
+5. Clone whiskerBullet
 
-5. Rename CMakeLists.txt in `your/path/to/bullet/examples` for backup.
-
-6. Copy the folder `Whiskers` and the file `CMakeLists.txt` into `your/path/to/bullet/examples`.
-
-7. Recompile bullet with:
+6. Compile whiskerBullet with:
 ```
-	cd your/path/to/bullet/bullet-build
-	cmake ..
+	cd your/path/to/whiskerBullet
+	mkdir build
+	cd build
+	cmake -DBULLET_SOURCE_DIR:STRING=/your/path/to/bullet/source/directory -DBULLET_BUILD_DIR:STRING=/your/path/to/bullet/build/directory ..
 	make
 ```
-8. Run `App_Whisker` (no graphics) or `AppWhiskerGui` (with graphics) in `your/path/to/bullet/bullet-build/examples/Whiskers`.
+7. Run `App_Whisker` (no graphics) or `AppWhiskerGui` (with graphics). Use --help or -h for information about command line arguments
  
