@@ -2,7 +2,7 @@
 #ifndef SIMULATION_IO_HPP
 #define SIMULATION_IO_HPP
 
-
+#include <cstring>
 #include <iostream>
 #include <fstream>
 #include <vector>

@@ -61,7 +61,8 @@ void addToDataset3D(std::vector<std::vector<std::vector<float>>> data, H5std_str
 
 	// std::cout << "- Data set dimensions: " << dims[0] << ", " << dims[1] << ", " << dims[2] << std::endl;
 
-	float data_array[T_DIM][W_DIM][D_DIM] = {0};
+	float data_array[T_DIM][W_DIM][D_DIM];
+	memset(data_array, 0, T_DIM*W_DIM*D_DIM*sizeof(float));
 	// std::cout << "- Data array declared." << std::endl;
 	for(int i=0; i<W_DIM; i++){
 		for(int j=0; j<D_DIM; j++){
