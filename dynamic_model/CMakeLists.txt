@@ -10,30 +10,33 @@ FIND_PACKAGE(HDF5 COMPONENTS C CXX REQUIRED)
 FIND_PACKAGE(Boost COMPONENTS program_options REQUIRED)
 FIND_PACKAGE(OpenGL)
 
-INCLUDE_DIRECTORIES(
+INCLUDE_DIRECTORIES(    
+        include
         ${BULLET_SOURCE_DIR}/src
         ${BULLET_SOURCE_DIR}/Extras/Serialize/BulletWorldImporter
         /usr/local/include/hdf5/serial
         ${Boost_INCLUDE_DIR}
+        
 )
 
-SET(AppWhisker_CODE
-    Parameters.cpp
-    Simulation_utility.cpp
-    Simulation_IO.cpp
-    Whisker_utility.cpp
-    Whisker_config.cpp
-    Whisker.cpp
-    WhiskerArray.cpp
-    Simulation.cpp
+
+SET(SOURCES
+    src/Parameters.cpp
+    src/Simulation_utility.cpp
+    src/Simulation_IO.cpp
+    src/Whisker_utility.cpp
+    src/Whisker_config.cpp
+    src/Whisker.cpp
+    src/WhiskerArray.cpp
+    src/Simulation.cpp
 
 )
 
-SET(AppWhisker_SRCS
+SET(EXT_SOURCES
     ${BULLET_SOURCE_DIR}/build3/bullet.rc
     #${BULLET_SOURCE_DIR}/examples/StandaloneMain/main_opengl_single_example.cpp
     ${BULLET_SOURCE_DIR}/examples/ExampleBrowser/OpenGLGuiHelper.cpp
-    ${BULLET_SOURCE_DIR}/examples/ExampleBrowser/GL_ShapeDrawer.cpp
+   ${BULLET_SOURCE_DIR}/examples/ExampleBrowser/GL_ShapeDrawer.cpp
     ${BULLET_SOURCE_DIR}/examples/ExampleBrowser/CollisionShape2TriangleMesh.cpp
     ${BULLET_SOURCE_DIR}/examples/Utils/b3Clock.cpp
 
@@ -45,20 +48,21 @@ LINK_LIBRARIES(
 
 IF (WIN32)
 	ADD_EXECUTABLE(App_Whisker
-        ${AppWhisker_SRCS}
-        ${AppWhisker_CODE}
-		main.cpp
+        ${EXT_SOURCES}
+        ${SOURCES}
+		${CMAKE_SOURCE_DIR}/src/main.cpp
 		
 	)
 ELSE()
 	ADD_EXECUTABLE(App_Whisker
-        ${BULLET_SOURCE_DIR}/build3/bullet.rc
-        ${AppWhisker_CODE}
-		main.cpp
+        ${SOURCES}
+        #${EXT_SOURCES}
+        ${BULLET_SOURCE_DIR}/build3/bullet.rc 
+		${CMAKE_SOURCE_DIR}/src/main.cpp
 	)
 ENDIF()
 
-
+#TARGET_INCLUDE_DIRECTORIES(App_Whisker PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 TARGET_LINK_LIBRARIES(App_Whisker ${HDF5_CXX_LIBRARIES} ${Boost_LIBRARIES})
 
 IF (INTERNAL_ADD_POSTFIX_EXECUTABLE_NAMES)
@@ -75,8 +79,8 @@ ENDIF(INTERNAL_ADD_POSTFIX_EXECUTABLE_NAMES)
 # Standalone SimulationGui using OpenGL (but not the example browser)
 
 
-
 INCLUDE_DIRECTORIES(
+        include
         ${BULLET_SOURCE_DIR}/src
         ${BULLET_SOURCE_DIR}/btgui
         ${BULLET_SOURCE_DIR}/examples
@@ -123,11 +127,12 @@ ENDIF(WIN32)
 
 
 ADD_EXECUTABLE(AppWhiskerGui
-    ${AppWhisker_SRCS}
-    ${AppWhisker_CODE}
-    main_opengl.cpp
+    ${EXT_SOURCES}
+    ${SOURCES}
+    ${CMAKE_SOURCE_DIR}/src/main_opengl.cpp
 )
 
+#TARGET_INCLUDE_DIRECTORIES(AppWhiskerGui PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 TARGET_LINK_LIBRARIES(AppWhiskerGui ${HDF5_CXX_LIBRARIES} ${Boost_LIBRARIES} ${BULLET_BUILD_DIR}/examples/OpenGLWindow/libOpenGLWindow.so)
 
 IF (INTERNAL_ADD_POSTFIX_EXECUTABLE_NAMES)
