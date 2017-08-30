@@ -91,7 +91,8 @@ void addToDataset1D(std::vector<float> data, H5std_string dataname, H5::H5File f
 
 	dim[0] = data.size();		// get time dimension
 
-	float data_array[dim[0]] = {0};
+	float data_array[dim[0]];
+	memset(data_array, 0, dim[0]*sizeof(float));
 	for(int i=0; i<dim[0]; i++){
 		data_array[i] = data[i]; // reorganize and convert data vectors to array
 	}
