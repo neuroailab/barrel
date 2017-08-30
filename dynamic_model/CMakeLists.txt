@@ -3,8 +3,15 @@ cmake_minimum_required(VERSION 3.7)
 
 SET(CMAKE_CXX_FLAGS "-std=c++11")
 
+IF(APPLE)
+    SET(DYLIB_SUFFIX dylib)
+ELSEIF(UNIX)
+    SET(DYLIB_SUFFIX so)
+ENDIF()
+
 SET(BULLET_SOURCE_DIR ~/bullet3 CACHE STRING "Some other user-specified option")
 SET(BULLET_BUILD_DIR ~/bullet3/bullet_build CACHE STRING "Some other user-specified option")
+SET(BULLET_ROOT_DIR /usr/local/ CACHE STRING "Bullet install position")
 
 FIND_PACKAGE(HDF5 COMPONENTS C CXX REQUIRED)
 FIND_PACKAGE(Boost COMPONENTS program_options REQUIRED)
@@ -42,8 +49,11 @@ SET(EXT_SOURCES
 
 )
 
+#LINK_LIBRARIES(
+# BulletDynamics BulletCollision LinearMath
+#)
 LINK_LIBRARIES(
- BulletDynamics BulletCollision LinearMath
+    ${BULLET_ROOT_DIR}/lib/libBullet3Common.${DYLIB_SUFFIX} ${BULLET_ROOT_DIR}/lib/libBulletDynamics.${DYLIB_SUFFIX} ${BULLET_ROOT_DIR}/lib/libBulletCollision.${DYLIB_SUFFIX} ${BULLET_ROOT_DIR}/lib/libLinearMath.${DYLIB_SUFFIX}
 )
 
 IF (WIN32)
@@ -96,8 +106,14 @@ INCLUDE_DIRECTORIES(
 #this define maps StandaloneExampleCreateFunc to the right 'CreateFunc'
 ADD_DEFINITIONS(-DB3_USE_STANDALONE_EXAMPLE)
 
+#LINK_LIBRARIES(
+#        BulletDynamics BulletCollision LinearMath OpenGLWindow Bullet3Common 
+#)
+#LINK_LIBRARIES(
+#        OpenGLWindow 
+#)
 LINK_LIBRARIES(
-        BulletDynamics BulletCollision LinearMath OpenGLWindow Bullet3Common 
+    ${BULLET_ROOT_DIR}/lib/libBullet3Common.${DYLIB_SUFFIX} ${BULLET_ROOT_DIR}/lib/libBulletDynamics.${DYLIB_SUFFIX} ${BULLET_ROOT_DIR}/lib/libBulletCollision.${DYLIB_SUFFIX}  ${BULLET_ROOT_DIR}/lib/libLinearMath.${DYLIB_SUFFIX}  ${BULLET_BUILD_DIR}/examples/OpenGLWindow/libOpenGLWindow.${DYLIB_SUFFIX}
 )
 
 #some code to support OpenGL and Glew cross platform
@@ -133,7 +149,8 @@ ADD_EXECUTABLE(AppWhiskerGui
 )
 
 #TARGET_INCLUDE_DIRECTORIES(AppWhiskerGui PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-TARGET_LINK_LIBRARIES(AppWhiskerGui ${HDF5_CXX_LIBRARIES} ${Boost_LIBRARIES} ${BULLET_BUILD_DIR}/examples/OpenGLWindow/libOpenGLWindow.so)
+TARGET_LINK_LIBRARIES(AppWhiskerGui ${HDF5_CXX_LIBRARIES} ${Boost_LIBRARIES})
+
 
 IF (INTERNAL_ADD_POSTFIX_EXECUTABLE_NAMES)
                         SET_TARGET_PROPERTIES(AppWhiskerGui PROPERTIES  DEBUG_POSTFIX "_Debug")
