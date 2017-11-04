@@ -3,10 +3,10 @@ While the raw sensor data is sufficiently powerful to separate objects at low am
 We found further that while many particular network architectures, especially shallow ones, fail to solve the shape recognition task, reasonable performance levels can be obtained for specific architectures within each distinct network structural family tested.
 We then showed that a population-level measurement that is in principle experimentally obtainable can distinguish between these higher-performing networks. 
 To summarize, we have shown that a goal-driven DNN approach to modeling the whisker-trigeminal system is feasible. 
-Code for all results, including the whisker model and neural networks, is publicly available at \WEBSITE.
+Code for all results, including the whisker model and neural networks, is publicly available at \url{https://github.com/neuroailab/whisker_model}.
 
 We emphasize that the present work is proof-of-concept rather than a model of the real nervous system.
-A number of critical issues must be overcome before our true goal --- a full integration of modeling with experimental data --- becomes possible.    
+A number of critical issues must be overcome before our true goal --- a full integration of computational modeling with experimental data --- becomes possible.    
 First, although our sensor model was biophysically informed, it does not include active whisking, and the mechanical signals at the whisker bases are approximate~\cite{Quist2014, Huet2016}.
 
 An equally important problem is that the goal that we set for our network, i.e. shape discrimination between 117 human-recognizable object classes, is not directly ethologically relevant to rodents. 
@@ -17,7 +17,14 @@ Similarly, we suggest that the large and variable object set used here may provi
 However, a key next priority is systematically building an appropriately large and variable set of objects, textures or other class boundaries that more realistically model the tasks that a rodent faces.
 The specific results obtained (e.g. which families are better than others, and the exact structure of learned representations) are likely to change significantly when these improvements are made.  
 
+In concert with these improvements, we plan to collect neural data in several areas within the whisker-trigeminal system, enabling us to make direct comparisons between model outputs and neural responses with metrics such as the RDM.  
+There are few existing experimental validated signatures of the computations in each of these areas.  Ideally, we will validate one or a small number of the specific model architectures described above by identifying a detailed mapping of model internal layers to brain-area specific response patterns.
+A core experimental issue is the magnitude of real experimental noise in trigeminal-system RDMs. 
+We will need to show that this noise does not swamp inter-model distances (as shown in Fig. \ref{fig_rdms}b), enabling us to reliably identify which model(s) are better predictors of the neural data.
+Though real neural RDM noise cannot yet be estimated, the inter­model RDM distances that we can compute computationally will be useful for informing experimental design decisions (e.g. trial count, stimulus set size, &c).
+
 In the longer term, we expect to use detailed encoding models of the whisker-trigeminal system as a platform for investigating issues of representation learning and sensory-based decision making in the rodent. 
 A particularly attractive option is to go beyond fixed class discrimination problems and situate a synthetic whisker system on a mobile animal in a navigational environment where it will be faced with a variety of actively-controlled discrete and continuous estimation problems.
+In this context, we hope to replace our currently supervised loss function with a more naturalistic reinforcement-learning based goal.
 By doing this work with a rich sensory domain in rodents, we seek to leverage the sophisticated neuroscience tools available in these systems to go beyond what might be possible in other model systems.  
 

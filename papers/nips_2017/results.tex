@@ -8,7 +8,7 @@
 
 \textbf{Model Performance:} 
 Our strategy in identifying potential models of the whisker-trigeminal system is to explore many specific architectures within each architecture family, evaluating each specific architecture both in terms of its ability to solve the shape recognition task in our training dataset, and its efficiency (number of parameters and number of overall units).
-Because it can be misleading to compare models with different numbers of parameters, we generally evaluated models with similar numbers of parameters: exceptions are noted where they occur.
+Because we evaluate networks on held-out validation data, it is not inherently unfair to compare results from networks different numbers of parameters, but for simplicity we generally evaluated models with similar numbers of parameters: exceptions are noted where they occur.
 As we evaluated many individual structures within each family, a list of the specific models and parameters are given in the supplementary materials.
 
 Our results (Fig. \ref{fig_main}) can be summarized with following conclusions:
@@ -29,20 +29,21 @@ Our results (Fig. \ref{fig_main}) can be summarized with following conclusions:
 \textbf{Model Discrimination:}  The above results indicated that we had identified several high-performing networks in quite distinct architecture families.
 In other words, the strong performance constraint allows us to identify several specific candidate model networks for the biological system, reducing a much larger set of mostly non-performing neural networks into a ``shortlist''.
 The key biologically relevant follow-up question is then: how should we distinguish between the elements in the shortlist? 
-That is, what signatures of the differences between these architectures could be extracted from data obtainable from experiments that use today's neurophysiological tools?
+That is, what reliable signatures of the differences between these architectures could be extracted from data obtainable from experiments that use today's neurophysiological tools?
 
 To address this question, we used Representational Dissimilarity Matrix (RDM) analysis~\cite{Kriegeskorte2008}.
 For a set of stimuli $S$, RDMs are $|S| \times |S|$-shaped correlation distance matrices taken over the feature dimensions of a representation, e.g. matrices with $ij$-th entry $RDM[i, j] = 1 - corr(F[i], F[j])$ for stimuli $i, j$ and corresponding feature output $F[i], F[j]$.
 The RDM characterizes the geometry of stimulus representation in a way that is independent of the individual feature dimensions.  RDMs can thus be quantitatively compared between different feature representations of the same data.
-RDMs have been useful in establishing connections between deep neural networks and neural data from the ventral visual stream~\cite{cadieu2014deep, Yamins2014, khaligh2014deep}. 
+This procedure been useful in establishing connections between deep neural networks and neural data from the ventral visual stream, where it has been shown that the RDMs of features from different layers of neural networks trained to solve visual tasks match RDMs computed from visual brain areas at different positions along the ventral visual hierarchy~\cite{cadieu2014deep, Yamins2014, khaligh2014deep}. 
 RDMs are readily computable from neural response pattern data samples, and are in general comparatively robust to variability due to experimental randomness (e.g. electrode/voxel sampling).
+RDMS for real neural populations from the rodent whisker-trigeminal system could be obtained through a conceptually simple electrophysiological recording experiment similar in spirit to those performe in macaque~\cite{Yamins2014}.
+
 We obtained RDMs for several of our high-performing models, computing RDMs separately for each model layer (Fig. \ref{fig_rdms}a), averaging feature vectors over different sweeps of the same object before computing the correlations.
 This procedure lead to $9981\times9981$-sized matrices (there were 9,981 distinct object in our dataset).
 We then computed distances between each layer of each model in RDM space, as in (e.g.) \cite{khaligh2014deep}.
 To determine if differences in this space between models and/or layers were significant, we computed RDMs for multiple instances of each model trained with different initial conditions, and compared the between-model to within-model distances.
 We found that while the top layers of models partially converged (likely because they were all trained on the same task), intermediate layers diverged substantially between models, by amounts larger than either the initial-condition-induced variability within a model layer or the distance between nearby layers of the same model (Fig. \ref{fig_rdms}b).
-This result is not entirely surprising since the models are quite structurally distinct.  
-However, it establishes the initial computational validity for a conceptually simple and potentially feasible neuroscience experiment to distinguish between models: RDMs computed from neural recordings in multiple areas of the whisker-trigeminal system could be compared to model RDMs.
+This observation is important from an experimental design point of view because it shows that different model architectures differ substantially on a well-validated metric that may be experimentally feasible to measure. 
 
 \begin{figure}
 \FigCenter
